@@ -43,3 +43,42 @@ Chỉ chuyển nội dung từ “dự kiến” sang “đã triển khai” sa
 Trong lần chạy đầu, Gateway bị lặp khởi động vì tmpfs gắn tại `/tmp` che mất thư mục `/tmp/nginx` được tạo trong lúc build. Cấu hình Nginx được đổi sang dùng trực tiếp `/tmp/client_temp`, `/tmp/proxy_temp` và các thư mục tương tự. Sau khi rebuild, health check đạt.
 
 Chi tiết dữ liệu thô nằm tại `evidence/T01/2026-10-11T0906/` và `evidence/T02/2026-10-11T0906/`. Đây là kết quả vòng phát triển trên macOS, chưa thay thế nghiệm thu chính thức trên VPS Linux sạch.
+
+## 11/10/2026 — Bắt đầu P0.2A: nền tảng control plane
+
+### Phạm vi thực hiện
+
+- Thêm Dashboard bằng React, Vite và TypeScript.
+- Thêm Control API bằng Fastify và TypeScript.
+- Thêm migration SQLite ban đầu cho user, session, application và audit event.
+- Thêm đăng nhập, kiểm tra session, logout, danh sách ứng dụng, audit.
+- Nginx định tuyến `/` đến Dashboard và `/api/*` đến Control API.
+- Giữ Docker socket ngoài Dashboard/Control API; Runner chuyển sang bước P0.2B.
+
+### Kết quả kiểm chứng
+
+- Control API unit test: 4/4 đạt.
+- Dashboard production build: đạt.
+- Docker Compose: 5/5 service healthy.
+- Regression P0.1: 9/9 đạt.
+- Integration P0.2: 14/14 đạt.
+- Dashboard hiển thị health 2/2 và phiên bản v1.0.0 của hai app qua dữ liệu API thực.
+- Kiểm tra giao diện 390×844 và 1440×900 đạt; không có console error/warning.
+
+### Sự cố và cách xử lý
+
+Lần kiểm tra trình duyệt đầu tiên cho thấy vùng nội dung Dashboard bị co hẹp. Nguyên nhân là Sidebar đã `position: fixed` nhưng shell vẫn dùng CSS Grid, làm phần tử Workspace bị xếp vào cột sai và cộng thêm `margin-left`. Shell được đổi về luồng block, Workspace giữ khoảng bù đúng bằng chiều rộng Sidebar. Sau khi rebuild, bố cục desktop và mobile đều đúng.
+
+### Nội dung có thể dùng cho báo cáo
+
+- Chương 3: control plane/data plane, mạng `edge`/`control`, ranh giới Docker socket.
+- Chương 3: mô hình user/session/application/audit trong SQLite.
+- Chương 4: auth flow, proxy `/api`, health/version qua Gateway và Dashboard responsive.
+- Chương 5: T07 phần xác thực và port exposure; phần action allowlist chờ Runner.
+
+### Giới hạn cần ghi đúng
+
+- `healthy` hiện là kết quả HTTP qua Gateway, không phải trạng thái Docker.
+- `node:sqlite` trên Node.js 24 vẫn phát cảnh báo thử nghiệm.
+- Chưa có start/stop/restart/update, log container hoặc CPU/RAM.
+- Cookie local chưa bật `Secure` vì chưa có HTTPS; VPS phải bật sau khi cấu hình TLS.

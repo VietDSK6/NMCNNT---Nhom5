@@ -4,13 +4,17 @@ services:
   gateway:
     build:
       context: ./platform/gateway
-    image: mini-paas/gateway:p0.1
+    image: mini-paas/gateway:p0.2
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
     depends_on:
       app-a:
         condition: service_healthy
       app-b:
+        condition: service_healthy
+      dashboard:
+        condition: service_healthy
+      control-api:
         condition: service_healthy
     networks:
       - edge
@@ -33,6 +37,88 @@ services:
     cpus: 0.25
     mem_limit: 64m
     pids_limit: 50
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+  dashboard:
+    build:
+      context: ./platform/dashboard
+    image: mini-paas/dashboard:p0.2
+    expose:
+      - "8080"
+    networks:
+      - control
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    cpus: 0.20
+    mem_limit: 64m
+    pids_limit: 50
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+  control-api:
+    build:
+      context: ./platform/control-api
+    image: mini-paas/control-api:p0.2
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_PATH: /data/control.db
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Hãy tạo file .env và đặt ADMIN_PASSWORD}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      PUBLIC_ORIGIN: http://127.0.0.1:${GATEWAY_PORT:-8080}
+      GATEWAY_BASE_URL: http://gateway:8080
+      APP_A_VERSION: ${APP_A_VERSION:-v1.0.0}
+      APP_B_VERSION: ${APP_B_VERSION:-v1.0.0}
+    expose:
+      - "3000"
+    networks:
+      - control
+    volumes:
+      - control-data:/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    cpus: 0.35
+    mem_limit: 192m
+    pids_limit: 100
     logging:
       driver: json-file
       options:
@@ -123,3 +209,7 @@ networks:
     name: mini-paas-control
     driver: bridge
     internal: true
+
+volumes:
+  control-data:
+    name: mini-paas-control-data

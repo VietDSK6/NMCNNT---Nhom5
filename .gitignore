@@ -6,5 +6,8 @@ node_modules/
 dist/
 coverage/
 *.log
+*.db
+*.db-shm
+*.db-wal
 .idea/
 .vscode/
