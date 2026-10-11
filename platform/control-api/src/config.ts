@@ -9,6 +9,8 @@ export interface AppConfig {
   readonly sessionCookieSecure: boolean;
   readonly publicOrigin: string;
   readonly gatewayBaseUrl: string;
+  readonly runnerBaseUrl: string;
+  readonly runnerSharedSecret: string;
   readonly appAVersion: string;
   readonly appBVersion: string;
 }
@@ -29,10 +31,18 @@ function booleanFromEnv(value: string | undefined, fallback: boolean): boolean {
   throw new Error("SESSION_COOKIE_SECURE chỉ nhận true hoặc false.");
 }
 
-function requiredSecret(env: NodeJS.ProcessEnv): string {
+function requiredAdminPassword(env: NodeJS.ProcessEnv): string {
   const value = env.ADMIN_PASSWORD;
   if (!value || value.length < 12 || value.length > 256 || value.startsWith("CHANGE_ME")) {
     throw new Error("ADMIN_PASSWORD phải có từ 12 đến 256 ký tự.");
+  }
+  return value;
+}
+
+function requiredRunnerSecret(env: NodeJS.ProcessEnv): string {
+  const value = env.RUNNER_SHARED_SECRET;
+  if (!value || value.length < 24 || value.length > 256 || value.startsWith("CHANGE_ME")) {
+    throw new Error("RUNNER_SHARED_SECRET phải có từ 24 đến 256 ký tự.");
   }
   return value;
 }
@@ -50,12 +60,14 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     port,
     databasePath: env.DATABASE_PATH || "/data/control.db",
     adminUsername: env.ADMIN_USERNAME || "admin",
-    adminPassword: requiredSecret(env),
+    adminPassword: requiredAdminPassword(env),
     sessionTtlSeconds,
     sessionCookieName: "mini_paas_session",
     sessionCookieSecure: booleanFromEnv(env.SESSION_COOKIE_SECURE, false),
     publicOrigin: env.PUBLIC_ORIGIN || "http://127.0.0.1:8080",
     gatewayBaseUrl: (env.GATEWAY_BASE_URL || "http://gateway:8080").replace(/\/$/, ""),
+    runnerBaseUrl: (env.RUNNER_BASE_URL || "http://runner:3001").replace(/\/$/, ""),
+    runnerSharedSecret: requiredRunnerSecret(env),
     appAVersion: env.APP_A_VERSION || "v1.0.0",
     appBVersion: env.APP_B_VERSION || "v1.0.0",
   };

@@ -22,3 +22,6 @@ export const ServerIcon = (props: IconProps) => <IconBase {...props}><rect x="3"
 export const ChevronIcon = (props: IconProps) => <IconBase {...props}><path d="m9 18 6-6-6-6"/></IconBase>;
 export const CheckIcon = (props: IconProps) => <IconBase {...props}><path d="m5 12 4 4L19 6"/></IconBase>;
 export const AlertIcon = (props: IconProps) => <IconBase {...props}><path d="M10.3 3.7 2.5 17a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></IconBase>;
+export const PlayIcon = (props: IconProps) => <IconBase {...props}><path d="m7 4 12 8-12 8V4Z"/></IconBase>;
+export const StopIcon = (props: IconProps) => <IconBase {...props}><rect x="5" y="5" width="14" height="14" rx="2"/></IconBase>;
+export const DeployIcon = (props: IconProps) => <IconBase {...props}><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></IconBase>;

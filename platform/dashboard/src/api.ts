@@ -1,4 +1,11 @@
-import type { ApplicationsResponse, AuditResponse, UserSession } from "./types";
+import type {
+  ApplicationsResponse,
+  AuditResponse,
+  OperationAction,
+  OperationItem,
+  OperationsResponse,
+  UserSession,
+} from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -40,5 +47,13 @@ export const api = {
   }),
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
   applications: () => request<ApplicationsResponse>("/api/v1/applications"),
+  operations: () => request<OperationsResponse>("/api/v1/operations?limit=12"),
+  execute: (appId: string, action: OperationAction, version?: string) => request<{ data: OperationItem }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}/actions`,
+    {
+      method: "POST",
+      body: JSON.stringify({ action, ...(version ? { version } : {}) }),
+    },
+  ),
   audit: () => request<AuditResponse>("/api/v1/audit-events?limit=12"),
 };

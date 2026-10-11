@@ -1,0 +1,13 @@
+{
+  "name": "@mini-paas/deployment-runner",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "test": "node --test src/*.test.mjs"
+  }
+}

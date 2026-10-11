@@ -4,6 +4,23 @@ export interface UserSession {
 }
 
 export type HealthStatus = "healthy" | "unhealthy" | "unknown";
+export type RuntimeStatus = "running" | "stopped" | "starting" | "unhealthy" | "unknown";
+export type OperationAction = "start" | "stop" | "restart" | "update";
+export type OperationStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface OperationItem {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly action: OperationAction;
+  readonly requestedVersion: string | null;
+  readonly status: OperationStatus;
+  readonly message: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+}
 
 export interface ApplicationItem {
   readonly id: string;
@@ -21,10 +38,18 @@ export interface ApplicationItem {
     readonly message: string;
   };
   readonly runtime: {
-    readonly status: "not_integrated";
-    readonly source: "runner_pending";
-    readonly message: string;
+    readonly appId: string;
+    readonly status: RuntimeStatus;
+    readonly containerId: string | null;
+    readonly containerName: string | null;
+    readonly image: string | null;
+    readonly observedVersion: string | null;
+    readonly health: string | null;
+    readonly startedAt: string | null;
+    readonly source: "deployment_runner";
+    readonly message?: string;
   };
+  readonly activeOperation: OperationItem | null;
 }
 
 export interface ApplicationsResponse {
@@ -32,6 +57,7 @@ export interface ApplicationsResponse {
   readonly summary: {
     readonly total: number;
     readonly healthy: number;
+    readonly running: number;
     readonly attention: number;
   };
   readonly checkedAt: string;
@@ -51,4 +77,8 @@ export interface AuditEvent {
 
 export interface AuditResponse {
   readonly data: readonly AuditEvent[];
+}
+
+export interface OperationsResponse {
+  readonly data: readonly OperationItem[];
 }

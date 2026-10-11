@@ -40,6 +40,23 @@ export interface AuditRecord {
   readonly createdAt: string;
 }
 
+export type OperationAction = "start" | "stop" | "restart" | "update";
+export type OperationStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface OperationRecord {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly action: OperationAction;
+  readonly requestedVersion: string | null;
+  readonly status: OperationStatus;
+  readonly message: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+}
+
 const migration001 = `
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
@@ -88,6 +105,25 @@ const migration001 = `
   CREATE INDEX audit_events_created_at_idx ON audit_events(created_at DESC);
 `;
 
+const migration002 = `
+  CREATE TABLE operations (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
+    action TEXT NOT NULL CHECK(action IN ('start', 'stop', 'restart', 'update')),
+    requested_version TEXT,
+    status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
+    message TEXT,
+    requested_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT
+  );
+  CREATE INDEX operations_created_at_idx ON operations(created_at DESC);
+  CREATE UNIQUE INDEX operations_one_active_per_app_idx
+    ON operations(application_id)
+    WHERE status IN ('queued', 'running');
+`;
+
 export class ControlDatabase {
   readonly #db: DatabaseSync;
 
@@ -101,15 +137,27 @@ export class ControlDatabase {
 
   #migrate(): void {
     const version = this.#db.prepare("PRAGMA user_version").get() as { user_version: number };
-    if (version.user_version >= 1) return;
-    this.#db.exec("BEGIN IMMEDIATE;");
-    try {
-      this.#db.exec(migration001);
-      this.#db.exec("PRAGMA user_version = 1;");
-      this.#db.exec("COMMIT;");
-    } catch (error) {
-      this.#db.exec("ROLLBACK;");
-      throw error;
+    if (version.user_version < 1) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration001);
+        this.#db.exec("PRAGMA user_version = 1;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
+    }
+    if (version.user_version < 2) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration002);
+        this.#db.exec("PRAGMA user_version = 2;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
     }
   }
 
@@ -166,7 +214,6 @@ export class ControlDatabase {
         route_path = excluded.route_path,
         health_path = excluded.health_path,
         version_path = excluded.version_path,
-        desired_version = excluded.desired_version,
         updated_at = excluded.updated_at
     `);
     for (const row of rows) statement.run(...row, now, now);
@@ -187,6 +234,92 @@ export class ControlDatabase {
       versionPath: String(row.version_path),
       desiredVersion: String(row.desired_version),
     }));
+  }
+
+  findApplication(id: string): ApplicationRecord | undefined {
+    return this.listApplications().find((application) => application.id === id);
+  }
+
+  setDesiredVersion(id: string, version: string): void {
+    this.#db.prepare(`
+      UPDATE applications SET desired_version = ?, updated_at = ? WHERE id = ?
+    `).run(version, new Date().toISOString(), id);
+  }
+
+  createOperation(input: {
+    applicationId: string;
+    action: OperationAction;
+    requestedVersion?: string;
+    requestedBy: string;
+  }): OperationRecord {
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
+    this.#db.prepare(`
+      INSERT INTO operations (
+        id, application_id, action, requested_version, status, requested_by, created_at
+      ) VALUES (?, ?, ?, ?, 'queued', ?, ?)
+    `).run(id, input.applicationId, input.action, input.requestedVersion ?? null, input.requestedBy, createdAt);
+    return this.findOperation(id)!;
+  }
+
+  findActiveOperation(applicationId: string): OperationRecord | undefined {
+    const row = this.#db.prepare(`
+      SELECT operations.*, applications.name AS application_name
+      FROM operations
+      JOIN applications ON applications.id = operations.application_id
+      WHERE operations.application_id = ? AND operations.status IN ('queued', 'running')
+      LIMIT 1
+    `).get(applicationId) as Record<string, unknown> | undefined;
+    return row ? this.#operationFromRow(row) : undefined;
+  }
+
+  findOperation(id: string): OperationRecord | undefined {
+    const row = this.#db.prepare(`
+      SELECT operations.*, applications.name AS application_name
+      FROM operations
+      JOIN applications ON applications.id = operations.application_id
+      WHERE operations.id = ?
+    `).get(id) as Record<string, unknown> | undefined;
+    return row ? this.#operationFromRow(row) : undefined;
+  }
+
+  markOperationRunning(id: string): void {
+    this.#db.prepare(`
+      UPDATE operations SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'
+    `).run(new Date().toISOString(), id);
+  }
+
+  finishOperation(id: string, status: "succeeded" | "failed", message: string): void {
+    this.#db.prepare(`
+      UPDATE operations SET status = ?, message = ?, finished_at = ?
+      WHERE id = ? AND status IN ('queued', 'running')
+    `).run(status, message, new Date().toISOString(), id);
+  }
+
+  listOperations(limit: number): readonly OperationRecord[] {
+    const rows = this.#db.prepare(`
+      SELECT operations.*, applications.name AS application_name
+      FROM operations
+      JOIN applications ON applications.id = operations.application_id
+      ORDER BY operations.created_at DESC LIMIT ?
+    `).all(limit) as readonly Record<string, unknown>[];
+    return rows.map((row) => this.#operationFromRow(row));
+  }
+
+  #operationFromRow(row: Record<string, unknown>): OperationRecord {
+    return {
+      id: String(row.id),
+      applicationId: String(row.application_id),
+      applicationName: String(row.application_name),
+      action: String(row.action) as OperationAction,
+      requestedVersion: row.requested_version === null ? null : String(row.requested_version),
+      status: String(row.status) as OperationStatus,
+      message: row.message === null ? null : String(row.message),
+      requestedBy: String(row.requested_by),
+      createdAt: String(row.created_at),
+      startedAt: row.started_at === null ? null : String(row.started_at),
+      finishedAt: row.finished_at === null ? null : String(row.finished_at),
+    };
   }
 
   createSession(userId: string, tokenHash: string, ttlSeconds: number): string {

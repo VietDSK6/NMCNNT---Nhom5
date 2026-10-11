@@ -92,15 +92,15 @@ node -e '
   const fs = require("node:fs");
   const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   if (body.data.length !== 2) process.exit(1);
-  if (!body.data.every((app) => app.runtime.status === "not_integrated")) process.exit(1);
+  if (!body.data.every((app) => app.runtime.status === "running")) process.exit(1);
 ' "$response_file" || {
-  printf 'KHÔNG ĐẠT: dữ liệu ứng dụng hoặc ranh giới Runner không đúng\n' >&2
+  printf 'KHÔNG ĐẠT: dữ liệu ứng dụng hoặc trạng thái Runner không đúng\n' >&2
   exit 1
 }
 
 expect_status 'Đọc nhật ký kiểm toán' 200 -b "$cookie_jar" "${base_url}/api/v1/audit-events?limit=10"
 
-for service in dashboard control-api app-a app-b; do
+for service in dashboard control-api runner app-a app-b; do
   container_id="$(docker compose ps -q "$service")"
   port_bindings="$(docker inspect "$container_id" --format '{{json .HostConfig.PortBindings}}')"
   if [ "$port_bindings" != '{}' ] && [ "$port_bindings" != 'null' ]; then
@@ -114,4 +114,4 @@ done
 expect_status 'Đăng xuất phiên quản trị' 204 -b "$cookie_jar" -X POST "${base_url}/api/v1/auth/logout"
 expect_status 'Phiên cũ bị vô hiệu sau đăng xuất' 401 -b "$cookie_jar" "${base_url}/api/v1/auth/session"
 
-printf '\nP0.2 integration test: %s/14 kiểm tra đạt.\n' "$passed"
+printf '\nP0.2 integration test: %s/15 kiểm tra đạt.\n' "$passed"

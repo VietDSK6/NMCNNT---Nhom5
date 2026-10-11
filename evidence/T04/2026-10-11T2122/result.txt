@@ -1,0 +1,7 @@
+ĐẠT: Operation stop App B thành công.
+ĐẠT: Gateway phản ánh upstream App B đã dừng bằng HTTP 504.
+ĐẠT: Operation start App B thành công và route trở lại HTTP 200.
+ĐẠT: Operation restart App B thành công và health trở lại.
+ĐẠT: Trạng thái cuối App B healthy.
+
+Toàn bộ bộ P0.2B: 21 kiểm tra đạt.

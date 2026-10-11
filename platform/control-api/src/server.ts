@@ -1,7 +1,13 @@
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import type { AppConfig } from "./config.js";
-import { ControlDatabase, type SessionUser } from "./database.js";
-import { inspectApplication, type ApplicationHealth } from "./health.js";
+import {
+  ControlDatabase,
+  type OperationAction,
+  type OperationRecord,
+  type SessionUser,
+} from "./database.js";
+import { inspectApplication } from "./health.js";
+import { HttpRunnerClient, type RunnerClient, type RunnerStatus } from "./runner.js";
 import {
   clearSessionCookie,
   createSessionToken,
@@ -16,13 +22,27 @@ interface LoginBody {
   readonly password: string;
 }
 
+interface ActionBody {
+  readonly action: OperationAction;
+  readonly version?: string;
+}
+
 interface ServerOptions {
   readonly healthInspector?: typeof inspectApplication;
+  readonly runnerClient?: RunnerClient;
   readonly logger?: boolean;
 }
 
 function requestIp(request: FastifyRequest): string {
   return request.ip || "unknown";
+}
+
+function operationFailureMessage(error: unknown): string {
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return "Quá thời gian chờ Deployment Runner phản hồi.";
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Deployment Runner không thể hoàn tất thao tác.";
 }
 
 export function createServer(config: AppConfig, db: ControlDatabase, options: ServerOptions = {}) {
@@ -32,6 +52,11 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     bodyLimit: 64 * 1024,
   });
   const healthInspector = options.healthInspector ?? inspectApplication;
+  const runnerClient = options.runnerClient ?? new HttpRunnerClient(
+    config.runnerBaseUrl,
+    config.runnerSharedSecret,
+  );
+  const activeTasks = new Set<Promise<void>>();
 
   server.addHook("onRequest", async (_request, reply) => {
     reply
@@ -39,6 +64,10 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
       .header("X-Frame-Options", "DENY")
       .header("Referrer-Policy", "no-referrer")
       .header("Cache-Control", "no-store");
+  });
+
+  server.addHook("onClose", async () => {
+    await Promise.allSettled([...activeTasks]);
   });
 
   function enforceSameOrigin(request: FastifyRequest, reply: FastifyReply): boolean {
@@ -66,6 +95,81 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
       return undefined;
     }
     return user;
+  }
+
+  async function inspectRuntime(appId: string): Promise<RunnerStatus | {
+    readonly appId: string;
+    readonly status: "unknown";
+    readonly containerId: null;
+    readonly containerName: null;
+    readonly image: null;
+    readonly observedVersion: null;
+    readonly health: null;
+    readonly startedAt: null;
+    readonly message: string;
+  }> {
+    try {
+      return await runnerClient.status(appId);
+    } catch {
+      return {
+        appId,
+        status: "unknown",
+        containerId: null,
+        containerName: null,
+        image: null,
+        observedVersion: null,
+        health: null,
+        startedAt: null,
+        message: "Không đọc được trạng thái container từ Deployment Runner.",
+      };
+    }
+  }
+
+  async function executeOperation(
+    operation: OperationRecord,
+    actor: SessionUser,
+    ipAddress: string,
+  ): Promise<void> {
+    db.markOperationRunning(operation.id);
+    try {
+      const result = await runnerClient.execute(
+        operation.applicationId,
+        operation.action,
+        operation.requestedVersion ?? undefined,
+      );
+      if (operation.action === "update" && operation.requestedVersion) {
+        db.setDesiredVersion(operation.applicationId, operation.requestedVersion);
+      }
+      db.finishOperation(operation.id, "succeeded", result.message);
+      db.addAudit({
+        actorUserId: actor.id,
+        actorUsername: actor.username,
+        action: `application.${operation.action}`,
+        resourceType: "application",
+        resourceId: operation.applicationId,
+        outcome: "succeeded",
+        detail: result.message,
+        ipAddress,
+      });
+    } catch (error) {
+      const message = operationFailureMessage(error);
+      db.finishOperation(operation.id, "failed", message);
+      db.addAudit({
+        actorUserId: actor.id,
+        actorUsername: actor.username,
+        action: `application.${operation.action}`,
+        resourceType: "application",
+        resourceId: operation.applicationId,
+        outcome: "failed",
+        detail: message,
+        ipAddress,
+      });
+    }
+  }
+
+  function trackOperation(task: Promise<void>): void {
+    activeTasks.add(task);
+    void task.finally(() => activeTasks.delete(task));
   }
 
   server.get("/api/health", async () => ({ status: "ok", service: "control-api" }));
@@ -149,7 +253,10 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     if (!user) return;
     const applications = db.listApplications();
     const data = await Promise.all(applications.map(async (application) => {
-      const health = await healthInspector(application, config.gatewayBaseUrl);
+      const [health, runtime] = await Promise.all([
+        healthInspector(application, config.gatewayBaseUrl),
+        inspectRuntime(application.id),
+      ]);
       return {
         id: application.id,
         slug: application.slug,
@@ -165,19 +272,77 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
           httpStatus: health.httpStatus,
           message: health.message,
         },
-        runtime: {
-          status: "not_integrated",
-          source: "runner_pending",
-          message: "Trạng thái container sẽ được bổ sung khi tích hợp Deployment Runner.",
-        },
+        runtime: { ...runtime, source: "deployment_runner" },
+        activeOperation: db.findActiveOperation(application.id) ?? null,
       };
     }));
     const healthy = data.filter((item) => item.health.status === "healthy").length;
+    const running = data.filter((item) => item.runtime.status === "running").length;
     return {
       data,
-      summary: { total: data.length, healthy, attention: data.length - healthy },
+      summary: { total: data.length, healthy, running, attention: data.length - healthy },
       checkedAt: new Date().toISOString(),
     };
+  });
+
+  server.post<{ Params: { appId: string }; Body: ActionBody }>("/api/v1/applications/:appId/actions", {
+    schema: {
+      params: {
+        type: "object",
+        additionalProperties: false,
+        required: ["appId"],
+        properties: { appId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 } },
+      },
+      body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["action"],
+        properties: {
+          action: { type: "string", enum: ["start", "stop", "restart", "update"] },
+          version: { type: "string", minLength: 1, maxLength: 64 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    if (!enforceSameOrigin(request, reply)) return;
+    const user = requireUser(request, reply);
+    if (!user) return;
+    const application = db.findApplication(request.params.appId);
+    if (!application) {
+      return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần thao tác." });
+    }
+    if (request.body.action === "update" && !request.body.version) {
+      return reply.code(400).send({ error: "version_required", message: "Thao tác cập nhật cần một phiên bản đích." });
+    }
+    if (request.body.action !== "update" && request.body.version) {
+      return reply.code(400).send({ error: "unexpected_version", message: "Thao tác này không nhận phiên bản đích." });
+    }
+    if (db.findActiveOperation(application.id)) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+
+    const operation = db.createOperation({
+      applicationId: application.id,
+      action: request.body.action,
+      ...(request.body.version ? { requestedVersion: request.body.version } : {}),
+      requestedBy: user.username,
+    });
+    trackOperation(executeOperation(operation, user, requestIp(request)));
+    return reply.code(202).send({ data: operation });
+  });
+
+  server.get<{ Querystring: { limit?: number } }>("/api/v1/operations", {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: { limit: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    return { data: db.listOperations(request.query.limit ?? 20) };
   });
 
   server.get<{ Querystring: { limit?: number } }>("/api/v1/audit-events", {

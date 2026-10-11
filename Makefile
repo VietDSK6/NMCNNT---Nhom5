@@ -1,10 +1,13 @@
-.PHONY: build up down status logs smoke test-p0-2 test config
+.PHONY: build prepare-images up down status logs smoke test-p0-2 test-p0-2b test-unit test config
 
 build:
 	docker compose build
 
-up:
-	docker compose up --build --wait
+prepare-images:
+	docker build --build-arg APP_VERSION=v2.0.0 --tag mini-paas/app-a:v2.0.0 ./apps/app-a
+
+up: build prepare-images
+	docker compose up -d --wait
 
 down:
 	docker compose down
@@ -21,7 +24,15 @@ smoke:
 test-p0-2:
 	./tests/integration/p0_2.sh
 
-test: smoke test-p0-2
+test-p0-2b:
+	./tests/integration/p0_2b.sh
+
+test-unit:
+	cd platform/runner && npm test
+	cd platform/control-api && npm test
+	cd platform/dashboard && npm run build
+
+test: test-unit smoke test-p0-2 test-p0-2b
 
 config:
 	docker compose config --quiet

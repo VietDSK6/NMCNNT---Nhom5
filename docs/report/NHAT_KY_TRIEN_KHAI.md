@@ -82,3 +82,50 @@ Lần kiểm tra trình duyệt đầu tiên cho thấy vùng nội dung Dashboa
 - `node:sqlite` trên Node.js 24 vẫn phát cảnh báo thử nghiệm.
 - Chưa có start/stop/restart/update, log container hoặc CPU/RAM.
 - Cookie local chưa bật `Secure` vì chưa có HTTPS; VPS phải bật sau khi cấu hình TLS.
+
+## 11/10/2026 — Hoàn thành P0.2B: Deployment Runner
+
+### Phạm vi thực hiện
+
+- Thêm Deployment Runner nội bộ, là container duy nhất được gắn Docker socket.
+- Thêm allowlist cho app, action và version; không có chức năng chạy lệnh shell tùy ý.
+- Thêm migration SQLite số 2 và bảng `operations`, cùng khóa một operation hoạt động trên mỗi app.
+- Thêm API bất đồng bộ để start, stop, restart, update; lưu kết quả vào operation và audit.
+- Dashboard hiển thị riêng health HTTP/trạng thái container, có nút vòng đời và lịch sử operation.
+- Chuẩn bị ảnh App A v1/v2; update thay container và phục hồi container cũ nếu bản mới không khỏe.
+- Nginx dùng DNS động Docker để theo địa chỉ container sau khi thay thế.
+
+### Kết quả kiểm chứng
+
+- Deployment Runner unit test: 5/5 đạt.
+- Control API unit test: 6/6 đạt.
+- Dashboard production build: đạt.
+- Regression P0.1: 9/9 đạt.
+- Integration P0.2: 15/15 đạt.
+- Integration P0.2B: 21 kiểm tra đạt.
+- Đã thực hiện thật: dừng/khởi động/khởi động lại App B, update App A v1 → v2 → v1.
+- Đã xác nhận Runner từ chối request thiếu secret, action `exec` và version `latest`.
+- Đã xác nhận Docker socket chỉ được mount vào Runner; Runner không có port host.
+- Trạng thái cuối: 6/6 service healthy; App A và App B ở v1.0.0.
+- Giao diện desktop hiển thị đúng dữ liệu và control thật; các nút vận hành có thể focus bằng phím Tab. Theo quy tắc tạm thời của mốc này, không thực hiện kiểm tra responsive.
+
+### Sự cố và cách xử lý
+
+Lần chạy đầu cho thấy Gateway trả 502 sau khi Control API được recreate. Nguyên nhân là Nginx giữ IP upstream đã phân giải khi khởi động, trong khi container mới nhận IP khác. Cấu hình được đổi sang Docker DNS `127.0.0.11`, khai báo `resolve` cho từng upstream và thêm shared zone.
+
+Khi App B bị dừng, request có thể chờ lâu trước khi Gateway báo lỗi. Gateway được bổ sung giới hạn `proxy_connect_timeout`, `proxy_send_timeout` và `proxy_read_timeout`. Tùy thời điểm DNS/kết nối, kết quả hợp lệ là 502 hoặc 504; cả hai đều chứng minh data plane không còn phục vụ app đã dừng.
+
+### Nội dung có thể dùng cho báo cáo
+
+- Chương 3: nguyên tắc đặc quyền tối thiểu, ranh giới Runner và nguy cơ Docker socket.
+- Chương 3: operation state machine, khóa theo ứng dụng và luồng control plane.
+- Chương 4: Docker Engine API qua Unix socket, replace container và Docker DNS động.
+- Chương 5: T03 cập nhật phiên bản, T04 dừng/khôi phục, T07 auth/allowlist/socket boundary.
+
+### Giới hạn cần ghi đúng
+
+- Runner có Docker socket nên vẫn là thành phần quyền rất cao, không phải sandbox an toàn để nhận mã không tin cậy.
+- Update chỉ dùng image chuẩn bị trước trong catalog; chưa build từ Git repository.
+- Cơ chế phục hồi trong một lần update lỗi chưa phải rollback lịch sử release đầy đủ.
+- Operation không có message broker bền vững; Control API dừng đột ngột có thể cần đối soát thủ công.
+- Kết quả hiện tại chạy trên macOS 27.0 ARM64, OrbStack/Docker Engine 29.4.0; cần nghiệm thu lại trên VPS Linux.

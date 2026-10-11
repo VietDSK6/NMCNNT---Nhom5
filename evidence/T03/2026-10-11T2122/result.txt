@@ -1,0 +1,8 @@
+ĐẠT: Tiếp nhận update App A lên v2.0.0.
+ĐẠT: Operation update v2.0.0 kết thúc với trạng thái succeeded.
+ĐẠT: Endpoint phiên bản qua Gateway trả v2.0.0.
+ĐẠT: Phiên bản latest bị Runner từ chối vì ngoài allowlist.
+ĐẠT: Operation đưa App A về v1.0.0 kết thúc với trạng thái succeeded.
+ĐẠT: Endpoint phiên bản cuối cùng trả v1.0.0.
+
+Toàn bộ bộ P0.2B: 21 kiểm tra đạt.

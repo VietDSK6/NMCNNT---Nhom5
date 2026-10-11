@@ -4,7 +4,7 @@ services:
   gateway:
     build:
       context: ./platform/gateway
-    image: mini-paas/gateway:p0.2
+    image: mini-paas/gateway:p0.2b
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
     depends_on:
@@ -46,7 +46,7 @@ services:
   dashboard:
     build:
       context: ./platform/dashboard
-    image: mini-paas/dashboard:p0.2
+    image: mini-paas/dashboard:p0.2b
     expose:
       - "8080"
     networks:
@@ -78,7 +78,7 @@ services:
   control-api:
     build:
       context: ./platform/control-api
-    image: mini-paas/control-api:p0.2
+    image: mini-paas/control-api:p0.2b
     environment:
       HOST: 0.0.0.0
       PORT: 3000
@@ -89,8 +89,13 @@ services:
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       PUBLIC_ORIGIN: http://127.0.0.1:${GATEWAY_PORT:-8080}
       GATEWAY_BASE_URL: http://gateway:8080
+      RUNNER_BASE_URL: http://runner:3001
+      RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?Hãy tạo file .env và đặt RUNNER_SHARED_SECRET}
       APP_A_VERSION: ${APP_A_VERSION:-v1.0.0}
       APP_B_VERSION: ${APP_B_VERSION:-v1.0.0}
+    depends_on:
+      runner:
+        condition: service_healthy
     expose:
       - "3000"
     networks:
@@ -125,12 +130,59 @@ services:
         max-size: 5m
         max-file: "2"
 
+  runner:
+    build:
+      context: ./platform/runner
+    image: mini-paas/deployment-runner:p0.2b
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DOCKER_SOCKET: /var/run/docker.sock
+      COMPOSE_PROJECT_NAME: mini-paas
+      RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?Hãy tạo file .env và đặt RUNNER_SHARED_SECRET}
+    expose:
+      - "3001"
+    networks:
+      - control
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/health').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    cpus: 0.25
+    mem_limit: 96m
+    pids_limit: 75
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
   app-a:
     build:
       context: ./apps/app-a
       args:
         APP_VERSION: ${APP_A_VERSION:-v1.0.0}
     image: mini-paas/app-a:${APP_A_VERSION:-v1.0.0}
+    labels:
+      io.mini-paas.managed: "true"
+      io.mini-paas.app-id: app-a
     expose:
       - "3000"
     networks:
@@ -169,6 +221,9 @@ services:
       args:
         APP_VERSION: ${APP_B_VERSION:-v1.0.0}
     image: mini-paas/app-b:${APP_B_VERSION:-v1.0.0}
+    labels:
+      io.mini-paas.managed: "true"
+      io.mini-paas.app-id: app-b
     expose:
       - "3000"
     networks:

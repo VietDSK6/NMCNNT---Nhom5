@@ -1,0 +1,2 @@
+./tests/integration/p0_2b.sh
+docker compose ps
