@@ -1,0 +1,11 @@
+docker compose config --quiet
+docker compose up --build --wait
+./tests/smoke/p0_1.sh
+
+APP_A_VERSION=v2.0.0 docker compose build app-a
+APP_A_VERSION=v2.0.0 docker compose up -d --wait --force-recreate app-a gateway
+APP_A_VERSION=v2.0.0 ./tests/smoke/p0_1.sh
+
+docker compose up -d --build --wait --force-recreate app-a gateway
+./tests/smoke/p0_1.sh
+docker compose ps

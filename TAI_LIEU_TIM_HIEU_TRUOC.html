@@ -1,0 +1,2129 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Bộ tài liệu tìm hiểu trước khi triển khai Mini PaaS cho nhóm bốn thành viên.">
+  <title>Bộ tài liệu khởi động Mini PaaS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: oklch(97.5% 0.014 83);
+      --paper-deep: oklch(93.5% 0.025 78);
+      --ink: oklch(24% 0.045 238);
+      --ink-soft: oklch(43% 0.036 238);
+      --line: oklch(82% 0.035 78);
+      --navy: oklch(31% 0.09 238);
+      --navy-deep: oklch(23% 0.075 238);
+      --orange: oklch(67% 0.17 47);
+      --orange-pale: oklch(91% 0.055 62);
+      --green: oklch(53% 0.105 155);
+      --green-pale: oklch(91% 0.05 153);
+      --red: oklch(50% 0.15 28);
+      --red-pale: oklch(92% 0.045 28);
+      --focus: oklch(62% 0.18 250);
+      --shadow: 0 18px 50px oklch(25% 0.04 238 / 0.10);
+      --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --font-body: "Avenir Next", Avenir, "Trebuchet MS", sans-serif;
+      --font-code: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --step--1: 0.84rem;
+      --step-0: 1rem;
+      --step-1: clamp(1.15rem, 1.05rem + 0.42vw, 1.36rem);
+      --step-2: clamp(1.45rem, 1.18rem + 1.12vw, 2rem);
+      --step-3: clamp(2rem, 1.46rem + 2.25vw, 3.15rem);
+      --step-4: clamp(2.7rem, 1.75rem + 4vw, 4.9rem);
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-5: 1.5rem;
+      --space-6: 2rem;
+      --space-7: 3rem;
+      --space-8: 4rem;
+      --content: 76rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 5rem;
+    }
+
+    body {
+      margin: 0;
+      min-width: 18rem;
+      background:
+        linear-gradient(90deg, transparent 0 49.8%, oklch(72% 0.045 78 / 0.13) 50%, transparent 50.2%) 0 0 / 4rem 4rem,
+        linear-gradient(oklch(72% 0.045 78 / 0.08) 1px, transparent 1px) 0 0 / 100% 1.5rem,
+        var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: var(--step-0);
+      line-height: 1.65;
+      font-kerning: normal;
+    }
+
+    a {
+      color: var(--navy);
+      text-decoration-thickness: 0.09em;
+      text-underline-offset: 0.18em;
+    }
+
+    a:hover {
+      color: var(--orange);
+    }
+
+    button,
+    input,
+    summary {
+      font: inherit;
+    }
+
+    button,
+    summary,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 0.75rem;
+      left: 0.75rem;
+      transform: translateY(-160%);
+      padding: 0.75rem 1rem;
+      background: var(--navy-deep);
+      color: var(--paper);
+      text-decoration: none;
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .read-progress {
+      position: fixed;
+      z-index: 90;
+      inset: 0 0 auto;
+      height: 4px;
+      background: var(--paper-deep);
+    }
+
+    .read-progress > span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: var(--orange);
+      transform-origin: left;
+      transition: width 100ms linear;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: var(--navy-deep);
+      color: var(--paper);
+      padding:
+        max(4.5rem, env(safe-area-inset-top))
+        max(1.25rem, env(safe-area-inset-right))
+        4rem
+        max(1.25rem, env(safe-area-inset-left));
+    }
+
+    .hero::after {
+      content: "P0";
+      position: absolute;
+      right: -0.08em;
+      bottom: -0.34em;
+      color: oklch(95% 0.025 78 / 0.055);
+      font-family: var(--font-display);
+      font-size: clamp(12rem, 38vw, 34rem);
+      font-weight: 700;
+      line-height: 0.8;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: var(--content);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--space-7);
+    }
+
+    .eyebrow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem 1.25rem;
+      align-items: center;
+      margin: 0;
+      color: var(--orange-pale);
+      font-size: var(--step--1);
+      font-weight: 700;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 2.75rem;
+      height: 3px;
+      background: var(--orange);
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      margin: 0;
+      font-family: var(--font-display);
+      line-height: 1.08;
+      text-wrap: balance;
+    }
+
+    h1 {
+      max-width: 12ch;
+      margin-top: var(--space-4);
+      font-size: var(--step-4);
+      font-weight: 700;
+      letter-spacing: -0.045em;
+    }
+
+    .hero-summary {
+      display: grid;
+      gap: var(--space-5);
+      align-items: end;
+    }
+
+    .lead {
+      max-width: 63ch;
+      margin: 0;
+      color: oklch(89% 0.018 225);
+      font-size: var(--step-1);
+      line-height: 1.55;
+    }
+
+    .hero-facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: oklch(82% 0.025 225 / 0.26);
+      border: 1px solid oklch(82% 0.025 225 / 0.26);
+    }
+
+    .fact {
+      min-height: 6.75rem;
+      padding: var(--space-4);
+      background: var(--navy-deep);
+    }
+
+    .fact strong {
+      display: block;
+      color: var(--orange);
+      font-family: var(--font-display);
+      font-size: var(--step-3);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .fact span {
+      display: block;
+      margin-top: var(--space-2);
+      color: oklch(86% 0.02 225);
+      font-size: var(--step--1);
+    }
+
+    .action-bar {
+      position: sticky;
+      z-index: 70;
+      top: 4px;
+      background: oklch(97.5% 0.014 83 / 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    .action-inner {
+      max-width: var(--content);
+      margin: 0 auto;
+      min-height: 3.75rem;
+      padding: 0.5rem max(1rem, env(safe-area-inset-right)) 0.5rem max(1rem, env(safe-area-inset-left));
+      display: flex;
+      gap: var(--space-3);
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .document-label {
+      overflow: hidden;
+      font-size: var(--step--1);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      gap: var(--space-2);
+    }
+
+    .button {
+      min-height: 2.75rem;
+      padding: 0.6rem 0.9rem;
+      border: 1px solid var(--navy);
+      border-radius: 0;
+      background: transparent;
+      color: var(--navy);
+      cursor: pointer;
+      font-size: var(--step--1);
+      font-weight: 800;
+      transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1), background-color 150ms linear, color 150ms linear;
+    }
+
+    .button:hover {
+      background: var(--navy);
+      color: var(--paper);
+      transform: translateY(-1px);
+    }
+
+    .button:active {
+      transform: translateY(1px);
+    }
+
+    .page-grid {
+      max-width: var(--content);
+      margin: 0 auto;
+      padding: var(--space-6) max(1rem, env(safe-area-inset-right)) var(--space-8) max(1rem, env(safe-area-inset-left));
+    }
+
+    .toc {
+      margin-bottom: var(--space-6);
+      border-block: 1px solid var(--line);
+    }
+
+    .toc summary {
+      min-height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: var(--step--1);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      list-style: none;
+      text-transform: uppercase;
+    }
+
+    .toc summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .toc summary::after {
+      content: "+";
+      color: var(--orange);
+      font-size: 1.5rem;
+      font-weight: 400;
+    }
+
+    .toc[open] summary::after {
+      content: "−";
+    }
+
+    .toc nav {
+      padding: 0 0 var(--space-4);
+    }
+
+    .toc ol {
+      margin: 0;
+      padding-left: 1.35rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 0.35rem 0;
+      color: var(--ink-soft);
+      font-size: var(--step--1);
+      text-decoration: none;
+    }
+
+    .toc a[aria-current="true"] {
+      color: var(--orange);
+      font-weight: 800;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .section {
+      padding: var(--space-7) 0;
+      border-bottom: 1px solid var(--line);
+      scroll-margin-top: 5rem;
+    }
+
+    .section:first-child {
+      padding-top: var(--space-4);
+    }
+
+    .section-kicker {
+      margin: 0 0 var(--space-3);
+      color: var(--orange);
+      font-size: var(--step--1);
+      font-weight: 900;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      max-width: 19ch;
+      margin-bottom: var(--space-5);
+      color: var(--navy-deep);
+      font-size: var(--step-3);
+      letter-spacing: -0.03em;
+    }
+
+    h3 {
+      margin: var(--space-7) 0 var(--space-4);
+      color: var(--navy);
+      font-size: var(--step-2);
+      letter-spacing: -0.02em;
+    }
+
+    h4 {
+      margin: var(--space-5) 0 var(--space-3);
+      font-family: var(--font-body);
+      font-size: var(--step-1);
+      line-height: 1.25;
+    }
+
+    p,
+    li {
+      max-width: 72ch;
+    }
+
+    p {
+      margin: 0 0 var(--space-4);
+    }
+
+    ul,
+    ol {
+      margin: 0 0 var(--space-5);
+      padding-left: 1.35rem;
+    }
+
+    li + li {
+      margin-top: 0.45rem;
+    }
+
+    li::marker {
+      color: var(--orange);
+      font-weight: 800;
+    }
+
+    .intro-grid,
+    .role-grid,
+    .lab-grid,
+    .source-grid {
+      display: grid;
+      gap: var(--space-5);
+    }
+
+    .principle {
+      padding: var(--space-5) 0;
+      border-top: 3px solid var(--navy);
+    }
+
+    .principle strong {
+      display: block;
+      margin-bottom: var(--space-2);
+      color: var(--navy);
+      font-size: var(--step-1);
+    }
+
+    .callout {
+      margin: var(--space-6) 0;
+      padding: var(--space-5);
+      background: var(--orange-pale);
+      border: 1px solid color-mix(in oklch, var(--orange) 38%, var(--paper));
+    }
+
+    .callout strong {
+      color: var(--navy-deep);
+    }
+
+    .callout.warning {
+      background: var(--red-pale);
+      border-color: color-mix(in oklch, var(--red) 35%, var(--paper));
+    }
+
+    .callout.success {
+      background: var(--green-pale);
+      border-color: color-mix(in oklch, var(--green) 35%, var(--paper));
+    }
+
+    .code-map {
+      max-width: 62rem;
+      overflow-x: auto;
+      margin: var(--space-5) 0;
+      padding: var(--space-5);
+      background: var(--navy-deep);
+      color: var(--paper);
+      font-family: var(--font-code);
+      font-size: 0.88rem;
+      line-height: 1.75;
+      white-space: pre;
+    }
+
+    .topic {
+      padding: var(--space-5) 0 var(--space-6);
+      border-top: 1px solid var(--line);
+    }
+
+    .topic-number,
+    .role-number,
+    .lab-number {
+      display: inline-flex;
+      min-width: 2rem;
+      min-height: 2rem;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-3);
+      background: var(--navy);
+      color: var(--paper);
+      font-size: var(--step--1);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .source-list {
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .source-list li {
+      position: relative;
+      padding-left: 1.4rem;
+    }
+
+    .source-list li::before {
+      content: "↗";
+      position: absolute;
+      left: 0;
+      color: var(--orange);
+      font-weight: 900;
+    }
+
+    .check-item {
+      display: grid;
+      grid-template-columns: 1.5rem 1fr;
+      gap: var(--space-3);
+      align-items: start;
+      max-width: 74ch;
+      margin: var(--space-3) 0;
+      cursor: pointer;
+    }
+
+    .check-item input {
+      width: 1.15rem;
+      height: 1.15rem;
+      margin: 0.32rem 0 0;
+      accent-color: var(--green);
+    }
+
+    .check-item span {
+      transition: color 150ms linear, text-decoration-color 150ms linear;
+    }
+
+    .check-item input:checked + span {
+      color: var(--ink-soft);
+      text-decoration: line-through;
+      text-decoration-color: var(--green);
+      text-decoration-thickness: 2px;
+    }
+
+    .role {
+      position: relative;
+      padding: var(--space-6);
+      background: color-mix(in oklch, var(--paper) 82%, var(--paper-deep));
+      border: 1px solid var(--line);
+      container-type: inline-size;
+    }
+
+    .role::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      background: var(--orange);
+    }
+
+    .role h3 {
+      margin-top: 0;
+      max-width: 22ch;
+    }
+
+    .role-tag {
+      display: inline-block;
+      margin-bottom: var(--space-4);
+      color: var(--ink-soft);
+      font-size: var(--step--1);
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @container (min-width: 42rem) {
+      .role-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+        gap: var(--space-6);
+      }
+    }
+
+    .lab {
+      padding: var(--space-5);
+      background: var(--navy-deep);
+      color: var(--paper);
+    }
+
+    .lab h3 {
+      margin-top: 0;
+      color: var(--orange-pale);
+    }
+
+    .lab a {
+      color: var(--orange-pale);
+    }
+
+    .lab li::marker {
+      color: var(--orange);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: var(--space-5) 0;
+      border: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      min-width: 42rem;
+      border-collapse: collapse;
+      background: color-mix(in oklch, var(--paper) 88%, var(--paper-deep));
+      font-size: 0.94rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th,
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--navy);
+      color: var(--paper);
+      font-size: var(--step--1);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .quiz {
+      counter-reset: quiz;
+      display: grid;
+      gap: 0;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--line);
+    }
+
+    .quiz li {
+      counter-increment: quiz;
+      max-width: none;
+      display: grid;
+      grid-template-columns: 2.5rem 1fr;
+      gap: var(--space-4);
+      margin: 0;
+      padding: var(--space-4) 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .quiz li::before {
+      content: counter(quiz, decimal-leading-zero);
+      color: var(--orange);
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .source-group {
+      padding-top: var(--space-4);
+      border-top: 3px solid var(--navy);
+    }
+
+    .source-group h3 {
+      margin-top: 0;
+    }
+
+    .defer-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      padding: 0;
+      list-style: none;
+    }
+
+    .defer-list li {
+      margin: 0;
+      padding: 0.45rem 0.65rem;
+      background: var(--paper-deep);
+      border: 1px solid var(--line);
+      font-size: var(--step--1);
+      font-weight: 700;
+    }
+
+    .footer {
+      padding: var(--space-7) max(1rem, env(safe-area-inset-right)) max(3rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      background: var(--navy-deep);
+      color: oklch(88% 0.02 225);
+    }
+
+    .footer-inner {
+      max-width: var(--content);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--space-5);
+    }
+
+    .footer strong {
+      color: var(--orange-pale);
+      font-family: var(--font-display);
+      font-size: var(--step-2);
+    }
+
+    .footer p {
+      margin: 0;
+    }
+
+    .back-to-top {
+      color: var(--orange-pale);
+      font-weight: 800;
+    }
+
+    @media (min-width: 42rem) {
+      .hero-summary {
+        grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
+      }
+
+      .hero-facts {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .intro-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .lab-grid,
+      .source-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .footer-inner {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+    }
+
+    @media (min-width: 64rem) {
+      .page-grid {
+        display: grid;
+        grid-template-columns: 15rem minmax(0, 1fr);
+        gap: clamp(3rem, 7vw, 7rem);
+        align-items: start;
+      }
+
+      .toc {
+        position: sticky;
+        top: 5rem;
+        max-height: calc(100vh - 6rem);
+        overflow-y: auto;
+        margin: 0;
+        border-top: 3px solid var(--navy);
+      }
+
+      .toc summary {
+        pointer-events: none;
+      }
+
+      .toc summary::after {
+        display: none;
+      }
+
+      .toc nav {
+        display: block;
+      }
+
+      .role-grid {
+        gap: var(--space-6);
+      }
+    }
+
+    @media (hover: hover) {
+      .toc a:hover {
+        padding-left: 0.25rem;
+      }
+    }
+
+    @media (pointer: coarse) {
+      .toc a,
+      .button {
+        min-height: 2.75rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media print {
+      @page {
+        margin: 18mm 16mm;
+      }
+
+      body {
+        background: white;
+        color: #17232d;
+        font-size: 10.5pt;
+      }
+
+      .read-progress,
+      .action-bar,
+      .toc,
+      .skip-link,
+      .button {
+        display: none !important;
+      }
+
+      .hero {
+        min-height: 0;
+        padding: 12mm 0 10mm;
+        background: white;
+        color: #17232d;
+        border-bottom: 2px solid #17232d;
+      }
+
+      .hero::after {
+        display: none;
+      }
+
+      .eyebrow,
+      .lead,
+      .fact span {
+        color: #24384a;
+      }
+
+      .hero-facts {
+        border-color: #c8c3b7;
+        background: #c8c3b7;
+      }
+
+      .fact {
+        min-height: 0;
+        background: white;
+      }
+
+      .fact strong {
+        color: #a83d18;
+      }
+
+      .page-grid {
+        display: block;
+        max-width: none;
+        padding: 0;
+      }
+
+      .section {
+        break-inside: auto;
+        padding: 10mm 0;
+      }
+
+      .role,
+      .lab,
+      .callout,
+      .table-wrap,
+      .source-group {
+        break-inside: avoid;
+      }
+
+      .lab {
+        background: #f2eee4;
+        color: #17232d;
+        border: 1px solid #c8c3b7;
+      }
+
+      .lab h3,
+      .lab a {
+        color: #24384a;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .source-list a::after {
+        content: " (" attr(href) ")";
+        font-family: var(--font-code);
+        font-size: 7.5pt;
+        overflow-wrap: anywhere;
+      }
+
+      .check-item input {
+        appearance: none;
+        width: 11pt;
+        height: 11pt;
+        border: 1px solid #24384a;
+      }
+
+      .footer {
+        padding: 10mm 0 0;
+        background: white;
+        color: #17232d;
+        border-top: 2px solid #17232d;
+      }
+    }
+  </style>
+  <style id="giao-dien-toi-gian">
+    :root {
+      --paper: #f7f9fc;
+      --paper-deep: #eef3f8;
+      --ink: #172033;
+      --ink-soft: #556176;
+      --line: #d8e0ea;
+      --navy: #1859a9;
+      --navy-deep: #123e73;
+      --orange: #1859a9;
+      --orange-pale: #eaf2fc;
+      --green: #277a50;
+      --green-pale: #eaf6ef;
+      --red: #b33a3a;
+      --red-pale: #fff0f0;
+      --focus: #0b66c3;
+      --shadow: none;
+      --font-display: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+      --font-body: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+      --font-code: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --step--1: 0.875rem;
+      --step-0: 1rem;
+      --step-1: clamp(1.12rem, 1.07rem + 0.2vw, 1.25rem);
+      --step-2: clamp(1.38rem, 1.22rem + 0.65vw, 1.75rem);
+      --step-3: clamp(1.75rem, 1.45rem + 1.2vw, 2.4rem);
+      --step-4: clamp(2rem, 1.6rem + 1.8vw, 3rem);
+      --content: 72rem;
+    }
+
+    html {
+      scroll-padding-top: 4.75rem;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.72;
+    }
+
+    a {
+      color: var(--navy);
+      text-decoration-thickness: 0.075em;
+      text-underline-offset: 0.18em;
+    }
+
+    a:hover {
+      color: var(--navy-deep);
+    }
+
+    .read-progress {
+      height: 3px;
+      background: #e3eaf2;
+    }
+
+    .read-progress > span {
+      background: var(--navy);
+    }
+
+    .hero {
+      overflow: visible;
+      background: #ffffff;
+      color: var(--ink);
+      padding: max(3.5rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) 3rem max(1.25rem, env(safe-area-inset-left));
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hero::after {
+      display: none;
+    }
+
+    .hero-inner {
+      gap: 1.5rem;
+    }
+
+    .eyebrow {
+      display: block;
+      margin-bottom: 0.75rem;
+      color: var(--navy);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: none;
+    }
+
+    .eyebrow::before {
+      display: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: var(--font-display);
+      letter-spacing: -0.018em;
+    }
+
+    h1 {
+      max-width: 18ch;
+      margin: 0;
+      font-size: var(--step-4);
+      line-height: 1.2;
+    }
+
+    .lead {
+      max-width: 68ch;
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      line-height: 1.75;
+    }
+
+    .hero-summary {
+      gap: 1.5rem;
+    }
+
+    .hero-facts {
+      gap: 0.75rem;
+    }
+
+    .fact {
+      min-height: auto;
+      padding: 0.95rem 1rem;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 0.5rem;
+    }
+
+    .fact strong {
+      color: var(--navy);
+      font-family: var(--font-body);
+      font-size: 1.3rem;
+    }
+
+    .fact span {
+      color: var(--ink-soft);
+    }
+
+    .action-bar {
+      background: rgba(255, 255, 255, 0.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: none;
+    }
+
+    .document-label {
+      color: var(--ink-soft);
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .button {
+      background: #ffffff;
+      color: var(--navy);
+      border: 1px solid #b8c8dc;
+      border-radius: 0.4rem;
+      box-shadow: none;
+    }
+
+    .button:hover {
+      background: var(--orange-pale);
+      color: var(--navy-deep);
+      transform: none;
+    }
+
+    .page-grid {
+      gap: 2.5rem;
+      padding-top: 2rem;
+      padding-bottom: 4rem;
+    }
+
+    .toc {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 0.55rem;
+      box-shadow: none;
+    }
+
+    .toc summary {
+      color: var(--ink);
+    }
+
+    .toc a {
+      border-left-color: transparent;
+    }
+
+    .toc a:hover,
+    .toc a[aria-current="true"] {
+      background: var(--orange-pale);
+      color: var(--navy-deep);
+      border-left-color: var(--navy);
+    }
+
+    main {
+      max-width: 100%;
+    }
+
+    .section {
+      padding: 2rem 0 2.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section:first-child {
+      padding-top: 0;
+    }
+
+    .section-kicker {
+      color: var(--navy);
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+    }
+
+    .section h2 {
+      color: var(--ink);
+      line-height: 1.28;
+    }
+
+    .section > p,
+    .section > ul,
+    .section > ol {
+      max-width: 72ch;
+    }
+
+    .intro-grid,
+    .topic,
+    .role,
+    .lab,
+    .callout,
+    .table-wrap,
+    .source-card {
+      box-shadow: none;
+    }
+
+    .principle,
+    .topic,
+    .role,
+    .source-card {
+      background: #ffffff;
+      border-color: var(--line);
+      border-radius: 0.55rem;
+    }
+
+    .principle::before,
+    .topic::before {
+      display: none;
+    }
+
+    .topic-number,
+    .lab-number {
+      background: var(--orange-pale);
+      color: var(--navy);
+      border: 1px solid #c8d9ee;
+    }
+
+    .role {
+      border-top: 3px solid var(--navy);
+    }
+
+    .role-tag {
+      background: var(--orange-pale);
+      color: var(--navy-deep);
+      letter-spacing: 0.02em;
+    }
+
+    .lab {
+      background: #ffffff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 0.55rem;
+    }
+
+    .lab h3,
+    .lab strong,
+    .lab p,
+    .lab li {
+      color: inherit;
+    }
+
+    .callout {
+      background: #eef5fd;
+      color: var(--ink);
+      border-left: 4px solid var(--navy);
+      border-radius: 0.25rem;
+    }
+
+    .callout.success {
+      background: var(--green-pale);
+      border-left-color: var(--green);
+    }
+
+    .callout.warning {
+      background: #fff7e8;
+      border-left-color: #a86a08;
+    }
+
+    .code-map {
+      background: #f1f5f9;
+      color: #243148;
+      border: 1px solid var(--line);
+      border-radius: 0.4rem;
+      box-shadow: none;
+    }
+
+    .check-item {
+      background: #f8fafc;
+      border-color: var(--line);
+      border-radius: 0.4rem;
+    }
+
+    .check-item:has(input:checked) {
+      background: var(--green-pale);
+      border-color: #a9d5bc;
+    }
+
+    table {
+      background: #ffffff;
+    }
+
+    thead {
+      background: #edf3fa;
+      color: var(--ink);
+    }
+
+    th,
+    td {
+      border-color: var(--line);
+    }
+
+    .footer {
+      background: #ffffff;
+      color: var(--ink);
+      border-top: 1px solid var(--line);
+    }
+
+    .footer p {
+      color: var(--ink-soft);
+    }
+
+    .back-to-top {
+      color: var(--navy);
+    }
+
+    @media (max-width: 48rem) {
+      .hero {
+        padding-top: 3rem;
+        padding-bottom: 2.25rem;
+      }
+
+      .hero-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .page-grid {
+        gap: 1.5rem;
+        padding-top: 1.25rem;
+      }
+
+      .action-bar {
+        position: static;
+      }
+
+      .action-inner {
+        display: grid;
+        gap: 0.75rem;
+        padding: 0.75rem 1.25rem;
+      }
+
+      .document-label {
+        white-space: normal;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .section {
+        padding: 1.75rem 0 2rem;
+      }
+    }
+
+    @media (max-width: 34rem) {
+      .hero-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .action-inner,
+      .actions {
+        align-items: stretch;
+      }
+
+      .button {
+        width: 100%;
+      }
+    }
+
+    @media print {
+      body {
+        font-family: "Be Vietnam Pro", "Segoe UI", Arial, sans-serif;
+      }
+
+      .hero {
+        padding: 0 0 8mm;
+        border-bottom: 1px solid #cbd5e1;
+      }
+
+      .fact,
+      .topic,
+      .role,
+      .lab,
+      .source-card {
+        border-color: #cbd5e1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#noi-dung">Bỏ qua mục lục</a>
+  <div class="read-progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <header class="hero" id="dau-trang">
+    <div class="hero-inner">
+      <div>
+        <p class="eyebrow">PTIT · Nhập môn công nghệ nền tảng · Mini PaaS</p>
+        <h1>Bộ tài liệu khởi động dự án</h1>
+      </div>
+      <div class="hero-summary">
+        <p class="lead">
+          Gói đọc và thực hành trước khi triển khai P0.1. Mỗi thành viên học phần chung,
+          đào sâu một vai trò và nộp đầu ra có thể dùng trực tiếp cho thiết kế, kiểm thử
+          hoặc báo cáo.
+        </p>
+        <div class="hero-facts" aria-label="Tóm tắt tài liệu">
+          <div class="fact"><strong>48h</strong><span>Thời hạn tìm hiểu đề xuất</span></div>
+          <div class="fact"><strong>04</strong><span>Gói chuyên trách</span></div>
+          <div class="fact"><strong>04</strong><span>Bài thực hành nhỏ</span></div>
+          <div class="fact"><strong>18</strong><span>Câu hỏi kiểm tra chung</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="action-bar">
+    <div class="action-inner">
+      <div class="document-label">Tài liệu học tập · Cập nhật 11/10/2026</div>
+      <div class="actions">
+        <button class="button" type="button" id="resetChecks">Xóa dấu đã chọn</button>
+        <button class="button" type="button" id="printDocument">In / Lưu PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-grid">
+    <details class="toc" open>
+      <summary>Mục lục</summary>
+      <nav aria-label="Mục lục tài liệu">
+        <ol>
+          <li><a href="#muc-tieu">Mục tiêu và cách học</a></li>
+          <li><a href="#kien-thuc-chung">Kiến thức chung</a></li>
+          <li><a href="#thanh-vien-1">Thành viên 1 · Lõi</a></li>
+          <li><a href="#thanh-vien-2">Thành viên 2 · Giao diện</a></li>
+          <li><a href="#thanh-vien-3">Thành viên 3 · Hạ tầng</a></li>
+          <li><a href="#thanh-vien-4">Thành viên 4 · QA</a></li>
+          <li><a href="#dau-ra">Đầu ra sau 48 giờ</a></li>
+          <li><a href="#labs">Bài thực hành</a></li>
+          <li><a href="#bao-cao">Đưa vào báo cáo</a></li>
+          <li><a href="#kiem-tra">Câu hỏi kiểm tra</a></li>
+          <li><a href="#nguon">Nguồn chính thức</a></li>
+          <li><a href="#chua-can-hoc">Chưa cần học</a></li>
+        </ol>
+      </nav>
+    </details>
+
+    <main id="noi-dung">
+      <section class="section" id="muc-tieu">
+        <p class="section-kicker">01 · Bắt đầu đúng hướng</p>
+        <h2>Mục tiêu và cách học</h2>
+        <p>
+          Mục tiêu không phải học hết Docker, vận hành phần mềm hay điện toán đám mây. Sau đợt tìm hiểu,
+          cả nhóm phải đủ khả năng giải thích kiến trúc trên một máy, luồng yêu cầu,
+          ranh giới quyền và cách thu thập minh chứng cho báo cáo.
+        </p>
+
+        <div class="intro-grid">
+          <div class="principle">
+            <strong>Học phần chung</strong>
+            <span>Khoảng 2 giờ cho Docker, mạng, máy chủ trung gian và an toàn.</span>
+          </div>
+          <div class="principle">
+            <strong>Đào sâu vai trò</strong>
+            <span>Khoảng 3–5 giờ theo đúng phần được phân công.</span>
+          </div>
+          <div class="principle">
+            <strong>Nộp đầu ra</strong>
+            <span>Khoảng 1–2 giờ để viết lại bằng lời của mình và chuẩn bị trình bày.</span>
+          </div>
+        </div>
+
+        <div class="callout success">
+          <strong>Quy tắc hoàn thành:</strong> không chỉ gửi danh sách liên kết. Mỗi người phải
+          có ghi chú, câu trả lời, sơ đồ/bảng, nguồn chính thức và phần có thể đưa vào báo cáo.
+        </div>
+
+        <h3>Tài liệu nền của dự án</h3>
+        <ul class="source-list">
+          <li><a href="./AGENTS.md">AGENTS.md — bối cảnh và ranh giới đề tài</a></li>
+          <li><a href="./KE_HOACH_TRIEN_KHAI_1_THANG.md">Kế hoạch triển khai trong một tháng</a></li>
+          <li><a href="./TAI_LIEU_TIM_HIEU_TRUOC.md">Bản Markdown của tài liệu này</a></li>
+        </ul>
+      </section>
+
+      <section class="section" id="kien-thuc-chung">
+        <p class="section-kicker">02 · Tất cả thành viên</p>
+        <h2>Kiến thức chung bắt buộc</h2>
+
+        <article class="topic">
+          <span class="topic-number">01</span>
+          <h3>Docker: ảnh, container và vòng đời</h3>
+          <ul class="source-list">
+            <li><a href="https://docs.docker.com/get-started/docker-overview/">Docker overview</a></li>
+            <li><a href="https://docs.docker.com/compose/gettingstarted/">Docker Compose Quickstart</a></li>
+            <li><a href="https://docs.docker.com/get-started/docker_cheatsheet.pdf">Docker CLI cheat sheet</a></li>
+          </ul>
+          <h4>Cần trả lời</h4>
+          <ol>
+            <li>Ảnh Docker khác container như thế nào?</li>
+            <li>Vì sao container không phải máy ảo?</li>
+            <li>Compose up, stop, start, restart và down khác nhau thế nào?</li>
+            <li>Dữ liệu trong lớp có thể ghi của container có bền vững không?</li>
+            <li>Vì sao không dùng thẻ <code>latest</code> làm bằng chứng phiên bản?</li>
+          </ol>
+          <label class="check-item">
+            <input type="checkbox" data-check="common-docker">
+            <span>Đã đọc nguồn và hoàn thành bảng ảnh Docker · container · máy ảo.</span>
+          </label>
+        </article>
+
+        <article class="topic">
+          <span class="topic-number">02</span>
+          <h3>Docker Compose: dịch vụ, mạng, vùng lưu trữ và kiểm tra sức khỏe</h3>
+          <ul class="source-list">
+            <li><a href="https://docs.docker.com/reference/compose-file/services/">Compose services reference</a></li>
+            <li><a href="https://docs.docker.com/compose/how-tos/networking/">Networking in Compose</a></li>
+            <li><a href="https://docs.docker.com/reference/compose-file/volumes/">Volumes in Compose</a></li>
+            <li><a href="https://docs.docker.com/reference/compose-file/deploy/">Giới hạn tài nguyên trong Docker Compose</a></li>
+          </ul>
+          <h4>Cần giải thích</h4>
+          <ul>
+            <li>Cơ chế tìm dịch vụ qua Docker DNS; cấu hình <code>ports</code> khác <code>expose</code>.</li>
+            <li>Vùng lưu trữ có tên khác với việc gắn trực tiếp thư mục máy chủ.</li>
+            <li>Kiểm tra sức khỏe đo điều gì và không bảo đảm điều gì.</li>
+            <li>Chính sách tự khởi động lại không thay thế kiểm tra sức khỏe.</li>
+            <li>Giới hạn CPU, RAM và số tiến trình giúp kiểm soát tài nguyên ra sao.</li>
+          </ul>
+          <label class="check-item">
+            <input type="checkbox" data-check="common-compose">
+            <span>Đã vẽ sơ đồ mạng và giải thích vùng lưu trữ, kiểm tra sức khỏe.</span>
+          </label>
+        </article>
+
+        <article class="topic">
+          <span class="topic-number">03</span>
+          <h3>HTTP, TCP/IP, DNS và máy chủ trung gian</h3>
+          <ul class="source-list">
+            <li><a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110 — HTTP Semantics</a></li>
+            <li><a href="https://docs.nginx.com/nginx/admin-guide/web-server/">NGINX Web Server và Reverse Proxy</a></li>
+            <li><a href="https://www.rfc-editor.org/rfc/rfc9293.html">RFC 9293 — TCP</a></li>
+          </ul>
+          <div class="code-map" role="img" aria-label="Luồng HTTP qua Nginx">Trình duyệt
+    │ Yêu cầu HTTP
+    ▼
+Nginx — máy chủ trung gian (reverse proxy)
+    │ Mạng nội bộ Docker
+    ▼
+App A hoặc App B
+    │ Phản hồi HTTP
+    ▼
+Trình duyệt</div>
+          <h4>Cần trả lời</h4>
+          <ul>
+            <li>Máy khách, máy chủ, cổng mạng và yêu cầu/phản hồi là gì?</li>
+            <li>Máy chủ trung gian chọn dịch vụ đích theo đường dẫn hoặc tên miền ra sao?</li>
+            <li>Các mã 200, 400, 401, 403, 404, 502 và 503 có nghĩa gì?</li>
+            <li>Vì sao Nginx có thể trả 502 khi ứng dụng dừng?</li>
+          </ul>
+          <label class="check-item">
+            <input type="checkbox" data-check="common-http">
+            <span>Đã giải thích được luồng yêu cầu và các mã HTTP chính.</span>
+          </label>
+        </article>
+
+        <article class="topic">
+          <span class="topic-number">04</span>
+          <h3>Kiến trúc Mini PaaS</h3>
+          <div class="code-map" role="img" aria-label="Ba phần chính của Mini PaaS">MẶT PHẲNG ĐIỀU KHIỂN (CONTROL PLANE)
+Bảng điều khiển ──► API quản trị ──► Bộ thực thi triển khai ──► Docker Engine
+
+MẶT PHẲNG DỮ LIỆU (DATA PLANE)
+Người dùng ──► Nginx ──► Ứng dụng A / Ứng dụng B
+
+KHẢ NĂNG QUAN SÁT (OBSERVABILITY)
+cAdvisor ──► Prometheus ──► Grafana</div>
+          <ul>
+            <li>Bộ thực thi triển khai là thành phần duy nhất trực tiếp điều khiển Docker.</li>
+            <li>Chỉ Nginx công khai cổng mạng trong cấu hình chuẩn.</li>
+            <li>SQLite lưu dữ liệu quản lý; Docker Engine phản ánh trạng thái chạy thực tế.</li>
+            <li>Một máy vẫn là điểm lỗi đơn, không được gọi là hệ thống có tính sẵn sàng cao.</li>
+          </ul>
+          <label class="check-item">
+            <input type="checkbox" data-check="common-architecture">
+            <span>Đã trình bày được mặt phẳng điều khiển, mặt phẳng dữ liệu và khả năng quan sát.</span>
+          </label>
+        </article>
+
+        <article class="topic">
+          <span class="topic-number">05</span>
+          <h3>An toàn Docker và API</h3>
+          <ul class="source-list">
+            <li><a href="https://docs.docker.com/engine/security/">Docker Engine security</a></li>
+            <li><a href="https://docs.docker.com/engine/security/protect-access/">Protect the Docker daemon socket</a></li>
+            <li><a href="https://api-security.owasp.org/editions/2023/en/0x10-api-security-risks/">OWASP API Security Top 10 2023</a></li>
+          </ul>
+          <div class="callout warning">
+            <strong>Ranh giới không được vượt qua:</strong> không đưa Docker socket/API ra Internet;
+            không cho người dùng truyền ảnh Docker, lệnh, điểm gắn thư mục, đường dẫn máy chủ hay cấu hình Compose tùy ý;
+            không đưa bí mật vào Git; không coi khả năng cách ly container là môi trường an toàn cho mã không tin cậy.
+          </div>
+          <label class="check-item">
+            <input type="checkbox" data-check="common-security">
+            <span>Đã nêu được rủi ro của Docker socket và cơ chế danh sách cho phép.</span>
+          </label>
+        </article>
+      </section>
+
+      <section class="section" id="thanh-vien-1">
+        <p class="section-kicker">03 · Gói chuyên trách</p>
+        <h2>Thành viên 1 — Kiến trúc, API và bộ thực thi triển khai</h2>
+        <article class="role">
+          <span class="role-tag">Lõi kỹ thuật · Tích hợp hệ thống</span>
+          <div class="role-body">
+            <div>
+              <h3>Phải đọc</h3>
+              <ul class="source-list">
+                <li><a href="https://fastify.dev/docs/latest/Guides/Getting-Started/">Fastify Getting Started</a></li>
+                <li><a href="https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/">Fastify Validation</a></li>
+                <li><a href="https://www.sqlite.org/quickstart.html">SQLite Quickstart</a></li>
+                <li><a href="https://docs.docker.com/engine/security/">Docker Engine security</a></li>
+              </ul>
+              <h4>Chủ đề cần nắm</h4>
+              <ul>
+                <li>Đường dẫn API, phần mở rộng, móc xử lý, kiểm tra dữ liệu, xử lý lỗi và ghi nhật ký.</li>
+                <li>Ứng dụng, lần triển khai, thao tác và giao dịch dữ liệu.</li>
+                <li>Các trạng thái: chờ, đang chạy, thành công và thất bại.</li>
+                <li>Khóa theo ứng dụng; trạng thái mong muốn và trạng thái thực tế.</li>
+                <li>Danh sách cho phép đối với mã ứng dụng, phiên bản và thao tác.</li>
+                <li>Khởi chạy tiến trình bằng mảng tham số, không ghép chuỗi lệnh shell.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Đầu ra</h3>
+              <ul>
+                <li>Sơ đồ trình tự cho triển khai và cập nhật.</li>
+                <li>Danh sách điểm cuối API và mã HTTP.</li>
+                <li>Lược đồ dữ liệu ở mức bảng.</li>
+                <li>Mô hình mối đe dọa tối thiểu.</li>
+                <li>Một trang giới hạn bảo mật.</li>
+              </ul>
+              <h4>Câu hỏi trọng tâm</h4>
+              <ol>
+                <li>Dữ liệu nào lấy từ SQLite, dữ liệu nào lấy từ Docker?</li>
+                <li>Nếu API khởi động lại giữa lúc triển khai, thao tác được xử lý thế nào?</li>
+                <li>Làm sao chặn hai lần cập nhật đồng thời?</li>
+                <li>Vì sao API không được mount Docker socket?</li>
+              </ol>
+            </div>
+          </div>
+          <label class="check-item">
+            <input type="checkbox" data-check="role-1">
+            <span>Thành viên 1 đã nộp sơ đồ, API, lược đồ dữ liệu và mô hình mối đe dọa.</span>
+          </label>
+        </article>
+      </section>
+
+      <section class="section" id="thanh-vien-2">
+        <p class="section-kicker">04 · Gói chuyên trách</p>
+        <h2>Thành viên 2 — Bảng điều khiển và trải nghiệm quản trị</h2>
+        <article class="role">
+          <span class="role-tag">Giao diện · Trạng thái · Khả năng sử dụng</span>
+          <div class="role-body">
+            <div>
+              <h3>Phải đọc</h3>
+              <ul class="source-list">
+                <li><a href="https://react.dev/learn">React Quick Start</a></li>
+                <li><a href="https://vite.dev/guide/">Vite Getting Started</a></li>
+                <li><a href="https://react.dev/reference/react">React Reference</a></li>
+                <li><a href="https://www.w3.org/WAI/WCAG22/quickref/">WCAG 2.2 Quick Reference</a></li>
+              </ul>
+              <h4>Sáu màn hình MVP</h4>
+              <ol>
+                <li>Đăng nhập.</li>
+                <li>Danh sách ứng dụng.</li>
+                <li>Chi tiết ứng dụng.</li>
+                <li>Lịch sử thao tác.</li>
+                <li>Log.</li>
+                <li>Xác nhận cập nhật phiên bản.</li>
+              </ol>
+              <h4>Trạng thái phải thiết kế</h4>
+              <ul>
+                <li>Đang tải, chưa có dữ liệu và API mất kết nối.</li>
+                <li>Đã dừng, đang khởi động, đang chạy nhưng không khỏe, hoạt động bình thường.</li>
+                <li>Thao tác thất bại và hết phiên đăng nhập.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Đầu ra</h3>
+              <ul>
+                <li>Bản phác thảo sáu màn hình.</li>
+                <li>Danh sách thành phần giao diện.</li>
+                <li>Bảng trạng thái giao diện.</li>
+                <li>Hợp đồng dữ liệu cần từ API.</li>
+                <li>Bản mô phỏng bảng điều khiển dùng dữ liệu giả.</li>
+              </ul>
+              <h4>Câu hỏi trọng tâm</h4>
+              <ol>
+                <li>Phân biệt trạng thái đã dừng, không khỏe và API không phản hồi thế nào?</li>
+                <li>Nút nào bị khóa khi đang triển khai?</li>
+                <li>Khi API trả mã 401, giao diện xử lý ra sao?</li>
+                <li>MVP có thật sự cần WebSocket không?</li>
+              </ol>
+            </div>
+          </div>
+          <label class="check-item">
+            <input type="checkbox" data-check="role-2">
+            <span>Thành viên 2 đã nộp bản phác thảo, bảng trạng thái và bản mô phỏng bảng điều khiển.</span>
+          </label>
+        </article>
+      </section>
+
+      <section class="section" id="thanh-vien-3">
+        <p class="section-kicker">05 · Gói chuyên trách</p>
+        <h2>Thành viên 3 — Linux, Docker, mạng và Nginx</h2>
+        <article class="role">
+          <span class="role-tag">Hạ tầng · Cơ sở lý thuyết · Chương 2</span>
+          <div class="role-body">
+            <div>
+              <h3>Phải đọc</h3>
+              <ul class="source-list">
+                <li><a href="https://ubuntu.com/server/docs/">Ubuntu Server documentation</a></li>
+                <li><a href="https://ubuntu.com/server/docs/how-to/containers/docker-for-system-admins/">Docker for Ubuntu administrators</a></li>
+                <li><a href="https://docs.docker.com/compose/how-tos/networking/">Compose networking</a></li>
+                <li><a href="https://docs.nginx.com/nginx/admin-guide/web-server/">NGINX Web Server</a></li>
+                <li><a href="https://ubuntu.com/server/docs/openssh-server/">Ubuntu OpenSSH</a></li>
+                <li><a href="https://ubuntu.com/server/docs/firewalls/">Ubuntu Firewall</a></li>
+              </ul>
+              <h4>Chủ đề cần nắm</h4>
+              <ul>
+                <li>Tiến trình, người dùng, nhóm, quyền, cổng mạng và dịch vụ.</li>
+                <li>Mô hình máy khách–máy chủ, TCP/IP, DNS và HTTP/HTTPS.</li>
+                <li>Mạng cầu nối, DNS nội bộ và công khai cổng mạng.</li>
+                <li>Vùng lưu trữ có tên, gắn thư mục máy chủ, khóa SSH và UFW.</li>
+                <li>Máy ảo Docker trên Mac khác Docker Engine trên Linux.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Đầu ra</h3>
+              <ul>
+                <li>Bản nháp Chương 2.</li>
+                <li>Sơ đồ mạng có cổng và phân vùng mạng.</li>
+                <li>Bảng so sánh container với máy ảo.</li>
+                <li>Bảng phân biệt kiểm tra sức khỏe, khởi động lại, chuyển đổi dự phòng và tự động mở rộng.</li>
+                <li>Danh sách kiểm tra VPS.</li>
+              </ul>
+              <h4>Câu hỏi trọng tâm</h4>
+              <ol>
+                <li>Yêu cầu đi qua những lớp nào từ trình duyệt đến Ứng dụng A?</li>
+                <li>Vì sao dùng tên dịch vụ thay cho địa chỉ IP của container?</li>
+                <li>Cổng nào mở và cổng nào không được mở trên VPS?</li>
+                <li>Vì sao nhiều container trên một VPS vẫn có điểm lỗi đơn?</li>
+              </ol>
+            </div>
+          </div>
+          <label class="check-item">
+            <input type="checkbox" data-check="role-3">
+            <span>Thành viên 3 đã nộp Chương 2 nháp, sơ đồ mạng và checklist VPS.</span>
+          </label>
+        </article>
+      </section>
+
+      <section class="section" id="thanh-vien-4">
+        <p class="section-kicker">06 · Gói chuyên trách</p>
+        <h2>Thành viên 4 — Kiểm thử, giám sát và tích hợp, triển khai liên tục</h2>
+        <article class="role">
+          <span class="role-tag">T01–T08 · Minh chứng · Chương 5</span>
+          <div class="role-body">
+            <div>
+              <h3>Phải đọc</h3>
+              <ul class="source-list">
+                <li><a href="https://prometheus.io/docs/introduction/overview/">Prometheus Overview</a></li>
+                <li><a href="https://github.com/google/cadvisor/blob/master/README.md">cAdvisor README</a></li>
+                <li><a href="https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/create-dashboard/">Grafana dashboards</a></li>
+                <li><a href="https://grafana.com/docs/k6/latest/using-k6/metrics/">k6 Metrics</a></li>
+                <li><a href="https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images">Publish Docker images</a></li>
+                <li><a href="https://docs.github.com/en/actions/reference/security/secure-use">GitHub Actions secure use</a></li>
+              </ul>
+              <h4>Chủ đề cần nắm</h4>
+              <ul>
+                <li>Chỉ số, chuỗi thời gian, nhãn và quá trình thu thập dữ liệu.</li>
+                <li>p50, p95, p99, thông lượng và tỷ lệ lỗi.</li>
+                <li>Các giai đoạn làm nóng, tải ổn định, hạ tải và đo lặp lại.</li>
+                <li>Mã commit, thẻ ảnh Docker, mã băm ảnh và lần triển khai.</li>
+                <li>Bí mật và nguyên tắc cấp quyền tối thiểu cho quy trình tự động.</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Đầu ra</h3>
+              <ul>
+                <li>Kế hoạch kiểm thử T01–T08 và mẫu biên bản.</li>
+                <li>Cấu trúc lưu minh chứng.</li>
+                <li>Chỉ số và bảng theo dõi cần cho T05/T06.</li>
+                <li>Thiết kế bài đo bằng k6.</li>
+                <li>Sơ đồ quy trình tự động và danh sách kiểm tra bí mật.</li>
+                <li>Khung Chương 5.</li>
+              </ul>
+              <h4>Câu hỏi trọng tâm</h4>
+              <ol>
+                <li>p95 khác giá trị trung bình như thế nào?</li>
+                <li>Vì sao phải theo dõi cả máy chạy k6?</li>
+                <li>Grafana có phải nơi lưu chỉ số không?</li>
+                <li>GITHUB_TOKEN cần quyền tối thiểu nào?</li>
+              </ol>
+            </div>
+          </div>
+          <label class="check-item">
+            <input type="checkbox" data-check="role-4">
+            <span>Thành viên 4 đã nộp kế hoạch kiểm thử, mẫu lưu minh chứng và khung Chương 5.</span>
+          </label>
+        </article>
+      </section>
+
+      <section class="section" id="dau-ra">
+        <p class="section-kicker">07 · Hạn 48 giờ</p>
+        <h2>Đầu ra nhóm phải nộp</h2>
+        <p>Mỗi người tạo một tài liệu Markdown:</p>
+        <div class="code-map">THANH_VIEN_1_KIEN_TRUC_API.md
+THANH_VIEN_2_DASHBOARD.md
+THANH_VIEN_3_HA_TANG_LY_THUYET.md
+THANH_VIEN_4_KIEM_THU_GIAM_SAT.md</div>
+        <h3>Mỗi tài liệu phải có</h3>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-summary"><span>Tóm tắt bằng lời của người viết.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-answers"><span>Trả lời câu hỏi được giao.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-diagram"><span>Sơ đồ hoặc bảng theo yêu cầu.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-terms"><span>Danh sách thuật ngữ.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-sources"><span>Nguồn chính thức và ngày truy cập.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-unknowns"><span>Điều chưa hiểu hoặc cần nhóm quyết định.</span></label>
+        <label class="check-item"><input type="checkbox" data-check="deliverable-report"><span>Phần có thể đưa vào báo cáo.</span></label>
+      </section>
+
+      <section class="section" id="labs">
+        <p class="section-kicker">08 · Học bằng thao tác</p>
+        <h2>Bốn bài thực hành nhỏ</h2>
+        <div class="lab-grid">
+          <article class="lab">
+            <span class="lab-number">A</span>
+            <h3>Docker cơ bản</h3>
+            <p><strong>Người làm:</strong> thành viên 1 và 3.</p>
+            <ul>
+              <li>Chạy container Web; xem container, nhật ký và mạng.</li>
+              <li>Dừng rồi khởi động lại; phân biệt dừng với xóa container.</li>
+              <li>Tạo vùng lưu trữ có tên và kiểm tra dữ liệu sau khi tạo lại container.</li>
+            </ul>
+            <p><strong>Không dùng <code>docker system prune</code>. Không xóa vùng lưu trữ ngoài bài thực hành.</strong></p>
+          </article>
+          <article class="lab">
+            <span class="lab-number">B</span>
+            <h3>Máy chủ trung gian</h3>
+            <p><strong>Người làm:</strong> thành viên 1 và 3.</p>
+            <ul>
+              <li>Hai dịch vụ HTTP nội bộ, một Nginx đứng trước.</li>
+              <li>Hai đường dẫn đi đến hai dịch vụ.</li>
+              <li>Chỉ Nginx công khai cổng mạng.</li>
+              <li>Dừng một dịch vụ và giải thích lỗi quan sát được.</li>
+            </ul>
+          </article>
+          <article class="lab">
+            <span class="lab-number">C</span>
+            <h3>Bản mô phỏng bảng điều khiển</h3>
+            <p><strong>Người làm:</strong> thành viên 2.</p>
+            <ul>
+              <li>Dữ liệu giả cho hai ứng dụng.</li>
+              <li>Tên, phiên bản, trạng thái, tình trạng sức khỏe và thao tác.</li>
+              <li>Trạng thái đang tải, có lỗi và chưa có dữ liệu.</li>
+              <li>Nộp bản phác thảo hoặc bản chạy cùng ảnh trạng thái.</li>
+            </ul>
+          </article>
+          <article class="lab">
+            <span class="lab-number">D</span>
+            <h3>Đọc kết quả tải</h3>
+            <p><strong>Người làm:</strong> thành viên 4.</p>
+            <ul>
+              <li>Đọc kết quả chính thức do k6 xuất ra.</li>
+              <li>Xác định p95, thông lượng, tỷ lệ lỗi và số người dùng ảo.</li>
+              <li>Giải thích vì sao giá trị trung bình là chưa đủ.</li>
+              <li>Không gửi tải đến dịch vụ bên thứ ba ngoài phạm vi được phép.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="bao-cao">
+        <p class="section-kicker">09 · Viết song song</p>
+        <h2>Đưa kết quả tìm hiểu vào báo cáo</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nội dung</th>
+                <th>Vị trí dự kiến</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Máy khách–máy chủ, TCP/IP, DNS, HTTP</td><td>Chương 2</td></tr>
+              <tr><td>Tiến trình Linux, cổng mạng, quyền truy cập</td><td>Chương 2</td></tr>
+              <tr><td>Container và máy ảo</td><td>Chương 2</td></tr>
+              <tr><td>Docker Compose, mạng, vùng lưu trữ</td><td>Chương 2 và 4</td></tr>
+              <tr><td>Nginx làm máy chủ trung gian</td><td>Chương 2, 3 và 4</td></tr>
+              <tr><td>PaaS, mặt phẳng điều khiển, mặt phẳng dữ liệu</td><td>Chương 2 và 3</td></tr>
+              <tr><td>Kiến trúc và mô hình mối đe dọa</td><td>Chương 3</td></tr>
+              <tr><td>React, Fastify, SQLite</td><td>Chương 3 và 4</td></tr>
+              <tr><td>CI/CD và phiên bản ảnh Docker</td><td>Chương 2 và 4</td></tr>
+              <tr><td>Prometheus, Grafana, cAdvisor</td><td>Chương 2, 4 và 5</td></tr>
+              <tr><td>k6, p95, thông lượng, tỷ lệ lỗi</td><td>Chương 5</td></tr>
+              <tr><td>T01–T08</td><td>Chương 5</td></tr>
+              <tr><td>Điểm lỗi đơn và giới hạn</td><td>Chương 5 và 6</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <strong>Nguyên tắc:</strong> Chương 2 không phải danh sách định nghĩa công nghệ.
+          Mỗi khái niệm phải liên hệ với một quyết định kiến trúc hoặc một bài kiểm thử của Mini PaaS.
+        </div>
+      </section>
+
+      <section class="section" id="kiem-tra">
+        <p class="section-kicker">10 · Kiểm tra chéo</p>
+        <h2>18 câu hỏi tất cả thành viên phải trả lời được</h2>
+        <ol class="quiz">
+          <li>Ảnh Docker và container khác nhau thế nào?</li>
+          <li>Container và máy ảo khác nhau ở điểm cốt lõi nào?</li>
+          <li>Máy chủ trung gian làm gì?</li>
+          <li>Vì sao chỉ Nginx được công khai cổng mạng?</li>
+          <li>Mạng Docker giúp các dịch vụ tìm nhau thế nào?</li>
+          <li>Vùng lưu trữ có tên giải quyết vấn đề gì?</li>
+          <li>Kiểm tra sức khỏe khác chính sách tự khởi động lại thế nào?</li>
+          <li>Mặt phẳng điều khiển và mặt phẳng dữ liệu của đề tài gồm những gì?</li>
+          <li>Vì sao Docker socket nguy hiểm?</li>
+          <li>Trạng thái mong muốn khác trạng thái thực tế thế nào?</li>
+          <li>Mã 401 và 403 khác nhau thế nào?</li>
+          <li>p95 là gì và vì sao cần đo?</li>
+          <li>Thông lượng và tỷ lệ lỗi phản ánh gì?</li>
+          <li>Vì sao phải ghi cấu hình máy khi kiểm thử tải?</li>
+          <li>Vì sao nhiều container trên một VPS vẫn có điểm lỗi đơn?</li>
+          <li>Mã commit, thẻ ảnh Docker và mã băm ảnh liên quan thế nào?</li>
+          <li>Tính năng nào thuộc P0, P1 và P2?</li>
+          <li>Khi nào được viết một tính năng ở thì hiện tại trong báo cáo?</li>
+        </ol>
+
+        <h3>Tiêu chí hoàn thành đợt tìm hiểu</h3>
+        <ul>
+          <li>Đã đọc phần chung và có tài liệu chuyên trách.</li>
+          <li>Trả lời được câu hỏi của vai trò.</li>
+          <li>Có đầu ra cụ thể, không chỉ danh sách liên kết.</li>
+          <li>Nguồn có tổ chức, tiêu đề, URL và ngày truy cập.</li>
+          <li>Trình bày lại cho nhóm trong 5–10 phút.</li>
+          <li>Nêu ít nhất hai rủi ro hoặc giới hạn liên quan.</li>
+        </ul>
+      </section>
+
+      <section class="section" id="nguon">
+        <p class="section-kicker">11 · Dùng để học và trích dẫn</p>
+        <h2>Danh sách nguồn chính thức</h2>
+
+        <div class="source-grid">
+          <article class="source-group">
+            <h3>Docker và Compose</h3>
+            <ul class="source-list">
+              <li><a href="https://docs.docker.com/get-started/docker-overview/">Docker overview</a></li>
+              <li><a href="https://docs.docker.com/compose/gettingstarted/">Compose Quickstart</a></li>
+              <li><a href="https://docs.docker.com/reference/compose-file/services/">Compose services</a></li>
+              <li><a href="https://docs.docker.com/compose/how-tos/networking/">Compose networking</a></li>
+              <li><a href="https://docs.docker.com/reference/compose-file/volumes/">Compose volumes</a></li>
+              <li><a href="https://docs.docker.com/reference/compose-file/deploy/">Resource constraints</a></li>
+              <li><a href="https://docs.docker.com/engine/security/">Engine security</a></li>
+              <li><a href="https://docs.docker.com/engine/security/protect-access/">Protect daemon socket</a></li>
+              <li><a href="https://docs.docker.com/build/building/multi-platform/">Multi-platform builds</a></li>
+            </ul>
+          </article>
+
+          <article class="source-group">
+            <h3>Linux, mạng và Nginx</h3>
+            <ul class="source-list">
+              <li><a href="https://ubuntu.com/server/docs/">Ubuntu Server</a></li>
+              <li><a href="https://ubuntu.com/server/docs/how-to/containers/docker-for-system-admins/">Docker for Ubuntu admins</a></li>
+              <li><a href="https://ubuntu.com/server/docs/openssh-server/">Ubuntu OpenSSH</a></li>
+              <li><a href="https://ubuntu.com/server/docs/firewalls/">Ubuntu Firewall</a></li>
+              <li><a href="https://docs.nginx.com/nginx/admin-guide/">NGINX Admin Guide</a></li>
+              <li><a href="https://docs.nginx.com/nginx/admin-guide/web-server/">NGINX Web Server</a></li>
+              <li><a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110 — HTTP</a></li>
+              <li><a href="https://www.rfc-editor.org/rfc/rfc9293.html">RFC 9293 — TCP</a></li>
+            </ul>
+          </article>
+
+          <article class="source-group">
+            <h3>Giao diện và API</h3>
+            <ul class="source-list">
+              <li><a href="https://react.dev/learn">React Learn</a></li>
+              <li><a href="https://react.dev/reference/react">React Reference</a></li>
+              <li><a href="https://vite.dev/guide/">Vite Guide</a></li>
+              <li><a href="https://fastify.dev/docs/latest/Guides/Getting-Started/">Fastify Getting Started</a></li>
+              <li><a href="https://fastify.dev/docs/latest/Reference/Validation-and-Serialization/">Fastify Validation</a></li>
+              <li><a href="https://www.sqlite.org/quickstart.html">SQLite Quickstart</a></li>
+              <li><a href="https://api-security.owasp.org/editions/2023/en/0x10-api-security-risks/">OWASP API Security</a></li>
+            </ul>
+          </article>
+
+          <article class="source-group">
+            <h3>Giám sát và kiểm thử</h3>
+            <ul class="source-list">
+              <li><a href="https://prometheus.io/docs/introduction/overview/">Prometheus Overview</a></li>
+              <li><a href="https://prometheus.io/docs/prometheus/latest/querying/basics/">PromQL basics</a></li>
+              <li><a href="https://github.com/google/cadvisor/blob/master/README.md">cAdvisor README</a></li>
+              <li><a href="https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md">cAdvisor metrics</a></li>
+              <li><a href="https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/create-dashboard/">Grafana dashboards</a></li>
+              <li><a href="https://grafana.com/docs/k6/latest/using-k6/metrics/">k6 Metrics</a></li>
+              <li><a href="https://grafana.com/docs/k6/latest/examples/get-started-with-k6/test-for-performance/">k6 Performance Testing</a></li>
+            </ul>
+          </article>
+
+          <article class="source-group">
+            <h3>GitHub Actions</h3>
+            <ul class="source-list">
+              <li><a href="https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images">Publishing Docker images</a></li>
+              <li><a href="https://docs.github.com/en/actions/concepts/security/github_token">GITHUB_TOKEN</a></li>
+              <li><a href="https://docs.github.com/en/actions/tutorials/authenticate-with-github_token">Use GITHUB_TOKEN securely</a></li>
+              <li><a href="https://docs.github.com/en/actions/reference/security/secure-use">Secure use of Actions</a></li>
+            </ul>
+          </article>
+
+          <article class="source-group">
+            <h3>Cách ghi nguồn</h3>
+            <p>Mẫu tối thiểu:</p>
+            <div class="code-map">Tổ chức/tác giả. Tên tài liệu.
+URL.
+Ngày truy cập: 11/10/2026.</div>
+            <ul>
+              <li>Ghi nguồn ngay khi lấy thông tin.</li>
+              <li>Trích dẫn gần nội dung sử dụng.</li>
+              <li>Không sao chép nguyên đoạn dài.</li>
+              <li>Chưa khóa kiểu trích dẫn đến khi có yêu cầu giảng viên.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="chua-can-hoc">
+        <p class="section-kicker">12 · Bảo vệ tiến độ</p>
+        <h2>Những chủ đề chưa cần học lúc này</h2>
+        <p>Không dành thời gian trong hai ngày đầu cho:</p>
+        <ul class="defer-list">
+          <li>Kubernetes</li>
+          <li>Terraform</li>
+          <li>Ansible nâng cao</li>
+          <li>Lưới dịch vụ (service mesh)</li>
+          <li>Theo vết phân tán (distributed tracing)</li>
+          <li>Hàng đợi thông điệp (message queue)</li>
+          <li>GitOps</li>
+          <li>Triển khai trên nhiều nền tảng đám mây</li>
+          <li>Tự động mở rộng phức tạp</li>
+          <li>Cụm cơ sở dữ liệu</li>
+          <li>PaaS phục vụ nhiều nhóm người dùng độc lập</li>
+          <li>Tự viết môi trường chạy container</li>
+        </ul>
+        <div class="callout warning">
+          Các chủ đề này không giúp hoàn thành P0.1 và có thể làm trễ sản phẩm,
+          kiểm thử cùng báo cáo.
+        </div>
+
+        <h3>Kết quả phải chốt sau buổi chia sẻ</h3>
+        <ol>
+          <li>Sơ đồ kiến trúc P0.</li>
+          <li>Hai ứng dụng mẫu.</li>
+          <li>Danh sách điểm cuối API của MVP.</li>
+          <li>Bản phác thảo bảng điều khiển.</li>
+          <li>Sơ đồ mạng và cổng.</li>
+          <li>Kế hoạch kiểm thử T01–T08.</li>
+          <li>Cấu trúc Chương 2, 3 và 5.</li>
+          <li>Danh sách rủi ro và giới hạn.</li>
+          <li>Phân công triển khai P0.1.</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <div>
+        <strong>Học đúng phần. Nộp đúng đầu ra. Viết báo cáo song song.</strong>
+        <p>Mini PaaS · Bộ tài liệu chuẩn bị P0.1 · 11/10/2026</p>
+      </div>
+      <a class="back-to-top" href="#dau-trang">Trở về đầu trang ↑</a>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var progressBar = document.getElementById('progressBar');
+      var printButton = document.getElementById('printDocument');
+      var resetButton = document.getElementById('resetChecks');
+      var checks = Array.prototype.slice.call(document.querySelectorAll('[data-check]'));
+      var tocLinks = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+      var sections = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+      var storageKey = 'mini-paas-learning-checks-v1';
+
+      function updateProgress() {
+        var root = document.documentElement;
+        var distance = root.scrollHeight - root.clientHeight;
+        var percent = distance > 0 ? (root.scrollTop / distance) * 100 : 0;
+        progressBar.style.width = Math.min(100, Math.max(0, percent)) + '%';
+      }
+
+      function loadChecks() {
+        try {
+          var saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+          checks.forEach(function (checkbox) {
+            checkbox.checked = Boolean(saved[checkbox.getAttribute('data-check')]);
+          });
+        } catch (error) {
+          // Trang vẫn hoạt động nếu storage bị trình duyệt chặn.
+        }
+      }
+
+      function saveChecks() {
+        var state = {};
+        checks.forEach(function (checkbox) {
+          state[checkbox.getAttribute('data-check')] = checkbox.checked;
+        });
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(state));
+        } catch (error) {
+          // Không cần hiển thị lỗi vì checklist chỉ là tiện ích bổ sung.
+        }
+      }
+
+      checks.forEach(function (checkbox) {
+        checkbox.addEventListener('change', saveChecks);
+      });
+
+      resetButton.addEventListener('click', function () {
+        checks.forEach(function (checkbox) {
+          checkbox.checked = false;
+        });
+        saveChecks();
+        resetButton.textContent = 'Đã đặt lại';
+        window.setTimeout(function () {
+          resetButton.textContent = 'Đặt lại checklist';
+        }, 1400);
+      });
+
+      printButton.addEventListener('click', function () {
+        window.print();
+      });
+
+      window.addEventListener('scroll', updateProgress, { passive: true });
+      window.addEventListener('resize', updateProgress);
+
+      if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            tocLinks.forEach(function (link) {
+              var active = link.getAttribute('href') === '#' + entry.target.id;
+              if (active) {
+                link.setAttribute('aria-current', 'true');
+              } else {
+                link.removeAttribute('aria-current');
+              }
+            });
+          });
+        }, { rootMargin: '-18% 0px -72% 0px', threshold: 0 });
+
+        sections.forEach(function (section) {
+          observer.observe(section);
+        });
+      }
+
+      loadChecks();
+      updateProgress();
+    }());
+  </script>
+</body>
+</html>

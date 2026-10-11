@@ -1,0 +1,28 @@
+ĐẠT: Gateway khỏe
+ĐẠT: Trang Ứng dụng A
+ĐẠT: Health Ứng dụng A
+ĐẠT: Phiên bản Ứng dụng A
+ĐẠT: Trang Ứng dụng B
+ĐẠT: Health Ứng dụng B
+ĐẠT: Phiên bản Ứng dụng B
+ĐẠT: app-a không công khai cổng 3000
+ĐẠT: app-b không công khai cổng 3000
+
+P0.1 smoke test: 9/9 kiểm tra đạt.
+
+Kiểm tra bổ sung:
+
+- Đường dẫn `/khong-ton-tai`: HTTP 404.
+- `/apps/app-a/health`: HTTP 200.
+- Mạng control: internal=true, driver=bridge, 1 container.
+- Mạng edge: internal=false, driver=bridge, 3 container.
+- App A chạy với uid=1000(node).
+- App B chạy với uid=1000(node).
+- Gateway chạy với uid=101(nginx).
+- App A/App B không có mount; Docker socket không xuất hiện.
+
+Giới hạn thực tế:
+
+- Gateway: 64 MiB, 0,25 CPU, 50 PID, root filesystem chỉ đọc, drop toàn bộ capability.
+- App A: 128 MiB, 0,35 CPU, 100 PID, root filesystem chỉ đọc, drop toàn bộ capability.
+- App B: cấu hình giới hạn tương đương App A.

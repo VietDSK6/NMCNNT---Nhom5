@@ -1,0 +1,20 @@
+KẾT QUẢ CUỐI CÙNG
+
+- app-a: image mini-paas/app-a:v1.0.0, trạng thái healthy.
+- app-b: image mini-paas/app-b:v1.0.0, trạng thái healthy.
+- gateway: image mini-paas/gateway:p0.1, trạng thái healthy.
+- Smoke test v1: 9/9 kiểm tra đạt.
+- Smoke test v2: 9/9 kiểm tra đạt.
+- Phiên bản App A khi thử v2: {"appId":"app-a","name":"Ứng dụng A","version":"v2.0.0"}
+- Phiên bản App A sau khi hoàn nguyên: {"appId":"app-a","name":"Ứng dụng A","version":"v1.0.0"}
+
+IMAGE ID
+
+- gateway p0.1: sha256:aad0806737a893fe65d813b196678af37b3896c1695f7e662c41bd6271d6c3ea
+- app-a v1.0.0: sha256:b8b8fdac1f1c79267129e5281a8555199c2e636d3d7fc972d27265b2de944d42
+- app-a v2.0.0: sha256:7410f6e139a7456212e7ef12271aeb5f0268e3be47eb0f4ed4cd3f7839f8d3fa
+- app-b v1.0.0: sha256:65b70ca6521b8d371cdebb38e9ed02d0fdd775fd7709a6eead807646198ceed6
+
+GHI NHẬN LỖI TRONG LẦN CHẠY ĐẦU
+
+Gateway từng không khởi động vì tmpfs gắn vào `/tmp` làm mất thư mục `/tmp/nginx` đã tạo lúc build. Cấu hình được sửa để Nginx tạo các thư mục tạm trực tiếp dưới `/tmp`. Sau khi rebuild, Gateway đạt trạng thái healthy.
