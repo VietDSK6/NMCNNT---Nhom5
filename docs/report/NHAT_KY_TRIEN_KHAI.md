@@ -175,3 +175,39 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - Bộ lọc bí mật trong log không thể phát hiện mọi định dạng dữ liệu nhạy cảm.
 - Log Docker chỉ tồn tại theo chính sách xoay vòng trên host; chưa có lưu trữ tập trung.
 - Cần chạy lại T05 và kiểm thử tải chính thức trên VPS Linux.
+
+## 12/10/2026 — Bắt đầu P1.1A: CI và ảnh theo commit
+
+### Phạm vi thực hiện
+
+- Thêm GitHub Actions chạy khi push `main`, pull request hoặc kích hoạt thủ công.
+- Ghim Node.js bằng `.node-version`, cài phụ thuộc bằng ba lockfile hiện có.
+- Ghim `checkout`, `setup-node` và `upload-artifact` bằng commit SHA đầy đủ.
+- Chạy kiểm tra Compose, unit test, production build và toàn bộ regression P0 trong workflow.
+- Dựng App A/App B với tag `sha-<12 ký tự commit>`, nhãn OCI chứa commit đầy đủ.
+- Sinh và kiểm tra `image-manifest.json`; chưa push registry hoặc triển khai vào VPS.
+- Ghi quy tắc mới của dự án: không chạy responsive/trình duyệt nếu không có yêu cầu riêng; vẫn build Dashboard và kiểm thử chức năng.
+
+### Kết quả kiểm chứng cục bộ
+
+- Cú pháp shell/JavaScript/YAML: đạt.
+- Deployment Runner unit test: 9/9 đạt.
+- Control API unit test: 7/7 đạt.
+- Dashboard production build: đạt; không chạy kiểm tra trình duyệt theo quy tắc dự án.
+- P0.1: 9/9 đạt; P0.2: 15/15 đạt; P0.2B: 21 đạt; P0.2C: 12 đạt.
+- P1.1A image manifest: 8/8 đạt.
+- Hai ảnh local có tag theo commit, image ID riêng và nhãn revision/version đúng.
+- Sau regression, 6/6 service healthy; App A/App B trở lại v1.0.0.
+
+### Giới hạn cần ghi đúng
+
+- Repository chưa có remote nên workflow chưa chạy trên GitHub; kết quả trên chỉ là kiểm thử tương đương ở máy phát triển.
+- `imageId` local không phải registry digest và khác nhau theo kiến trúc CPU.
+- Chưa có quyền ghi package, registry, deploy hook hoặc kết nối từ CI đến VPS.
+- P1.1A chưa phải CI/CD hoàn chỉnh; P1.1B phải bổ sung registry digest và triển khai image nằm trong allowlist.
+
+### Nội dung có thể dùng cho báo cáo
+
+- Chương 3: tách CI khỏi CD, ranh giới quyền và truy vết commit → tag → image ID.
+- Chương 4: workflow, cách dựng ảnh và cách đọc manifest.
+- Chương 5: kết quả regression, kiểm tra input SHA và nhãn OCI; bổ sung log GitHub sau khi có remote.

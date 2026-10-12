@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến mốc P0.2C ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; CI/CD, Prometheus/Grafana và kiểm thử tải vẫn là nội dung dự kiến của P1.
+> Bản nháp cập nhật đến mốc P1.1A ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; triển khai tự động từ registry, Prometheus/Grafana và kiểm thử tải vẫn là nội dung dự kiến của P1.
 
 ## 3.1. Phân tích bài toán
 
@@ -22,7 +22,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR06 | Lưu lịch sử operation và audit | Đã triển khai, kiểm thử |
 | FR07 | Xem log gần nhất theo giới hạn | Đã triển khai, kiểm thử |
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
-| FR09 | Triển khai dựa trên Git bằng CI/CD | Dự kiến P1 |
+| FR09 | Triển khai dựa trên Git bằng CI/CD | Đang thực hiện P1: đã cấu hình build/test theo commit, chưa push registry hoặc deploy |
 | FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Dự kiến P1 |
 
 ### 3.2.2. Yêu cầu phi chức năng
@@ -190,6 +190,6 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 
 ## 3.10. Giới hạn thiết kế và hướng tiếp theo
 
-Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation bất đồng bộ chưa có message broker bền vững. Image v2 được build trước, chưa có quy trình Git/CI/CD. Stats chỉ là snapshot và log chưa được tập trung.
+Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation bất đồng bộ chưa có message broker bền vững. P1.1A đã cấu hình CI build/test và tạo image manifest theo commit, nhưng workflow chưa chạy trên GitHub, ảnh chưa được đẩy lên registry và Runner chưa triển khai theo registry digest. Stats chỉ là snapshot và log chưa được tập trung.
 
-Giai đoạn P1 dự kiến bổ sung CI/CD có kiểm soát, cAdvisor/Prometheus/Grafana, kiểm thử tải và số liệu thực nghiệm. Các thành phần này phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Phần tiếp theo của P1 dự kiến chạy CI thật trên GitHub, bổ sung push/deploy theo registry digest có kiểm soát, sau đó tích hợp cAdvisor/Prometheus/Grafana, kiểm thử tải và số liệu thực nghiệm. Các thành phần này phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

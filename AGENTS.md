@@ -6,13 +6,14 @@
 >
 > **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt, chưa có thông tin hệ thống đã triển khai.** Không tự coi các mục dự kiến dưới đây là tính năng đã hoàn thành.
 
-## Quy tắc tạm thời cho mốc P0.2B — đã hết hiệu lực
+## Quy tắc kiểm tra giao diện — áp dụng cho toàn dự án
 
-> P0.2B đã hoàn thành kiểm thử ngày 11/10/2026. Nội dung dưới đây được giữ để ghi lại ngoại lệ đã áp dụng trong mốc này, không áp dụng cho các mốc tiếp theo.
+> Theo quyết định mới nhất của chủ dự án ngày 12/10/2026, quy tắc này thay thế ngoại lệ tạm thời từng dùng ở P0.2B và áp dụng cho mọi mốc tiếp theo.
 
-- Trong phạm vi triển khai và nghiệm thu **P0.2B**, không thực hiện kiểm tra responsive (khả năng thích ứng theo kích thước màn hình) cho Dashboard.
-- Vẫn phải kiểm tra đầy đủ chức năng, trạng thái thao tác, thông báo lỗi và khả năng sử dụng bằng bàn phím trên giao diện desktop.
-- Quy tắc này tự hết hiệu lực ngay khi P0.2B được xác nhận hoàn thành; các mốc sau quay lại yêu cầu kiểm tra responsive theo kế hoạch chung.
+- Không chủ động chạy kiểm tra responsive, kiểm tra trực quan bằng trình duyệt, Playwright/CUA hoặc chụp ảnh giao diện, trừ khi chủ dự án yêu cầu riêng.
+- Khi thay đổi Dashboard vẫn phải chạy typecheck/production build và kiểm thử API, unit, integration liên quan; không được coi việc bỏ kiểm tra trình duyệt là bỏ kiểm thử chức năng.
+- Không tuyên bố một thay đổi giao diện mới đã được xác minh responsive nếu chưa có lần kiểm tra riêng. Các kết quả responsive của P0.2A/P0.2C chỉ là bằng chứng lịch sử cho đúng phiên bản đã kiểm tra khi đó.
+- Khi viết kế hoạch, bằng chứng và báo cáo, ảnh giao diện chỉ là tùy chọn; ưu tiên log, phản hồi API, kết quả build và dữ liệu kiểm thử để giảm chi phí thực hiện.
 
 ---
 

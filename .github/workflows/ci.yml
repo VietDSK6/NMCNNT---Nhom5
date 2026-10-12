@@ -1,0 +1,80 @@
+name: Kiem tra lien tuc
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build, test va tao image manifest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ADMIN_USERNAME: ci-admin
+      ADMIN_PASSWORD: ci-only-password-not-for-production
+      RUNNER_SHARED_SECRET: ci-only-runner-secret-not-for-production
+      SESSION_COOKIE_SECURE: 'false'
+    steps:
+      - name: Lay ma nguon
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Cai Node.js da ghim phien ban
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - name: Cai phu thuoc tu lockfile
+        run: |
+          npm ci --prefix platform/runner
+          npm ci --prefix platform/control-api
+          npm ci --prefix platform/dashboard
+
+      - name: Kiem tra cau hinh va ma nguon
+        run: |
+          make config
+          make test-unit
+
+      - name: Dung stack mot host
+        run: make up
+
+      - name: Chay regression P0
+        run: make test-integration
+
+      - name: Dung anh theo commit va kiem tra manifest
+        run: make test-p1-1a COMMIT_SHA="$GITHUB_SHA" CI_OUTPUT_DIR=output/ci
+
+      - name: Luu thong tin moi truong CI
+        if: always()
+        run: |
+          mkdir -p output/ci
+          node --version > output/ci/environment.txt
+          npm --version >> output/ci/environment.txt
+          docker version --format '{{.Server.Version}}' >> output/ci/environment.txt
+          docker compose version --short >> output/ci/environment.txt
+          docker compose ps --all >> output/ci/compose-status.txt || true
+
+      - name: Tai minh chung CI
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mini-paas-ci-${{ github.sha }}
+          path: output/ci/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Don stack CI
+        if: always()
+        run: docker compose down --remove-orphans

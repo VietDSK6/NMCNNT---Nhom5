@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. Repository hiện ở **P0.2C: quan sát log và tài nguyên theo yêu cầu**. Mốc này kế thừa P0.2B, bổ sung ảnh chụp CPU/RAM/PID/mạng cùng log container gần nhất mà không đưa quyền Docker vào Dashboard hoặc Control API.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển; repository đang ở **P1.1A: tích hợp liên tục và dựng ảnh theo commit**. Workflow GitHub Actions đã được cấu hình, còn kết quả chạy thật trên GitHub chờ repository được gắn remote và đẩy lên GitHub.
 
 ## Trạng thái hiện tại
 
@@ -21,10 +21,14 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. Repos
 - Nginx dùng DNS động của Docker nên vẫn định tuyến đúng sau khi Runner thay container.
 - Health check, giới hạn CPU/RAM/PID, filesystem chỉ đọc và xoay vòng log.
 - Unit/integration test kiểm tra xác thực, định tuyến, allowlist, ranh giới Docker socket và vòng đời thật.
+- Script dựng App A/App B với tag `sha-<12 ký tự>`, nhãn OCI chứa commit đầy đủ và manifest chứa image ID.
+- Workflow CI dùng quyền chỉ đọc, phiên bản Node cố định, action ghim bằng commit SHA; thực hiện build, regression P0 và lưu manifest làm artifact.
 
-Chưa triển khai trong P0.2C:
+Chưa hoàn tất trong P1.1:
 
-- CI/CD, chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
+- Chưa có kết quả chạy workflow trên GitHub vì repository local chưa có remote.
+- Chưa đẩy ảnh lên registry, chưa có registry digest và chưa tự động triển khai image theo commit vào Mini PaaS; đây là P1.1B.
+- Chưa có chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
@@ -102,6 +106,8 @@ Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update
 
 Bộ P0.2C kiểm tra xác thực cho log/stats, giới hạn tối đa 200 dòng, ứng dụng ngoài danh mục, hợp đồng CPU/RAM/PID/mạng và việc Runner từ chối endpoint quan sát khi thiếu secret. Dashboard đã được kiểm tra ở 1440×900, 768×1024 và 390×844; không tràn ngang, vùng điều khiển quan sát trên mobile cao tối thiểu 44 px.
 
+Theo quy tắc dự án từ ngày 12/10/2026, các thay đổi tiếp theo không được kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt nếu chủ dự án không yêu cầu riêng. Dashboard vẫn phải qua TypeScript/production build và kiểm thử chức năng liên quan. Kết quả responsive nêu trên chỉ là bằng chứng lịch sử của bản P0.2C.
+
 Chạy unit test và build riêng khi phát triển:
 
 ```bash
@@ -115,6 +121,18 @@ Xem 100 dòng log gần nhất:
 ```bash
 make logs
 ```
+
+## Tích hợp liên tục P1.1A
+
+Chạy riêng quy trình dựng ảnh theo commit hiện tại và kiểm tra manifest:
+
+```bash
+make test-p1-1a
+```
+
+Đầu ra cục bộ nằm ở `output/ci/image-manifest.json` và không được commit. Manifest ghi commit đầy đủ, tag, nền tảng và image ID của App A/App B. Ở P1.1A, `publishStatus` là `local-only`: image ID này chưa phải registry digest.
+
+Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. Khi đã tạo repository GitHub, một lần chạy thành công là bằng chứng bắt buộc trước khi mở P1.1B.
 
 ## Dừng hệ thống
 
@@ -157,6 +175,9 @@ tests/smoke/p0_1.sh         Kiểm thử nhanh P0.1
 tests/integration/p0_2.sh   Kiểm thử tích hợp P0.2
 tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
+tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
+scripts/ci/                 Dựng ảnh và kiểm tra image manifest
+.github/workflows/ci.yml    Pipeline GitHub Actions P1.1A
 docs/architecture/          Kiến trúc đã chốt
 docs/decisions/             Nhật ký quyết định kiến trúc
 docs/report/                Nội dung viết báo cáo song song
@@ -179,4 +200,4 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md) và [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md) và [P1.1A_CI.md](docs/architecture/P1.1A_CI.md).

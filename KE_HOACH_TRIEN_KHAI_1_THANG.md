@@ -12,11 +12,13 @@
 ### Cập nhật thực tế ngày 12/10/2026
 
 - P0.1, P0.2A, P0.2B và P0.2C đã được triển khai, kiểm thử trên máy phát triển macOS/OrbStack.
+- P1.1A đã có workflow CI, script build ảnh theo commit và manifest; kiểm thử cục bộ đạt. Chưa có workflow run trên GitHub vì repository chưa gắn remote, vì vậy chưa tính là hoàn tất CI trên môi trường đích.
 - MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
 - G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
 - T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
 - Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
-- Bước tiếp theo là G3/P1: CI/CD có kiểm soát, Prometheus/Grafana, k6 và thu thập số liệu; không mở P2 trước khi các phần này ổn định.
+- Bước tiếp theo của CI/CD là P1.1B sau khi có GitHub remote: chạy P1.1A trên GitHub, chọn registry, lưu registry digest và chỉ triển khai ảnh đã cho phép. Prometheus/Grafana và k6 vẫn thuộc G3; không mở P2 trước khi các phần này ổn định.
+- Theo quyết định của chủ dự án, từ ngày 12/10/2026 không chạy kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt ở bất kỳ giai đoạn nào, trừ khi được yêu cầu riêng. Dashboard vẫn phải qua typecheck/build và các kiểm thử chức năng qua API/unit/integration; không được ghi responsive là đã xác minh cho thay đổi mới nếu chưa kiểm tra.
 
 Kế hoạch này dùng ba luồng công việc song song:
 
@@ -386,12 +388,13 @@ Nếu ngày bắt đầu hoặc deadline thực tế khác, giữ nguyên thứ 
 - Ghi cả kết quả thành công và thất bại.
 - Không cắt ảnh hoặc log theo cách che mất điều kiện thử.
 - Xóa hoặc che token, mật khẩu và cookie trước khi lưu bằng chứng.
+- Không mặc định chụp ảnh hoặc chạy trình duyệt để nghiệm thu giao diện; chỉ thực hiện khi chủ dự án yêu cầu riêng. Với các thay đổi Dashboard, bằng chứng mặc định là typecheck/build, phản hồi API và integration test.
 
 | Mã | Mục tiêu | Cách thực hiện dự kiến | Tiêu chí chấp nhận | Bằng chứng |
 |---|---|---|---|---|
 | T01 | Dựng từ máy sạch | Làm đúng README trên VM sạch hoặc snapshot sạch | Không cần bước thủ công ngoài tài liệu; mọi service bắt buộc healthy | Lệnh, thời gian, phiên bản, log Compose, ảnh truy cập |
-| T02 | Triển khai App A và B | Khởi tạo hai app rồi truy cập qua Nginx | Đúng nội dung, version và mã HTTP; app không mở cổng host trực tiếp | curl, ảnh trình duyệt, access log, inspect network |
-| T03 | Cập nhật App A v1 lên v2 | Deploy v1, ghi trạng thái, cập nhật v2, kiểm tra health | Version/digest thay đổi đúng; ghi được thời gian và gián đoạn thực tế | Ảnh trước/sau, operation log, digest, timestamp |
+| T02 | Triển khai App A và B | Khởi tạo hai app rồi truy cập qua Nginx | Đúng nội dung, version và mã HTTP; app không mở cổng host trực tiếp | curl, access log, inspect network; ảnh chỉ khi được yêu cầu |
+| T03 | Cập nhật App A v1 lên v2 | Deploy v1, ghi trạng thái, cập nhật v2, kiểm tra health | Version/digest thay đổi đúng; ghi được thời gian và gián đoạn thực tế | Phản hồi API trước/sau, operation log, digest, timestamp |
 | T04 | Dừng/khởi động lại | Stop/restart app, quan sát API, UI và truy cập | Trạng thái phản ánh đúng; log ghi nguyên nhân/kết quả; truy cập phục hồi | Timeline, health, HTTP response, container log |
 | T05 | Giám sát tài nguyên | Tạo tải nhẹ và quan sát CPU/RAM | Có metric thật, cùng timestamp và giải thích đúng ý nghĩa | Export Grafana/Prometheus, ảnh, dữ liệu thô |
 | T06 | Kiểm thử tải | Warm-up rồi chạy các mức tải cố định | Có p95, throughput, error rate, CPU/RAM; điều kiện so sánh giữ nguyên | File k6, JSON/CSV, dashboard, bảng tổng hợp |
@@ -427,7 +430,7 @@ Các mức trên là điểm xuất phát, không phải cam kết hiệu năng.
 | P0 | Dashboard | React/Vite | T03, T04, T05 | Ảnh thao tác, đối chiếu API |
 | P0 | Xác thực quản trị | Session, middleware, allowlist | T07 | 401/403, audit và log |
 | P0 | Khôi phục | README, Compose, manifest | T01, T08 | Biên bản chạy lại |
-| P1 | CI/CD | Pipeline build và deploy kiểm soát | Kiểm thử pipeline | Commit, tag, digest, log pipeline |
+| P1 | CI/CD | P1.1A build theo commit; P1.1B push/deploy kiểm soát | Kiểm thử pipeline | Commit, tag, image ID; registry digest và log pipeline sau P1.1B |
 | P1 | Giám sát | cAdvisor, Prometheus, Grafana | T05 | Dữ liệu thô và dashboard |
 | P1 | Kiểm thử tải | k6 | T06 | Script, JSON/CSV, bảng và biểu đồ |
 | P1 | Xử lý sự cố | Health, restart, log | T04, T08 | Timeline và thời gian phục hồi |
