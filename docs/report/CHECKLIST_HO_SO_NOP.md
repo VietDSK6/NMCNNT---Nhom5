@@ -33,7 +33,7 @@ Phụ lục dự kiến:
 - [ ] Sơ đồ kiến trúc bản cuối.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
 - [ ] Bảng tài nguyên/IP/quyền bản VPS đã đối soát.
-- [ ] Script/cấu hình monitoring và kiểm thử tải.
+- [x] Script/cấu hình monitoring Prometheus/Grafana và kiểm thử tích hợp; kiểm thử tải k6 còn thiếu.
 - [ ] Gói release cuối không chứa secret.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.

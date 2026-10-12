@@ -26,5 +26,6 @@ Minh chứng hiện có:
 - `T07`: xác thực, allowlist và ranh giới Docker socket.
 - `CI/2026-10-12-p1.1a`: kiểm thử cục bộ, image manifest và metadata GitHub Actions run số 1 của CI nội bộ; không phải bằng chứng FR09 của sản phẩm.
 - `P1-GIT/2026-10-12T1201`: kiểm thử sản phẩm repository tin cậy → commit → build image → deploy App A; 10 kiểm tra đạt.
+- `P1-OBS/2026-10-12T1659`: Runner exporter → Prometheus → Grafana; metric thô, digest image và 15 kiểm tra tích hợp đạt.
 
 Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

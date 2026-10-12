@@ -14,11 +14,12 @@
 - P0.1, P0.2A, P0.2B và P0.2C đã được triển khai, kiểm thử trên máy phát triển macOS/OrbStack.
 - Đã có workflow CI nội bộ, script build ảnh mẫu theo commit và manifest; kiểm thử cục bộ đạt. Workflow run đầu tiên trên GitHub đã thành công và tạo artifact ngày 12/10/2026. Đây là công cụ kiểm tra repository Mini PaaS, chưa phải chức năng triển khai ứng dụng từ Git của sản phẩm.
 - Luồng sản phẩm repository tin cậy → commit SHA → build image → triển khai App A → lưu build log/lịch sử đã đạt 10 kiểm tra tích hợp ngày 12/10/2026. Phạm vi hiện chỉ có một source allowlist và image cục bộ, chưa có registry digest.
+- Lát cắt giám sát chuỗi thời gian đã hoàn thành ngày 12/10/2026: Runner exporter → Prometheus → Grafana, 15/15 kiểm tra tích hợp đạt. Dashboard Grafana có sáu vùng và ba alert rule đã được nạp; chưa có Alertmanager/kênh thông báo.
 - MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
 - G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
 - T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
 - Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
-- Bước tiếp theo của P1 là Prometheus/Grafana, k6 và nghiệm thu lại luồng Git trên Linux/VPS; không mở P2 trước khi các phần này ổn định.
+- Bước tiếp theo của P1 là k6, dữ liệu đo gốc và nghiệm thu lại luồng Git/giám sát trên Linux/VPS; không mở P2 trước khi các phần này ổn định.
 - Theo quyết định của chủ dự án, từ ngày 12/10/2026 không chạy kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt ở bất kỳ giai đoạn nào, trừ khi được yêu cầu riêng. Dashboard vẫn phải qua typecheck/build và các kiểm thử chức năng qua API/unit/integration; không được ghi responsive là đã xác minh cho thay đổi mới nếu chưa kiểm tra.
 - Yêu cầu nộp mới: báo cáo 12–18 trang nội dung chính, video 5–7 phút, bảng kiểm thử đủ đầu vào/thao tác/kỳ vọng/thực tế/kết quả/bằng chứng có dấu thời gian, dữ liệu đo gốc, bảng tài nguyên/IP/quyền, phiếu đóng góp cá nhân và khai báo nguồn tham khảo/cách dùng AI.
 - Nhóm có 04 thành viên. Mỗi người phải có sản phẩm kỹ thuật riêng; nhiệm vụ chỉ tìm tài liệu hoặc viết báo cáo không đủ điều kiện đóng góp cá nhân.
@@ -43,7 +44,7 @@ Các giả định dưới đây phải được xác nhận trong hai ngày đ�
 6. Dashboard dùng React, Vite và TypeScript.
 7. Control API và Deployment Runner dùng Node.js, TypeScript và Fastify.
 8. SQLite lưu metadata, lịch sử triển khai và lịch sử thao tác; Docker Engine là nguồn xác nhận trạng thái chạy thực tế.
-9. Prometheus, Grafana và cAdvisor được triển khai sau khi P0 ổn định.
+9. Prometheus và Grafana được triển khai sau khi P0 ổn định; exporter tại Runner thay cAdvisor trong phạm vi hai ứng dụng allowlist.
 10. CI/CD chỉ xây dựng và triển khai các repository hoặc image đã được cho phép.
 11. Nhóm có thể dành đủ năng lực để duy trì đồng thời ba luồng công việc nêu trên.
 
@@ -132,7 +133,7 @@ Data plane, tức mặt phẳng lưu lượng ứng dụng:
 
 Observability plane, tức mặt phẳng quan sát:
 
-- cAdvisor: thu thập thông tin container.
+- Runner exporter: chỉ thu thập thông tin App A/App B trong allowlist từ Docker API.
 - Prometheus: lưu chuỗi thời gian.
 - Grafana: trực quan hóa số liệu.
 - Docker logs: nguồn log ứng dụng ở phạm vi bài tập.
@@ -160,11 +161,10 @@ Luồng chính:
 ### 5.2. Phân tách mạng
 
 - edge: Nginx và các Web App.
-- control: Nginx, Control API và Deployment Runner; mạng nội bộ không có egress.
+- control: Nginx, Dashboard, Control API, Deployment Runner, Prometheus và Grafana; mạng nội bộ không có egress.
 - source-egress: chỉ Runner dùng để tải commit từ repository allowlist; không publish cổng host.
-- observability: cAdvisor, Prometheus và Grafana.
 
-Chỉ Nginx được publish cổng ra host trong cấu hình demo chuẩn. App A, App B, Control API, Runner và Docker socket không được công khai trực tiếp.
+Chỉ Nginx được publish cổng ra host trong cấu hình demo chuẩn. App A, App B, Dashboard, Control API, Runner, Prometheus, Grafana và Docker socket không được công khai trực tiếp.
 
 ### 5.3. Nguyên tắc điều khiển Docker
 
@@ -295,7 +295,7 @@ Thời gian: 26/10 đến 31/10/2026.
 
 - Pipeline xây image, gắn tag theo commit SHA và lưu kết quả.
 - Bước deploy chỉ nhận image hoặc repository cho phép.
-- Prometheus, Grafana và cAdvisor hoạt động trên môi trường Linux.
+- Runner exporter, Prometheus và Grafana đã hoạt động trên máy phát triển; phải nghiệm thu lại trên Linux.
 - Dashboard giám sát có CPU, RAM và trạng thái.
 - Kịch bản k6 có warm-up, tải ổn định và nhiều mức tải.
 - T05 và T06 có dữ liệu ban đầu.
@@ -367,8 +367,8 @@ Cổng nghiệm thu G5:
 | 25/10 | Tích hợp và sửa lỗi MVP | Chạy T03/T04/T07 vòng nghiệm thu | Hoàn thiện bản nháp Chương 3 |
 | 26/10 | Thêm API/giao diện đăng ký repository tin cậy và build theo commit SHA | Xác minh đầu vào repository, tag, digest và build log | Viết phần luồng Git của sản phẩm đúng trạng thái |
 | 27/10 | Thêm deploy có kiểm soát từ image được phép và lưu lịch sử release | Test build/deploy thất bại, allowlist và che secret | Cập nhật tài liệu release/deploy |
-| 28/10 | Tích hợp cAdvisor, Prometheus, Grafana | Xác minh metric target và timestamp | Viết phần giám sát và chỉ số |
-| 29/10 | Tạo dashboard CPU/RAM/trạng thái | Chạy T05; chụp và xuất dashboard | Ghi cách đọc và giới hạn của metric |
+| 28/10 | Nghiệm thu lại Runner exporter, Prometheus, Grafana trên Linux; bản phát triển đã hoàn thành sớm 12/10 | Xác minh metric target và timestamp | Rà phần giám sát và chỉ số |
+| 29/10 | Rà dashboard CPU/RAM/trạng thái đã provisioning | Chạy lại T05 và xuất dữ liệu dashboard nếu cần | Ghi cách đọc và giới hạn của metric |
 | 30/10 | Viết kịch bản k6 và chuẩn hóa môi trường đo | Chạy pilot, chọn mức tải an toàn | Viết phương pháp thực nghiệm |
 | 31/10 | Ổn định monitoring và ứng dụng dưới tải | Chạy T06 tối thiểu ba lần mỗi cấu hình | Ghi bảng dữ liệu thô, chưa kết luận quá sớm |
 | 01/11 | Chuẩn hóa reset/redeploy | Chạy T08 từ môi trường sạch | Viết quy trình khôi phục |
@@ -447,7 +447,7 @@ Các mức trên là điểm xuất phát, không phải cam kết hiệu năng.
 | P0 | Xác thực quản trị | Session, middleware, allowlist | T07 | 401/403, audit và log |
 | P0 | Khôi phục | README, Compose, manifest | T01, T08 | Biên bản chạy lại |
 | P1 | Triển khai từ Git | Đăng ký repository tin cậy, build theo commit, lưu digest và triển khai có kiểm soát | Kiểm thử pipeline của sản phẩm | Repository/commit, build log, tag/digest, operation và phiên bản quan sát được |
-| P1 | Giám sát | cAdvisor, Prometheus, Grafana | T05 | Dữ liệu thô và dashboard |
+| P1 | Giám sát | Runner exporter, Prometheus, Grafana | T05, P1-OBS-01 | Metric thô, rule, datasource và dashboard provisioning |
 | P1 | Kiểm thử tải | k6 | T06 | Script, JSON/CSV, bảng và biểu đồ |
 | P1 | Xử lý sự cố | Health, restart, log | T04, T08 | Timeline và thời gian phục hồi |
 | P2 | Nhiều replica | Nginx/Compose scale | Test nâng cao | So sánh cấu hình và kết quả |
@@ -578,7 +578,7 @@ Nhóm có 04 thành viên. Chưa có tên và phân công cuối, vì vậy tạ
 
 ### Vai trò C — Quan sát và kiểm thử tải
 
-- Prometheus, Grafana, cAdvisor.
+- Runner exporter, Prometheus và Grafana.
 - k6 và T01–T08.
 - Tạo cấu hình monitoring và dữ liệu T05.
 - Tạo script k6, dữ liệu đo gốc và bảng T06.

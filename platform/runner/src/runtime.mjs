@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import {
   getAppSpec,
   getSourceSpec,
+  listAppIds,
   listPublicSources,
   RunnerInputError,
   validateAction,
   validateCommitSha,
 } from "./catalog.mjs";
 import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
+import { renderPrometheusMetrics } from "./metrics.mjs";
 
 export class RunnerRuntimeError extends Error {
   constructor(code, message, statusCode = 500) {
@@ -136,6 +138,45 @@ export class DeploymentRuntime {
       containerId: String(container.Id).slice(0, 12),
       ...summarizeDockerStats(await this.docker.stats(container.Id)),
     };
+  }
+
+  async prometheusMetrics() {
+    const samples = await Promise.all(listAppIds().map(async (appId) => {
+      try {
+        const status = await this.status(appId);
+        const running = ["running", "starting", "unhealthy"].includes(status.status);
+        const base = {
+          appId,
+          running,
+          healthy: status.health === "healthy",
+          scrapeSuccess: true,
+          containerId: status.containerId,
+          version: status.observedVersion,
+          status: status.status,
+          health: status.health,
+          stats: null,
+        };
+        if (!running) return base;
+        try {
+          return { ...base, stats: await this.stats(appId) };
+        } catch {
+          return { ...base, scrapeSuccess: false };
+        }
+      } catch {
+        return {
+          appId,
+          running: false,
+          healthy: false,
+          scrapeSuccess: false,
+          containerId: null,
+          version: null,
+          status: "unknown",
+          health: "unknown",
+          stats: null,
+        };
+      }
+    }));
+    return renderPrometheusMetrics(samples);
   }
 
   async waitFor(appId, containerId, predicate, failureMessage) {

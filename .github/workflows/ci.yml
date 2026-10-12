@@ -50,7 +50,7 @@ jobs:
       - name: Dung stack mot host
         run: make up
 
-      - name: Chay regression P0
+      - name: Chay regression P0 va quan sat P1
         run: make test-integration
 
       - name: Dung anh theo commit va kiem tra manifest

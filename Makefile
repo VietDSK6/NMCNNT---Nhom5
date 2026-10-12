@@ -1,7 +1,7 @@
 COMMIT_SHA ?= $(shell git rev-parse HEAD)
 CI_OUTPUT_DIR ?= output/ci
 
-.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-p1-git test-unit test-integration test config
+.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-p1-git test-p1-observability test-unit test-integration test config
 
 build:
 	docker compose build
@@ -45,12 +45,15 @@ test-p1-1a:
 test-p1-git:
 	./tests/integration/p1_git_deploy.sh "$(COMMIT_SHA)"
 
+test-p1-observability:
+	./tests/integration/p1_observability.sh
+
 test-unit:
 	cd platform/runner && npm test
 	cd platform/control-api && npm test
 	cd platform/dashboard && npm run build
 
-test-integration: smoke test-p0-2 test-p0-2b test-p0-2c
+test-integration: smoke test-p0-2 test-p0-2b test-p0-2c test-p1-observability
 
 test: test-unit test-integration
 

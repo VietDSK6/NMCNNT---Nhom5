@@ -10,6 +10,7 @@ const runtime = {
   status: async (appId) => ({ appId, status: "running" }),
   logs: async (appId, tail) => ({ appId, requestedTail: tail, lines: [] }),
   stats: async (appId) => ({ appId, cpuPercent: 1.5 }),
+  prometheusMetrics: async () => '# TYPE mini_paas_app_running gauge\nmini_paas_app_running{app_id="app-a"} 1\n',
   execute: async (appId, action, version) => ({ message: "done", runtime: { appId, action, version } }),
 };
 const logger = { info() {}, error() {} };
@@ -30,10 +31,15 @@ function invoke({ method = "GET", path = "/", headers = {}, body }) {
         this.headers = responseHeaders;
       },
       end(payload) {
+        const raw = payload ? String(payload) : "";
+        let parsed = null;
+        if (raw) {
+          try { parsed = JSON.parse(raw); } catch { parsed = raw; }
+        }
         resolve({
           statusCode: this.statusCode,
           headers: this.headers,
-          body: payload ? JSON.parse(String(payload)) : null,
+          body: parsed,
         });
       },
     };
@@ -44,6 +50,13 @@ function invoke({ method = "GET", path = "/", headers = {}, body }) {
 test("health không yêu cầu secret", async () => {
   const response = await invoke({ path: "/health" });
   assert.equal(response.statusCode, 200);
+});
+
+test("metrics chỉ đọc được trong mạng nội bộ mà không cần secret quản trị", async () => {
+  const response = await invoke({ path: "/metrics" });
+  assert.equal(response.statusCode, 200);
+  assert.match(response.headers["content-type"], /version=0\.0\.4/);
+  assert.match(response.body, /mini_paas_app_running/);
 });
 
 test("từ chối API quản trị khi thiếu secret", async () => {

@@ -1,0 +1,29 @@
+groups:
+  - name: mini-paas-applications
+    rules:
+      - alert: MiniPaasApplicationNotHealthy
+        expr: mini_paas_app_healthy == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ứng dụng {{ $labels.app_id }} không khỏe"
+          description: "Health check của ứng dụng không đạt liên tục trong ít nhất 30 giây."
+
+      - alert: MiniPaasApplicationMemoryHigh
+        expr: mini_paas_app_memory_usage_ratio > 0.8
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Ứng dụng {{ $labels.app_id }} dùng nhiều RAM"
+          description: "Working set RAM vượt 80% giới hạn container liên tục trong ít nhất 2 phút."
+
+      - alert: MiniPaasRunnerScrapeFailed
+        expr: mini_paas_app_scrape_success == 0
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Không đọc được tài nguyên {{ $labels.app_id }}"
+          description: "Runner không thể lấy Docker stats liên tục trong ít nhất 30 giây."

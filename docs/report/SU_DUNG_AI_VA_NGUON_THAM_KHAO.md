@@ -23,5 +23,7 @@ Nguyên tắc khai báo cuối:
 | Nginx | Tài liệu chính thức Nginx | Reverse proxy, timeout, DNS resolver | Route Mini PaaS và Docker DNS động |
 | GitHub Actions | Tài liệu và action chính thức của GitHub | Workflow, checkout, Node setup, artifact | Quyền chỉ đọc, regression P0 và image manifest |
 | React/Vite/Fastify | Tài liệu chính thức từng dự án | API/framework và production build | Dashboard, Control API, xác thực và operation flow |
+| Prometheus | <https://prometheus.io/docs/prometheus/latest/installation/>, <https://prometheus.io/download/>; truy cập 12/10/2026 | Image chính thức, cấu hình scrape và lưu TSDB | Runner exporter allowlist, chu kỳ 5 giây, retention 7 ngày/256 MiB và alert rule |
+| Grafana | <https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/>, <https://grafana.com/docs/grafana/latest/administration/provisioning/>; truy cập 12/10/2026 | Image Docker và provisioning từ file | Route `/monitoring/`, datasource nội bộ, dashboard sáu panel, giới hạn tài nguyên và kiểm thử API |
 
 Khi bổ sung nguồn mới phải lưu URL, ngày truy cập và mục báo cáo sử dụng nguồn đó.

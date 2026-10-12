@@ -1,0 +1,16 @@
+docker compose config --quiet
+npm --prefix platform/runner test
+npm --prefix platform/dashboard run build
+make up
+make test-p1-observability
+make test
+make test-p1-git COMMIT_SHA=093f1b29341accae2520ba5854db1a5a992b959f
+docker compose ps
+docker compose exec -T prometheus promtool check config /etc/prometheus/prometheus.yml
+docker compose exec -T prometheus promtool check rules /etc/prometheus/alerts.yml
+docker image inspect prom/prometheus:v3.14.0
+docker image inspect grafana/grafana:13.2.2
+docker compose exec -T prometheus wget -q -O - http://127.0.0.1:9090/api/v1/query?query=mini_paas_app_info
+docker compose exec -T prometheus wget -q -O - http://127.0.0.1:9090/api/v1/query?query=mini_paas_app_cpu_percent
+docker compose exec -T prometheus wget -q -O - http://127.0.0.1:9090/api/v1/query?query=mini_paas_app_memory_working_set_bytes
+docker compose exec -T prometheus wget -q -O - http://127.0.0.1:9090/api/v1/query?query=mini_paas_app_healthy

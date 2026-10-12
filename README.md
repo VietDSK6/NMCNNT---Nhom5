@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện có luồng tối thiểu cho phép quản trị viên chọn repository tin cậy, nhập commit SHA, build image, triển khai App A và xem lịch sử/build log. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện có luồng tối thiểu cho phép quản trị viên chọn repository tin cậy, nhập commit SHA, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
 
 ## Trạng thái hiện tại
 
@@ -27,12 +27,15 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Runner tải archive của commit từ URL cố định, giới hạn 16 MiB, build context cố định qua Docker API và triển khai image `git-<12 ký tự>`.
 - SQLite lưu source, commit, phiên bản, image reference/ID, log, người yêu cầu và các mốc thời gian của deployment.
 - Kiểm thử thật đã build commit `093f1b2…`, triển khai App A qua Gateway, kiểm tra nhãn OCI và đưa ứng dụng về v1.0.0.
+- Runner xuất metric của App A/App B trong allowlist; Prometheus thu thập mỗi 5 giây và giữ chuỗi thời gian tối đa 7 ngày/256 MiB.
+- Grafana được cấp sẵn datasource và dashboard sáu vùng cho health, CPU, RAM, PID và lưu lượng mạng; truy cập qua Gateway và yêu cầu xác thực.
+- Prometheus nạp ba quy tắc cho ứng dụng không khỏe, RAM cao và lỗi đọc Docker stats; hiện chưa có kênh gửi thông báo.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
 - Source hiện được quản trị bằng allowlist trong mã; chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
-- Chưa có chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
+- Chưa có Alertmanager/kênh gửi thông báo, lưu trữ log tập trung và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
@@ -55,7 +58,11 @@ P0.2 bắt buộc đặt mật khẩu quản trị, không có mật khẩu mặ
 cp .env.example .env
 ```
 
-Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` bằng mật khẩu phát triển có ít nhất 12 ký tự và thay `RUNNER_SHARED_SECRET=CHANGE_ME...` bằng chuỗi riêng có ít nhất 24 ký tự. Hai giá trị phải khác nhau. Không commit file `.env`. Nếu thay mật khẩu và khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên cũ bị hủy.
+Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHANGE_ME...` bằng hai mật khẩu phát triển khác nhau, mỗi mật khẩu có ít nhất 12 ký tự; thay `RUNNER_SHARED_SECRET=CHANGE_ME...` bằng chuỗi riêng có ít nhất 24 ký tự. Không commit file `.env`. Nếu bỏ `GRAFANA_ADMIN_PASSWORD`, Compose dùng `ADMIN_PASSWORD` để tương thích môi trường cũ.
+
+Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên Dashboard cũ bị hủy. Grafana chỉ dùng mật khẩu môi trường khi khởi tạo volume `grafana-data` lần đầu; thay biến sau đó không tự đổi mật khẩu trong volume đã tồn tại. Hãy đổi mật khẩu trong Grafana trước khi cập nhật `.env`, không xóa volume chỉ để đổi mật khẩu.
+
+`PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này.
 
 Chỉ đặt `SESSION_COOKIE_SECURE=true` sau khi Gateway được cấu hình HTTPS. Môi trường localhost hiện dùng HTTP nên giữ `false`.
 
@@ -76,6 +83,7 @@ Các địa chỉ:
 - Ứng dụng B: <http://127.0.0.1:8080/apps/app-b/>
 - Health Gateway: <http://127.0.0.1:8080/healthz>
 - Health Control API: <http://127.0.0.1:8080/api/health>
+- Grafana: <http://127.0.0.1:8080/monitoring/>
 
 Nếu đổi `GATEWAY_PORT` trong `.env`, thay `8080` bằng cổng mới.
 
@@ -90,7 +98,7 @@ make status
 make smoke
 ```
 
-Chạy toàn bộ regression test P0.1 và integration test P0.2:
+Chạy toàn bộ unit/build, regression P0 và kiểm thử P1 observability:
 
 ```bash
 make test
@@ -98,7 +106,7 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 11/11 đạt.
+- Deployment Runner unit test: 16/16 đạt.
 - Control API unit test: 9/9 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
@@ -107,12 +115,15 @@ Kết quả chuẩn hiện tại:
 - P0.2C: 12 kiểm tra đạt.
 - CI nội bộ/image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
 - P1 Git deployment: 10/10 kiểm tra tích hợp đạt.
+- P1 observability: 15/15 kiểm tra tích hợp đạt.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
 Bộ P0.2C kiểm tra xác thực cho log/stats, giới hạn tối đa 200 dòng, ứng dụng ngoài danh mục, hợp đồng CPU/RAM/PID/mạng và việc Runner từ chối endpoint quan sát khi thiếu secret. Dashboard đã được kiểm tra ở 1440×900, 768×1024 và 390×844; không tràn ngang, vùng điều khiển quan sát trên mobile cao tối thiểu 44 px.
 
 Theo quy tắc dự án từ ngày 12/10/2026, các thay đổi tiếp theo không được kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt nếu chủ dự án không yêu cầu riêng. Dashboard vẫn phải qua TypeScript/production build và kiểm thử chức năng liên quan. Kết quả responsive nêu trên chỉ là bằng chứng lịch sử của bản P0.2C.
+
+Bộ P1 observability kiểm tra endpoint metric nội bộ, port binding, Prometheus readiness/target/query/rules và Grafana health/xác thực/provisioning. Không dùng kiểm tra trình duyệt hoặc ảnh giao diện cho thay đổi này.
 
 Chạy unit test và build riêng khi phát triển:
 
@@ -152,13 +163,25 @@ make test-p1-1a
 
 Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. [Run đầu tiên](https://github.com/VietDSK6/NMCNNT---Nhom5/actions/runs/38197344603) đã thành công với commit `4dbd6c1` và tạo artifact chứa manifest cùng thông tin môi trường. Kết quả này chỉ chứng minh quy trình kiểm tra repository Mini PaaS, không được dùng để tuyên bố FR09 “triển khai ứng dụng từ Git” đã hoàn thành.
 
+## Giám sát chuỗi thời gian
+
+Prometheus và Grafana được khởi động cùng `make up`. Prometheus chỉ truy cập được trong mạng `control`; Grafana đi qua Gateway tại `/monitoring/` và dùng tài khoản quản trị đã cấu hình.
+
+Chạy riêng bộ kiểm thử:
+
+```bash
+make test-p1-observability
+```
+
+Dashboard Mini PaaS có liên kết **Mở đồ thị lịch sử** tới Grafana. Dashboard mặc định hiển thị 15 phút gần nhất và tự làm mới 5 giây. Alert rule đã được nạp nhưng chưa có Alertmanager, email hoặc webhook; trạng thái alert chỉ xem được trong Prometheus/Grafana.
+
 ## Dừng hệ thống
 
 ```bash
 make down
 ```
 
-Lệnh này dừng và xóa container cùng mạng do Compose tạo, nhưng không dùng `docker system prune`. Volume `mini-paas-control-data` được giữ lại để bảo toàn SQLite.
+Lệnh này dừng và xóa container cùng mạng do Compose tạo, nhưng không dùng `docker system prune`. Các volume `mini-paas-control-data`, `mini-paas-prometheus-data` và `mini-paas-grafana-data` được giữ lại.
 
 ## Thử bản v2 của Ứng dụng A
 
@@ -189,11 +212,13 @@ platform/control-api/       Xác thực, SQLite, metadata và audit
 platform/dashboard/         Dashboard React/Vite
 platform/runner/            Ranh giới đặc quyền và Docker Engine API
 platform/gateway/           Ảnh và cấu hình Nginx
+platform/monitoring/        Prometheus, alert rule và Grafana provisioning
 tests/smoke/p0_1.sh         Kiểm thử nhanh P0.1
 tests/integration/p0_2.sh   Kiểm thử tích hợp P0.2
 tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
+tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
 .github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
@@ -211,6 +236,8 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chỉ Deployment Runner được gắn Docker socket; đây vẫn là quyền rất cao trên host.
 - Runner không có API nhận shell/URL/Dockerfile tùy ý; chỉ nhận app/action/source trong catalog và commit SHA đầy đủ.
 - Runner có mạng `source-egress` để tải source GitHub đã allowlist; mạng `control` vẫn internal và Runner không publish cổng host.
+- `/metrics` chỉ chứa số liệu hai app trong allowlist và chỉ được scrape qua mạng `control`; Prometheus không có route Gateway hoặc cổng host.
+- Grafana tắt anonymous access, có mật khẩu cấu hình riêng (fallback về mật khẩu Dashboard cho môi trường cũ) và không dùng chung cookie Dashboard.
 - API log chỉ đọc App A/App B, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
 - Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
@@ -221,6 +248,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md) và [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md) và [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

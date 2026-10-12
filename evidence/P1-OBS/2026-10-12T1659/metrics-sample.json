@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-10-12T16:59:39+07:00",
+  "source": "Prometheus instant query API",
+  "environment": "macOS/OrbStack development",
+  "applications": [
+    {
+      "appId": "app-a",
+      "containerId": "478a7c511e66",
+      "version": "v1.0.0",
+      "status": "running",
+      "health": "healthy",
+      "cpuPercent": 0.57,
+      "memoryWorkingSetBytes": 18612224
+    },
+    {
+      "appId": "app-b",
+      "containerId": "8848f23efdee",
+      "version": "v1.0.0",
+      "status": "running",
+      "health": "healthy",
+      "cpuPercent": 0.68,
+      "memoryWorkingSetBytes": 19443712
+    }
+  ],
+  "note": "Đây là mẫu phát triển khi hệ thống gần như nhàn rỗi, không phải kết quả kiểm thử hiệu năng."
+}

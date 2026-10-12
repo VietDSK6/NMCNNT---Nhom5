@@ -273,3 +273,44 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - `evidence/P1-GIT/2026-10-12T1201/`.
 - `docs/architecture/P1_GIT_DEPLOYMENT.md`.
 - `docs/decisions/0006-trusted-git-source-deployment.md`.
+
+## 12/10/2026 — P1: giám sát chuỗi thời gian Prometheus/Grafana
+
+### Phạm vi thực hiện
+
+- Bổ sung exporter Prometheus tại Runner, tự duyệt App A/App B trong catalog và không nhận container ID từ request.
+- Xuất trạng thái chạy/health, CPU, working set RAM, giới hạn/tỷ lệ RAM, PID và bộ đếm mạng.
+- Thêm Prometheus 3.14.0 với scrape 5 giây, retention 7 ngày/256 MiB và ba alert rule.
+- Thêm Grafana 13.2.2, datasource và dashboard sáu panel được provisioning từ Git.
+- Route Grafana qua Gateway tại `/monitoring/`; tắt anonymous access; không publish cổng Runner/Prometheus/Grafana.
+- Ghim version và manifest digest của hai image giám sát.
+- Không thêm cAdvisor vì Runner đã có Docker API và allowlist; tránh thêm container có mount/quyền rộng trên host.
+
+### Kết quả thực tế
+
+- Runner unit test: 16/16 đạt.
+- Control API unit test: 9/9 đạt.
+- Dashboard production build: đạt; không chạy trình duyệt/responsive theo quy tắc dự án.
+- P1 observability integration: 15/15 đạt.
+- Toàn bộ regression: P0.1 9/9, P0.2 15/15, P0.2B 21, P0.2C 12 và P1 observability 15 đều đạt.
+- Luồng P1 Git deployment chạy lại: 10/10 đạt; App A trở lại v1.0.0.
+- Tám service ở trạng thái healthy; chỉ Gateway bind `127.0.0.1:8080`.
+- Prometheus thu được hai chuỗi App A/App B; Grafana có datasource nội bộ và dashboard sáu panel.
+
+### Sự cố và cách xử lý
+
+Grafana 13.2.2 không khởi động ổn định với giới hạn 100 PID. Health check ghi nhận container bị từ chối tạo tiến trình/namespace trong giai đoạn khởi tạo. Giới hạn được nâng lên 300 PID và RAM 384 MiB; sau khi tạo lại container, health check và toàn bộ test đạt. Đây là ví dụ cho thấy giới hạn tài nguyên phải được đo và điều chỉnh theo đặc tính tiến trình, không đặt tùy ý chỉ để cấu hình trông chặt.
+
+### Giới hạn cần ghi đúng
+
+- Alert rule đã được nạp nhưng chưa có Alertmanager/email/webhook.
+- Chưa có log tập trung; log vẫn đọc từ Docker với giới hạn P0.2C.
+- Metric mới bao phủ hai app allowlist, chưa bao phủ host và các service nền tảng.
+- Dữ liệu macOS/OrbStack chứng minh đường thu thập, chưa phải số liệu hiệu năng chính thức.
+- Bước tiếp theo là k6, dữ liệu đo gốc và chạy lại trên VPS Linux.
+
+### Bằng chứng
+
+- `evidence/P1-OBS/2026-10-12T1659/`.
+- `docs/architecture/P1_OBSERVABILITY.md`.
+- `docs/decisions/0007-runner-prometheus-exporter.md`.

@@ -113,7 +113,7 @@ function LoginScreen({ onAuthenticated }: { readonly onAuthenticated: (session: 
           <div><strong>Mini PaaS</strong><small>Control Center</small></div>
         </div>
         <div className="login-copy">
-          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P1 GIT</span>
+          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P1</span>
           <h1>Một điểm điều khiển cho toàn bộ vòng đời ứng dụng.</h1>
           <p>Theo dõi và vận hành các ứng dụng mẫu qua Control API, Deployment Runner và Docker Engine.</p>
         </div>
@@ -617,6 +617,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           <a className="nav-item" href="#activity"><HistoryIcon />Kiểm toán</a>
           <span className="nav-label nav-label--spaced">QUAN SÁT</span>
           <a className="nav-item" href="#observability"><ActivityIcon />Log và tài nguyên</a>
+          <a className="nav-item" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer"><ActivityIcon />Đồ thị lịch sử<ExternalIcon /></a>
         </nav>
         <div className="sidebar-footer">
           <div className="environment-card"><span className="pulse-dot" /><div><strong>Môi trường phát triển</strong><small>Một máy · Docker Compose</small></div></div>
@@ -637,8 +638,8 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           {error && <div className="alert alert--error" role="alert"><AlertIcon /><div><strong>Thao tác chưa hoàn tất</strong><span>{error}</span></div><button onClick={() => void loadData()}>Tải lại dữ liệu</button></div>}
           {notice && <div className="alert alert--success" role="status"><CheckIcon /><div><strong>Yêu cầu đã được tiếp nhận</strong><span>{notice}</span></div><button onClick={() => setNotice("")}>Đóng</button></div>}
           <section className="stage-banner">
-            <div><span className="eyebrow">MINI PAAS · P1</span><h2>Từ commit Git đến container đang hoạt động</h2><p>Dashboard tạo deployment; Control API lưu lịch sử; Runner build source tin cậy và cập nhật ứng dụng qua Docker Engine.</p></div>
-            <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Git commit</span><ChevronIcon /><span>Control API</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Docker</span></div>
+            <div><span className="eyebrow">MINI PAAS · P1</span><h2>Triển khai và quan sát ứng dụng trên một nền tảng</h2><p>Runner build source tin cậy, vận hành container và xuất số liệu cho Prometheus/Grafana.</p></div>
+            <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Git commit</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Container</span><ChevronIcon /><span>Metrics</span></div>
           </section>
 
           <section className="metrics-grid" aria-label="Chỉ số tổng quan">
@@ -680,7 +681,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           </section>
 
           <section className="section" id="observability">
-            <div className="section-heading"><div><span className="eyebrow">QUAN SÁT THEO YÊU CẦU</span><h2>Log và tài nguyên container</h2><p>Dữ liệu được lấy trực tiếp từ Docker qua Runner, có xác thực và giới hạn dung lượng phản hồi.</p></div><span className="last-updated">Không tự động làm mới</span></div>
+            <div className="section-heading"><div><span className="eyebrow">QUAN SÁT HỆ THỐNG</span><h2>Log và tài nguyên container</h2><p>Ảnh chụp và log được lấy có giới hạn; Prometheus lưu chuỗi thời gian để Grafana vẽ đồ thị.</p></div><a className="button button--secondary" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer">Mở đồ thị lịch sử<ExternalIcon /></a></div>
             <ObservabilityPanel applications={applications?.data ?? []} />
           </section>
 
@@ -694,7 +695,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             <AuditTable events={auditEvents} />
           </section>
 
-          <footer className="workspace-footer"><span>Mini PaaS · Mốc P1 triển khai từ Git</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
+          <footer className="workspace-footer"><span>Mini PaaS · Mốc P1 triển khai và quan sát</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
         </div>
       </main>
     </div>

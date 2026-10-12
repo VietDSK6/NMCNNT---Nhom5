@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến P1 Git deployment ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry, Prometheus/Grafana và kiểm thử tải vẫn là nội dung dự kiến của P1.
+> Bản nháp cập nhật đến P1 giám sát chuỗi thời gian ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest, kiểm thử tải và nghiệm thu VPS vẫn là nội dung dự kiến của P1.
 
 ## 3.1. Phân tích bài toán
 
@@ -12,7 +12,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 
 ### 3.2.1. Yêu cầu chức năng
 
-| Mã | Yêu cầu | Trạng thái đến P0.2C |
+| Mã | Yêu cầu | Trạng thái hiện tại |
 |---|---|---|
 | FR01 | Phục vụ hai ứng dụng Web qua một Gateway | Đã triển khai, kiểm thử |
 | FR02 | Hiển thị health, phiên bản mong muốn và phiên bản thực tế | Đã triển khai, kiểm thử |
@@ -23,7 +23,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR07 | Xem log gần nhất theo giới hạn | Đã triển khai, kiểm thử |
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
 | FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử phạm vi tối thiểu cho một source/App A theo commit SHA; chưa có registry digest hoặc repository tùy ý |
-| FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Dự kiến P1 |
+| FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Đã triển khai và kiểm thử bằng Runner exporter, Prometheus và Grafana; chưa có Alertmanager |
 
 ### 3.2.2. Yêu cầu phi chức năng
 
@@ -37,7 +37,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 
 ## 3.3. Kiến trúc tổng thể một máy
 
-Hệ thống được chia thành mặt phẳng điều khiển và mặt phẳng dữ liệu. P1 bổ sung đường tải source Git tin cậy và build image, nhưng chưa tạo mặt phẳng giám sát chuỗi thời gian riêng.
+Hệ thống được chia thành mặt phẳng điều khiển, mặt phẳng dữ liệu và mặt phẳng quan sát. P1 bổ sung đường tải source Git tin cậy, build image và chuỗi thu thập metric riêng.
 
 ```text
                         NGƯỜI QUẢN TRỊ
@@ -60,9 +60,18 @@ Hệ thống được chia thành mặt phẳng điều khiển và mặt phẳn
                     Docker Engine API
                     /       |        \
                  trạng thái log      stats
+                                      |
+                                      v
+                                  /metrics
+                                      |
+                                      v
+                             Prometheus -> Grafana
+                                             |
+                                             v
+                                   Gateway /monitoring/
 ```
 
-Mặt phẳng dữ liệu là lưu lượng từ Gateway tới App A/App B. Mặt phẳng điều khiển gồm Dashboard, Control API, SQLite và Runner. Gateway tham gia cả hai mạng để chuyển tiếp request, nhưng quyền Docker chỉ nằm ở Runner.
+Mặt phẳng dữ liệu là lưu lượng từ Gateway tới App A/App B. Mặt phẳng điều khiển gồm Dashboard, Control API, SQLite và Runner. Mặt phẳng quan sát gồm exporter tại Runner, Prometheus và Grafana. Gateway chuyển tiếp request của người dùng, nhưng quyền Docker chỉ nằm ở Runner.
 
 ## 3.4. Thiết kế thành phần
 
@@ -74,6 +83,7 @@ Gateway là cổng HTTP duy nhất bind vào `127.0.0.1:8080` trong môi trườ
 - `/api/*`: Control API.
 - `/apps/app-a/*`: App A.
 - `/apps/app-b/*`: App B.
+- `/monitoring/*`: Grafana có xác thực riêng.
 - `/healthz`: health của Gateway.
 
 Nginx dùng DNS nội bộ Docker và phân giải động để tiếp tục chuyển tiếp đúng sau khi Runner thay container trong quy trình cập nhật.
@@ -82,7 +92,7 @@ Nginx dùng DNS nội bộ Docker và phân giải động để tiếp tục ch
 
 Dashboard dùng React, Vite và TypeScript. Giao diện trình bày riêng health HTTP, trạng thái container, phiên bản mong muốn và phiên bản quan sát được để tránh coi các khái niệm này là tương đương.
 
-Các thao tác vòng đời và deployment trả về `202 Accepted`; Dashboard theo dõi trạng thái qua polling. Vùng triển khai Git chỉ hiển thị source allowlist, nhận commit SHA đầy đủ và đọc lịch sử/build log. Log và stats chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới.
+Các thao tác vòng đời và deployment trả về `202 Accepted`; Dashboard theo dõi trạng thái qua polling. Vùng triển khai Git chỉ hiển thị source allowlist, nhận commit SHA đầy đủ và đọc lịch sử/build log. Log và stats snapshot chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới. Liên kết đồ thị lịch sử mở dashboard Grafana đã được cấp sẵn.
 
 ### 3.4.3. Control API
 
@@ -100,9 +110,15 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, logs, stats và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
+Runner cung cấp status, start, stop, restart, update, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
 
-### 3.4.5. Ứng dụng mẫu
+### 3.4.5. Prometheus và Grafana
+
+Runner xuất metric của hai ứng dụng trong allowlist tại `/metrics`. Prometheus scrape mỗi 5 giây, lưu TSDB tối đa 7 ngày/256 MiB và đánh giá ba rule cho health, RAM cao và lỗi đọc stats. Grafana truy vấn Prometheus qua mạng nội bộ, nạp datasource/dashboard từ file trong Git và hiển thị sáu vùng health, CPU, RAM, PID và mạng.
+
+Không dùng cAdvisor trong lát cắt này vì Runner đã có quyền Docker và catalog giới hạn; thêm cAdvisor sẽ phát sinh thêm mount/quyền quan sát toàn host. Đổi lại, metric phụ thuộc Runner và chưa bao phủ các service nền tảng.
+
+### 3.4.6. Ứng dụng mẫu
 
 App A và App B là hai Web server Node.js nhỏ, không có thư viện ngoài. Mỗi app có `/health`, `/version`, log JSON trên stdout và trang minh họa. App A có hai image v1.0.0/v2.0.0; App B dùng để đối chiếu định tuyến và vòng đời độc lập.
 
@@ -114,6 +130,8 @@ App A và App B là hai Web server Node.js nhỏ, không có thư viện ngoài.
 | Dashboard | Không | Có | Không | Không | Không |
 | Control API | Không | Có | Không | Không | Không |
 | Runner | Không | Có | Có | Không | Có |
+| Prometheus | Không | Có | Không | Không | Không |
+| Grafana | Không | Có | Không | Không | Không |
 | App A/App B | Có | Không | Không | Không | Không |
 
 Mạng `control` được đặt nội bộ. `source-egress` chỉ phục vụ Runner tải archive của repository allowlist và không publish cổng. Việc tách mạng làm giảm kết nối trực tiếp không cần thiết, nhưng không biến Docker socket thành quyền hạn chế. Nếu Runner bị chiếm quyền, host Docker vẫn có nguy cơ cao.
@@ -131,7 +149,7 @@ SQLite hiện lưu các nhóm dữ liệu:
 
 Operation và deployment chuyển qua `queued → running → succeeded|failed`. Partial unique index ngăn hai bản ghi cùng loại đang hoạt động trên một ứng dụng; Control API còn đối chiếu chéo operation/deployment trước khi nhận yêu cầu. Runner có khóa trong bộ nhớ để bảo vệ lớp Docker nếu request đi ngoài luồng thông thường.
 
-Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù hợp với cơ sở dữ liệu nghiệp vụ. P1 dự kiến dùng Prometheus cho chuỗi thời gian.
+Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù hợp với cơ sở dữ liệu nghiệp vụ. Prometheus lưu chuỗi thời gian trong volume `prometheus-data`; Grafana lưu metadata riêng trong `grafana-data` nhưng dashboard nguồn vẫn được cấp từ file trong repository.
 
 ## 3.7. Các luồng chính
 
@@ -176,6 +194,14 @@ Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù
 5. CPU được tính từ chênh lệch hai mẫu; RAM dùng working set; PID và byte mạng được tổng hợp.
 6. Dashboard hiển thị kết quả cùng thời điểm lấy mẫu. Nếu người dùng đổi ứng dụng nhanh, phản hồi cũ bị bỏ.
 
+### 3.7.6. Thu thập và hiển thị chuỗi thời gian
+
+1. Prometheus gọi `runner:3001/metrics` mỗi 5 giây trong mạng `control`.
+2. Runner tự duyệt catalog, tìm container bằng nhãn và lấy stats; request không truyền container ID.
+3. Metric trạng thái vẫn được xuất khi app dừng; metric tài nguyên không được tạo giả nếu không lấy được stats.
+4. Prometheus lưu mẫu, đánh giá rule và cung cấp PromQL cho Grafana.
+5. Grafana dùng datasource nội bộ và dashboard provisioning; người quản trị truy cập qua `/monitoring/` sau khi xác thực.
+
 ## 3.8. Thiết kế an toàn
 
 Các biện pháp đã triển khai gồm:
@@ -186,6 +212,8 @@ Các biện pháp đã triển khai gồm:
 - Control API và Runner đều kiểm tra đầu vào; Runner có catalog cố định.
 - Không có endpoint `exec` hoặc khả năng nhận shell command.
 - Docker socket không xuất hiện trong Dashboard, API, Gateway hoặc app mẫu.
+- Runner và Prometheus không publish cổng; endpoint `/metrics` chỉ nằm trong mạng `control` và không nhận tham số điều khiển.
+- Grafana tắt anonymous access và đăng ký tài khoản; provisioning được mount chỉ đọc.
 - Log giới hạn 200 dòng, 2 MiB dữ liệu thô và 4.096 ký tự mỗi dòng.
 - Container chạy non-root, filesystem chỉ đọc, drop capability, `no-new-privileges`, giới hạn CPU/RAM/PID.
 
@@ -199,10 +227,11 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 - Fastify có JSON Schema, footprint nhỏ và phù hợp API Node.js.
 - SQLite giảm số service ở MVP, đủ cho một quản trị viên và lịch sử quy mô nhỏ.
 - Docker Engine API qua Unix socket tránh ghép command shell từ input, nhưng vẫn phải coi Runner là đặc quyền cao.
-- Quan sát on-demand hoàn thành MVP trước; Prometheus/Grafana được tách sang P1 để cung cấp lịch sử đúng chức năng.
+- Quan sát on-demand phục vụ chẩn đoán tức thời; Prometheus/Grafana lưu lịch sử và tách dữ liệu giám sát khỏi SQLite nghiệp vụ.
+- Runner exporter được chọn thay cAdvisor để chỉ xuất metric của allowlist và không thêm một container có mount/quyền nhạy cảm.
 
 ## 3.10. Giới hạn thiết kế và hướng tiếp theo
 
-Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Stats chỉ là snapshot và log chưa được tập trung.
+Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Metric ứng dụng đã có chuỗi thời gian nhưng log chưa được tập trung; Prometheus/Grafana cùng host nên không còn quan sát được nếu host hỏng.
 
-Phần tiếp theo của P1 dự kiến bổ sung registry digest, sau đó tích hợp cAdvisor/Prometheus/Grafana, kiểm thử tải và số liệu thực nghiệm trên Linux/VPS. Các thành phần này phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Phần tiếp theo của P1 là viết kịch bản k6, chạy pilot có giới hạn và đối chiếu p95/thông lượng/tỷ lệ lỗi với metric Prometheus; sau đó nghiệm thu trên Linux/VPS. Registry digest có thể bổ sung nếu còn thời gian, nhưng không được trì hoãn kiểm thử tải, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

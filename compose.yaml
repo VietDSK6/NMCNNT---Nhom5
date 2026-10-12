@@ -4,7 +4,7 @@ services:
   gateway:
     build:
       context: ./platform/gateway
-    image: mini-paas/gateway:p0.2c
+    image: mini-paas/gateway:p1-observability
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
     depends_on:
@@ -15,6 +15,8 @@ services:
       dashboard:
         condition: service_healthy
       control-api:
+        condition: service_healthy
+      grafana:
         condition: service_healthy
     networks:
       - edge
@@ -46,7 +48,7 @@ services:
   dashboard:
     build:
       context: ./platform/dashboard
-    image: mini-paas/dashboard:p1-git
+    image: mini-paas/dashboard:p1-observability
     expose:
       - "8080"
     networks:
@@ -78,7 +80,7 @@ services:
   control-api:
     build:
       context: ./platform/control-api
-    image: mini-paas/control-api:p1-git
+    image: mini-paas/control-api:p1-observability
     environment:
       HOST: 0.0.0.0
       PORT: 3000
@@ -87,7 +89,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Hãy tạo file .env và đặt ADMIN_PASSWORD}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
-      PUBLIC_ORIGIN: http://127.0.0.1:${GATEWAY_PORT:-8080}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://127.0.0.1:8080}
       GATEWAY_BASE_URL: http://gateway:8080
       RUNNER_BASE_URL: http://runner:3001
       RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?Hãy tạo file .env và đặt RUNNER_SHARED_SECRET}
@@ -133,7 +135,7 @@ services:
   runner:
     build:
       context: ./platform/runner
-    image: mini-paas/deployment-runner:p1-git
+    image: mini-paas/deployment-runner:p1-observability
     environment:
       HOST: 0.0.0.0
       PORT: 3001
@@ -169,6 +171,96 @@ services:
     cpus: 0.25
     mem_limit: 96m
     pids_limit: 75
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+  prometheus:
+    image: prom/prometheus:v3.14.0@sha256:5ce7540c3c00ef4ab0c9d2c995c6a5b9c421f44b4a115d97a2c7af3b1c21cbb0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=256MB
+    depends_on:
+      runner:
+        condition: service_healthy
+    expose:
+      - "9090"
+    networks:
+      - control
+    volumes:
+      - ./platform/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./platform/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:9090/-/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 10s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    cpus: 0.30
+    mem_limit: 320m
+    pids_limit: 100
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
+
+  grafana:
+    image: grafana/grafana:13.2.2@sha256:ac461fb352abc50da10a51c7d02462e9c05488f11f53f14b3ad79a8145f638a0
+    environment:
+      GF_SERVER_ROOT_URL: ${PUBLIC_ORIGIN:-http://127.0.0.1:8080}/monitoring/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SECURITY_ADMIN_USER: ${ADMIN_USERNAME:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-${ADMIN_PASSWORD:?Hãy tạo file .env và đặt ADMIN_PASSWORD}}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    expose:
+      - "3000"
+    networks:
+      - control
+    volumes:
+      - ./platform/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./platform/monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 15s
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    cpus: 0.35
+    mem_limit: 384m
+    pids_limit: 300
     logging:
       driver: json-file
       options:
@@ -272,3 +364,7 @@ networks:
 volumes:
   control-data:
     name: mini-paas-control-data
+  prometheus-data:
+    name: mini-paas-prometheus-data
+  grafana-data:
+    name: mini-paas-grafana-data

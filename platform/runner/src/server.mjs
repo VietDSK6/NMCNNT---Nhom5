@@ -11,6 +11,16 @@ function json(response, statusCode, value) {
   response.end(JSON.stringify(value));
 }
 
+function text(response, statusCode, value, contentType = "text/plain; charset=utf-8") {
+  response.writeHead(statusCode, {
+    "content-type": contentType,
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+  });
+  response.end(value);
+}
+
 function tokenMatches(provided, expected) {
   if (typeof provided !== "string") return false;
   const actualBuffer = Buffer.from(provided);
@@ -42,6 +52,20 @@ export function createRunnerServer({ runtime, token, logger = console }) {
     const url = new URL(request.url || "/", "http://runner.internal");
     if (request.method === "GET" && url.pathname === "/health") {
       json(response, 200, { status: "ok", service: "deployment-runner" });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/metrics") {
+      try {
+        text(
+          response,
+          200,
+          await runtime.prometheusMetrics(),
+          "text/plain; version=0.0.4; charset=utf-8",
+        );
+      } catch {
+        text(response, 503, "Không thể thu thập metric tại thời điểm này.\n");
+      }
       return;
     }
 

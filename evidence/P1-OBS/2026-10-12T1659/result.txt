@@ -1,0 +1,31 @@
+ĐẠT: Runner xuất metric Prometheus hữu hạn cho App A và App B
+ĐẠT: Runner và Prometheus không công khai cổng ra host
+ĐẠT: Prometheus sẵn sàng nhận truy vấn
+ĐẠT: Prometheus thu được trạng thái đang chạy của App A và App B
+ĐẠT: Prometheus lưu nhiều mẫu theo thời gian cho App A và App B
+ĐẠT: Chuỗi metric RAM có giá trị thực cho hai ứng dụng
+ĐẠT: Prometheus target Runner ở trạng thái up
+ĐẠT: Prometheus nạp đủ ba quy tắc cảnh báo
+ĐẠT: Grafana khỏe qua đường dẫn Gateway
+ĐẠT: Grafana báo cơ sở dữ liệu nội bộ hoạt động
+ĐẠT: Grafana yêu cầu xác thực khi đọc datasource
+ĐẠT: Datasource Prometheus được cấp sẵn trong Grafana
+ĐẠT: Datasource Grafana trỏ đúng Prometheus nội bộ
+ĐẠT: Dashboard Mini PaaS được cấp sẵn trong Grafana
+ĐẠT: Dashboard Grafana có đủ sáu bảng trạng thái/tài nguyên
+
+P1 observability integration test: 15 kiểm tra đạt.
+
+Prometheus validation:
+- `promtool check config`: SUCCESS, tìm thấy 1 rule file.
+- `promtool check rules`: SUCCESS, tìm thấy 3 rules.
+
+Regression cùng lần thay đổi:
+- Runner unit: 16/16 đạt.
+- Control API unit: 9/9 đạt.
+- Dashboard production build: đạt.
+- P0.1: 9/9 đạt.
+- P0.2: 15/15 đạt.
+- P0.2B: 21 kiểm tra đạt.
+- P0.2C: 12 kiểm tra đạt.
+- P1 Git deployment: 10 kiểm tra đạt; App A trở lại v1.0.0.

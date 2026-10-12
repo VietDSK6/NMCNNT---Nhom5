@@ -50,6 +50,10 @@ export function getAppSpec(appId) {
   return spec;
 }
 
+export function listAppIds() {
+  return Object.keys(APP_CATALOG);
+}
+
 export function getSourceSpec(sourceId) {
   const source = SOURCE_CATALOG[sourceId];
   if (!source) {
