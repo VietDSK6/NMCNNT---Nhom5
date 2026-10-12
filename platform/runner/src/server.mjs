@@ -50,19 +50,34 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
-    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/actions)?$/);
+    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats))?$/);
     if (!match) {
       json(response, 404, { error: "not_found", message: "Không tìm thấy tài nguyên yêu cầu." });
       return;
     }
 
     const appId = match[1];
+    const resource = match[2] ?? "status";
     try {
-      if (request.method === "GET" && !url.pathname.endsWith("/actions")) {
+      if (request.method === "GET" && resource === "status") {
         json(response, 200, { data: await runtime.status(appId) });
         return;
       }
-      if (request.method === "POST" && url.pathname.endsWith("/actions")) {
+      if (request.method === "GET" && resource === "logs") {
+        const rawTail = url.searchParams.get("tail");
+        const tail = rawTail === null ? 100 : Number(rawTail);
+        if (!Number.isInteger(tail) || tail < 1 || tail > 200) {
+          json(response, 400, { error: "validation_error", message: "Số dòng log phải là số nguyên từ 1 đến 200." });
+          return;
+        }
+        json(response, 200, { data: await runtime.logs(appId, tail) });
+        return;
+      }
+      if (request.method === "GET" && resource === "stats") {
+        json(response, 200, { data: await runtime.stats(appId) });
+        return;
+      }
+      if (request.method === "POST" && resource === "actions") {
         const body = await readJson(request);
         if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.action !== "string") {
           json(response, 400, { error: "validation_error", message: "Yêu cầu phải có thao tác hợp lệ." });

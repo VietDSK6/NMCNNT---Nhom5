@@ -9,6 +9,15 @@
 - Trạng thái phê duyệt đề tài: chưa có thông tin xác nhận giảng viên đã phê duyệt.
 - Quy mô nhóm, thời lượng làm việc mỗi thành viên và cấu hình máy chủ: chưa được cung cấp.
 
+### Cập nhật thực tế ngày 12/10/2026
+
+- P0.1, P0.2A, P0.2B và P0.2C đã được triển khai, kiểm thử trên máy phát triển macOS/OrbStack.
+- MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
+- G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
+- T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
+- Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
+- Bước tiếp theo là G3/P1: CI/CD có kiểm soát, Prometheus/Grafana, k6 và thu thập số liệu; không mở P2 trước khi các phần này ổn định.
+
 Kế hoạch này dùng ba luồng công việc song song:
 
 1. Sản phẩm và hạ tầng.

@@ -1,10 +1,11 @@
 import http from "node:http";
 
 export class DockerApiError extends Error {
-  constructor(statusCode, message) {
+  constructor(statusCode, message, code = "docker_api_error") {
     super(message);
     this.name = "DockerApiError";
     this.statusCode = statusCode;
+    this.code = code;
   }
 }
 
@@ -53,6 +54,44 @@ export class DockerClient {
     });
   }
 
+  requestBuffer(method, path, accepted = [200], maximumBytes = 2 * 1024 * 1024) {
+    return new Promise((resolve, reject) => {
+      const request = http.request({ socketPath: this.socketPath, path, method }, (response) => {
+        const chunks = [];
+        let receivedBytes = 0;
+        let stopped = false;
+        response.on("data", (chunk) => {
+          if (stopped) return;
+          receivedBytes += chunk.length;
+          if (receivedBytes > maximumBytes) {
+            stopped = true;
+            response.destroy();
+            reject(new DockerApiError(413, "Dữ liệu log từ Docker vượt giới hạn 2 MiB cho mỗi yêu cầu.", "log_output_too_large"));
+            return;
+          }
+          chunks.push(Buffer.from(chunk));
+        });
+        response.on("end", () => {
+          if (stopped) return;
+          const statusCode = response.statusCode ?? 500;
+          const buffer = Buffer.concat(chunks);
+          if (!accepted.includes(statusCode)) {
+            const parsed = parseBody(buffer.toString("utf8"));
+            const message = parsed && typeof parsed === "object" && "message" in parsed
+              ? String(parsed.message)
+              : `Docker API trả về HTTP ${statusCode}.`;
+            reject(new DockerApiError(statusCode, message));
+            return;
+          }
+          resolve(buffer);
+        });
+      });
+      request.setTimeout(10_000, () => request.destroy(new Error("Quá thời gian chờ Docker API.")));
+      request.on("error", reject);
+      request.end();
+    });
+  }
+
   async listManaged(project, service) {
     const filters = encodeURIComponent(JSON.stringify({
       label: [
@@ -65,6 +104,11 @@ export class DockerClient {
   }
 
   inspect(id) { return this.request("GET", `/containers/${encodeURIComponent(id)}/json`); }
+  logs(id, tail) {
+    const query = new URLSearchParams({ stdout: "1", stderr: "1", timestamps: "1", tail: String(tail) });
+    return this.requestBuffer("GET", `/containers/${encodeURIComponent(id)}/logs?${query}`, [200], 2 * 1024 * 1024);
+  }
+  stats(id) { return this.request("GET", `/containers/${encodeURIComponent(id)}/stats?stream=false&one-shot=true`); }
   start(id) { return this.request("POST", `/containers/${encodeURIComponent(id)}/start`, undefined, [204, 304]); }
   stop(id) { return this.request("POST", `/containers/${encodeURIComponent(id)}/stop?t=10`, undefined, [204, 304]); }
   restart(id) { return this.request("POST", `/containers/${encodeURIComponent(id)}/restart?t=10`, undefined, [204]); }

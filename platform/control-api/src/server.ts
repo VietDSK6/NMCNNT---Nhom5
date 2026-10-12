@@ -7,7 +7,7 @@ import {
   type SessionUser,
 } from "./database.js";
 import { inspectApplication } from "./health.js";
-import { HttpRunnerClient, type RunnerClient, type RunnerStatus } from "./runner.js";
+import { HttpRunnerClient, RunnerRequestError, type RunnerClient, type RunnerStatus } from "./runner.js";
 import {
   clearSessionCookie,
   createSessionToken,
@@ -43,6 +43,19 @@ function operationFailureMessage(error: unknown): string {
   }
   if (error instanceof Error && error.message) return error.message;
   return "Deployment Runner không thể hoàn tất thao tác.";
+}
+
+function observationFailure(error: unknown): { statusCode: number; code: string; message: string } {
+  if (error instanceof RunnerRequestError) {
+    if ([400, 404, 409, 413].includes(error.statusCode)) {
+      return { statusCode: error.statusCode, code: error.code, message: error.message };
+    }
+    return { statusCode: 502, code: "runner_unavailable", message: "Không thể đọc dữ liệu quan sát từ Deployment Runner." };
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return { statusCode: 504, code: "runner_timeout", message: "Quá thời gian chờ dữ liệu quan sát." };
+  }
+  return { statusCode: 502, code: "runner_unavailable", message: "Không thể đọc dữ liệu quan sát từ Deployment Runner." };
 }
 
 export function createServer(config: AppConfig, db: ControlDatabase, options: ServerOptions = {}) {
@@ -329,6 +342,57 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     });
     trackOperation(executeOperation(operation, user, requestIp(request)));
     return reply.code(202).send({ data: operation });
+  });
+
+  server.get<{ Params: { appId: string }; Querystring: { tail?: number } }>("/api/v1/applications/:appId/logs", {
+    schema: {
+      params: {
+        type: "object",
+        additionalProperties: false,
+        required: ["appId"],
+        properties: { appId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 } },
+      },
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: { tail: { type: "integer", minimum: 1, maximum: 200, default: 100 } },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    if (!db.findApplication(request.params.appId)) {
+      return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần quan sát." });
+    }
+    try {
+      return { data: await runnerClient.logs(request.params.appId, request.query.tail ?? 100) };
+    } catch (error) {
+      const failure = observationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
+    }
+  });
+
+  server.get<{ Params: { appId: string } }>("/api/v1/applications/:appId/stats", {
+    schema: {
+      params: {
+        type: "object",
+        additionalProperties: false,
+        required: ["appId"],
+        properties: { appId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 } },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    if (!db.findApplication(request.params.appId)) {
+      return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần quan sát." });
+    }
+    try {
+      return { data: await runnerClient.stats(request.params.appId) };
+    } catch (error) {
+      const failure = observationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
+    }
   });
 
   server.get<{ Querystring: { limit?: number } }>("/api/v1/operations", {

@@ -4,7 +4,7 @@ services:
   gateway:
     build:
       context: ./platform/gateway
-    image: mini-paas/gateway:p0.2b
+    image: mini-paas/gateway:p0.2c
     ports:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
     depends_on:
@@ -46,7 +46,7 @@ services:
   dashboard:
     build:
       context: ./platform/dashboard
-    image: mini-paas/dashboard:p0.2b
+    image: mini-paas/dashboard:p0.2c
     expose:
       - "8080"
     networks:
@@ -78,7 +78,7 @@ services:
   control-api:
     build:
       context: ./platform/control-api
-    image: mini-paas/control-api:p0.2b
+    image: mini-paas/control-api:p0.2c
     environment:
       HOST: 0.0.0.0
       PORT: 3000
@@ -133,7 +133,7 @@ services:
   runner:
     build:
       context: ./platform/runner
-    image: mini-paas/deployment-runner:p0.2b
+    image: mini-paas/deployment-runner:p0.2c
     environment:
       HOST: 0.0.0.0
       PORT: 3001

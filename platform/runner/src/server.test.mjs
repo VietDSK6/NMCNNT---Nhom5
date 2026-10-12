@@ -6,6 +6,8 @@ import { createRunnerServer } from "./server.mjs";
 const token = "runner-test-secret-at-least-24";
 const runtime = {
   status: async (appId) => ({ appId, status: "running" }),
+  logs: async (appId, tail) => ({ appId, requestedTail: tail, lines: [] }),
+  stats: async (appId) => ({ appId, cpuPercent: 1.5 }),
   execute: async (appId, action, version) => ({ message: "done", runtime: { appId, action, version } }),
 };
 const logger = { info() {}, error() {} };
@@ -61,4 +63,18 @@ test("đọc trạng thái và thực hiện thao tác có xác thực", async (
   });
   assert.equal(action.statusCode, 200);
   assert.equal(action.body.data.runtime.version, "v2.0.0");
+});
+
+test("đọc log và số liệu với giới hạn số dòng", async () => {
+  const headers = { "x-runner-token": token };
+  const logs = await invoke({ path: "/v1/apps/app-a/logs?tail=50", headers });
+  assert.equal(logs.statusCode, 200);
+  assert.equal(logs.body.data.requestedTail, 50);
+
+  const invalid = await invoke({ path: "/v1/apps/app-a/logs?tail=201", headers });
+  assert.equal(invalid.statusCode, 400);
+
+  const stats = await invoke({ path: "/v1/apps/app-a/stats", headers });
+  assert.equal(stats.statusCode, 200);
+  assert.equal(stats.body.data.cpuPercent, 1.5);
 });

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getAppSpec, RunnerInputError, validateAction } from "./catalog.mjs";
+import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
 
 export class RunnerRuntimeError extends Error {
   constructor(code, message, statusCode = 500) {
@@ -67,6 +68,35 @@ export class DeploymentRuntime {
   async status(appId) {
     const spec = getAppSpec(appId);
     return publicStatus(appId, await this.findContainer(spec));
+  }
+
+  async logs(appId, tail = OBSERVABILITY_LIMITS.defaultTail) {
+    const spec = getAppSpec(appId);
+    if (!Number.isInteger(tail) || tail < 1 || tail > OBSERVABILITY_LIMITS.maximumTail) {
+      throw new RunnerInputError("invalid_log_tail", `Số dòng log phải từ 1 đến ${OBSERVABILITY_LIMITS.maximumTail}.`);
+    }
+    const container = await this.findContainer(spec);
+    const decoded = decodeDockerLogs(await this.docker.logs(container.Id, tail), tail);
+    return {
+      appId,
+      containerId: String(container.Id).slice(0, 12),
+      requestedTail: tail,
+      ...decoded,
+      fetchedAt: new Date().toISOString(),
+    };
+  }
+
+  async stats(appId) {
+    const spec = getAppSpec(appId);
+    const container = await this.findContainer(spec);
+    if (!container.State?.Running) {
+      throw new RunnerRuntimeError("container_not_running", "Không thể lấy số liệu khi container đang dừng.", 409);
+    }
+    return {
+      appId,
+      containerId: String(container.Id).slice(0, 12),
+      ...summarizeDockerStats(await this.docker.stats(container.Id)),
+    };
   }
 
   async waitFor(appId, containerId, predicate, failureMessage) {

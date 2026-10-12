@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. Repository hiện ở **P0.2B: Deployment Runner và vòng đời ứng dụng**. Mốc này kế thừa P0.2A, bổ sung trạng thái container cùng thao tác start, stop, restart và update có kiểm soát.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. Repository hiện ở **P0.2C: quan sát log và tài nguyên theo yêu cầu**. Mốc này kế thừa P0.2B, bổ sung ảnh chụp CPU/RAM/PID/mạng cùng log container gần nhất mà không đưa quyền Docker vào Dashboard hoặc Control API.
 
 ## Trạng thái hiện tại
 
@@ -15,16 +15,18 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. Repos
 - Dashboard đọc phiên bản và health HTTP thực tế của App A, App B qua Gateway.
 - Deployment Runner là thành phần duy nhất gắn Docker socket; chỉ quản lý App A/App B theo danh sách cho phép.
 - Dashboard có thao tác dừng, khởi động, khởi động lại và cập nhật App A giữa v1.0.0/v2.0.0.
+- Dashboard đọc tối đa 50/100/200 dòng log gần nhất và ảnh chụp CPU, working set RAM, PID, lưu lượng mạng của từng ứng dụng.
+- Log và stats chỉ được lấy khi quản trị viên yêu cầu; lỗi của từng nguồn được hiển thị độc lập để phần còn lại của giao diện vẫn dùng được.
 - SQLite lưu operation với trạng thái chờ, đang chạy, thành công hoặc thất bại; kết quả cũng được ghi audit.
 - Nginx dùng DNS động của Docker nên vẫn định tuyến đúng sau khi Runner thay container.
 - Health check, giới hạn CPU/RAM/PID, filesystem chỉ đọc và xoay vòng log.
 - Unit/integration test kiểm tra xác thực, định tuyến, allowlist, ranh giới Docker socket và vòng đời thật.
 
-Chưa triển khai trong P0.2B:
+Chưa triển khai trong P0.2C:
 
-- Log container, CPU/RAM thực tế, CI/CD, Prometheus, Grafana và k6.
+- CI/CD, chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
-- Nhận repository/build mã người dùng; P0.2B chỉ dùng app và image tin cậy đã khai báo.
+- Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
 Dashboard vẫn phân biệt **health HTTP**, **trạng thái container**, **phiên bản mong muốn** và **phiên bản quan sát được**; các giá trị này không được coi là tương đương.
 
@@ -88,11 +90,17 @@ make test
 
 Kết quả chuẩn hiện tại:
 
+- Deployment Runner unit test: 9/9 đạt.
+- Control API unit test: 7/7 đạt.
+- Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
 - P0.2: 15/15 kiểm tra đạt.
 - P0.2B: 21 kiểm tra đạt.
+- P0.2C: 12 kiểm tra đạt.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
+
+Bộ P0.2C kiểm tra xác thực cho log/stats, giới hạn tối đa 200 dòng, ứng dụng ngoài danh mục, hợp đồng CPU/RAM/PID/mạng và việc Runner từ chối endpoint quan sát khi thiếu secret. Dashboard đã được kiểm tra ở 1440×900, 768×1024 và 390×844; không tràn ngang, vùng điều khiển quan sát trên mobile cao tối thiểu 44 px.
 
 Chạy unit test và build riêng khi phát triển:
 
@@ -128,6 +136,14 @@ make test-p0-2b
 
 Bộ test luôn đưa App A trở lại v1 và bảo đảm App B đang chạy khi kết thúc thành công.
 
+Kiểm tra riêng log và ảnh chụp tài nguyên:
+
+```bash
+make test-p0-2c
+```
+
+Sau khi đăng nhập Dashboard, mở mục **Log và tài nguyên**, chọn ứng dụng và số dòng cần đọc rồi dùng **Làm mới quan sát**. CPU/RAM hiển thị là một mẫu tại thời điểm yêu cầu, không phải đồ thị lịch sử.
+
 ## Cấu trúc chính
 
 ```text
@@ -140,6 +156,7 @@ platform/gateway/           Ảnh và cấu hình Nginx
 tests/smoke/p0_1.sh         Kiểm thử nhanh P0.1
 tests/integration/p0_2.sh   Kiểm thử tích hợp P0.2
 tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
+tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 docs/architecture/          Kiến trúc đã chốt
 docs/decisions/             Nhật ký quyết định kiến trúc
 docs/report/                Nội dung viết báo cáo song song
@@ -152,6 +169,8 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chỉ chạy các ứng dụng mẫu do nhóm kiểm soát.
 - Chỉ Deployment Runner được gắn Docker socket; đây vẫn là quyền rất cao trên host.
 - Runner không có API chạy shell tùy ý và chỉ nhận app/action/version trong catalog cố định.
+- API log chỉ đọc App A/App B, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
+- Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
 - Gateway chỉ bind vào `127.0.0.1` theo cấu hình phát triển hiện tại.
 - Cookie local chưa có cờ `Secure` vì môi trường hiện dùng HTTP; VPS có HTTPS phải bật cờ này.
@@ -160,4 +179,4 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md) và [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md) và [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md).

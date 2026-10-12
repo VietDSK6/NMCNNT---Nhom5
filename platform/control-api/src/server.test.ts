@@ -47,6 +47,26 @@ const runnerClient: RunnerClient = {
     health: "healthy",
     startedAt: "2026-10-11T00:00:00.000Z",
   }),
+  logs: async (appId, tail) => ({
+    appId,
+    containerId: "0123456789ab",
+    requestedTail: tail,
+    lines: [{ timestamp: "2026-10-12T01:02:03.000Z", stream: "stdout", message: "ready" }],
+    truncated: false,
+    fetchedAt: "2026-10-12T01:02:04.000Z",
+  }),
+  stats: async (appId) => ({
+    appId,
+    containerId: "0123456789ab",
+    cpuPercent: 1.25,
+    memoryWorkingSetBytes: 16_777_216,
+    memoryLimitBytes: 134_217_728,
+    memoryPercent: 12.5,
+    pids: 8,
+    networkRxBytes: 1_024,
+    networkTxBytes: 2_048,
+    sampledAt: "2026-10-12T01:02:03.000Z",
+  }),
   execute: async (appId, _action, version) => ({
     message: version ? `Đã cập nhật ${appId} lên ${version}.` : `Đã thao tác ${appId}.`,
     runtime: {
@@ -196,4 +216,50 @@ test("từ chối thao tác thiếu xác thực và dữ liệu không đúng", 
   });
   assert.equal(invalid.statusCode, 400);
   assert.equal(invalid.json().error, "version_required");
+});
+
+test("log và số liệu tài nguyên yêu cầu phiên đăng nhập, có giới hạn đầu vào", async () => {
+  const unauthenticated = await server.inject({ method: "GET", url: "/api/v1/applications/app-a/logs" });
+  assert.equal(unauthenticated.statusCode, 401);
+
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const invalidTail = await server.inject({
+    method: "GET",
+    url: "/api/v1/applications/app-a/logs?tail=201",
+    headers: { cookie },
+  });
+  assert.equal(invalidTail.statusCode, 400);
+
+  const logs = await server.inject({
+    method: "GET",
+    url: "/api/v1/applications/app-a/logs?tail=50",
+    headers: { cookie },
+  });
+  assert.equal(logs.statusCode, 200);
+  assert.equal(logs.json().data.requestedTail, 50);
+  assert.equal(logs.json().data.lines[0].message, "ready");
+
+  const stats = await server.inject({
+    method: "GET",
+    url: "/api/v1/applications/app-a/stats",
+    headers: { cookie },
+  });
+  assert.equal(stats.statusCode, 200);
+  assert.equal(stats.json().data.memoryLimitBytes, 134_217_728);
+
+  const unknown = await server.inject({
+    method: "GET",
+    url: "/api/v1/applications/not-registered/stats",
+    headers: { cookie },
+  });
+  assert.equal(unknown.statusCode, 404);
 });

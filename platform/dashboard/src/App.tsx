@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import {
   ActivityIcon,
@@ -19,6 +19,8 @@ import {
 } from "./icons";
 import type {
   ApplicationItem,
+  ApplicationLogs,
+  ApplicationStats,
   ApplicationsResponse,
   AuditEvent,
   OperationAction,
@@ -101,7 +103,7 @@ function LoginScreen({ onAuthenticated }: { readonly onAuthenticated: (session: 
           <div><strong>Mini PaaS</strong><small>Control Center</small></div>
         </div>
         <div className="login-copy">
-          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P0.2B</span>
+          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P0.2C</span>
           <h1>Một điểm điều khiển cho toàn bộ vòng đời ứng dụng.</h1>
           <p>Theo dõi và vận hành các ứng dụng mẫu qua Control API, Deployment Runner và Docker Engine.</p>
         </div>
@@ -271,6 +273,135 @@ function AuditTable({ events }: { readonly events: readonly AuditEvent[] }) {
   );
 }
 
+function formatBytes(value: number): string {
+  if (!Number.isFinite(value) || value <= 0) return "0 B";
+  const units = ["B", "KiB", "MiB", "GiB"];
+  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const amount = value / 1024 ** index;
+  return `${amount >= 100 || index === 0 ? amount.toFixed(0) : amount.toFixed(1)} ${units[index]}`;
+}
+
+function ObservabilityPanel({ applications }: { readonly applications: readonly ApplicationItem[] }) {
+  const [selectedAppId, setSelectedAppId] = useState("app-a");
+  const [tail, setTail] = useState(100);
+  const [stats, setStats] = useState<ApplicationStats | null>(null);
+  const [logs, setLogs] = useState<ApplicationLogs | null>(null);
+  const [statsError, setStatsError] = useState("");
+  const [logsError, setLogsError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const requestSequence = useRef(0);
+  const selectedApplication = applications.find((application) => application.id === selectedAppId) ?? applications[0];
+
+  const loadObservability = useCallback(async () => {
+    if (!selectedApplication) return;
+    const requestId = ++requestSequence.current;
+    setLoading(true);
+    setStats(null);
+    setLogs(null);
+    setStatsError("");
+    setLogsError("");
+    const [statsResult, logsResult] = await Promise.allSettled([
+      api.stats(selectedApplication.id),
+      api.logs(selectedApplication.id, tail),
+    ]);
+    if (requestId !== requestSequence.current) return;
+    if (statsResult.status === "fulfilled") {
+      setStats(statsResult.value.data);
+    } else {
+      setStats(null);
+      setStatsError(statsResult.reason instanceof Error ? statsResult.reason.message : "Không thể lấy số liệu tài nguyên.");
+    }
+    if (logsResult.status === "fulfilled") {
+      setLogs(logsResult.value.data);
+    } else {
+      setLogs(null);
+      setLogsError(logsResult.reason instanceof Error ? logsResult.reason.message : "Không thể lấy nhật ký ứng dụng.");
+    }
+    setLoading(false);
+  }, [selectedApplication?.id, tail]);
+
+  useEffect(() => {
+    void loadObservability();
+  }, [loadObservability]);
+
+  if (!selectedApplication) return <div className="skeleton-card" />;
+
+  return (
+    <div className="observability-panel">
+      <div className="observability-toolbar">
+        <div className="application-switcher" role="group" aria-label="Chọn ứng dụng cần quan sát">
+          {applications.map((application) => (
+            <button
+              key={application.id}
+              className={application.id === selectedApplication.id ? "is-selected" : ""}
+              aria-pressed={application.id === selectedApplication.id}
+              onClick={() => setSelectedAppId(application.id)}
+            >
+              <BoxIcon />{application.name}
+            </button>
+          ))}
+        </div>
+        <div className="observability-actions">
+          <label htmlFor="log-tail">Số dòng log</label>
+          <select id="log-tail" value={tail} onChange={(event) => setTail(Number(event.target.value))}>
+            <option value={50}>50 dòng</option>
+            <option value={100}>100 dòng</option>
+            <option value={200}>200 dòng</option>
+          </select>
+          <button className="button button--secondary observation-refresh" onClick={() => void loadObservability()} disabled={loading}>
+            <RefreshIcon className={loading ? "is-spinning" : ""} />{loading ? "Đang lấy dữ liệu" : "Làm mới quan sát"}
+          </button>
+        </div>
+      </div>
+
+      <div className="resource-heading">
+        <div><strong>{selectedApplication.name}</strong><span>Ảnh chụp tại một thời điểm, không phải dữ liệu liên tục</span></div>
+        {stats && <time dateTime={stats.sampledAt}>Lấy lúc {formatDateTime(stats.sampledAt)}</time>}
+      </div>
+
+      {statsError ? (
+        <div className="inline-state inline-state--error" role="status"><AlertIcon /><span><strong>Chưa lấy được số liệu</strong>{statsError}</span></div>
+      ) : stats ? (
+        <div className="resource-grid" aria-label={`Số liệu tài nguyên ${selectedApplication.name}`}>
+          <article><small>CPU</small><strong>{stats.cpuPercent.toFixed(2)}%</strong><span>Mức dùng tại thời điểm lấy mẫu</span></article>
+          <article><small>Bộ nhớ</small><strong>{formatBytes(stats.memoryWorkingSetBytes)}</strong><span>{stats.memoryPercent.toFixed(1)}% của {formatBytes(stats.memoryLimitBytes)}</span></article>
+          <article><small>Tiến trình</small><strong>{stats.pids}</strong><span>Số PID trong container</span></article>
+          <article><small>Mạng</small><strong>↓ {formatBytes(stats.networkRxBytes)}</strong><span>↑ {formatBytes(stats.networkTxBytes)} từ lúc khởi động</span></article>
+        </div>
+      ) : (
+        <div className="resource-grid resource-grid--loading" aria-label="Đang lấy số liệu tài nguyên"><i /><i /><i /><i /></div>
+      )}
+
+      <div className="log-heading">
+        <div><strong>Nhật ký container gần nhất</strong><span>Chỉ đọc stdout/stderr, tối đa 200 dòng mỗi yêu cầu</span></div>
+        {logs && <span className="log-count">{logs.lines.length}/{logs.requestedTail} dòng</span>}
+      </div>
+      {logsError ? (
+        <div className="inline-state inline-state--error" role="status"><AlertIcon /><span><strong>Chưa lấy được log</strong>{logsError}</span></div>
+      ) : logs ? (
+        <div className="log-viewer" role="region" aria-label={`Log gần nhất của ${selectedApplication.name}`} tabIndex={0}>
+          {logs.lines.length === 0 ? (
+            <p className="log-empty">Container chưa có dòng log nào trong phạm vi đã chọn.</p>
+          ) : (
+            <ol>
+              {logs.lines.map((line, index) => (
+                <li key={`${line.timestamp ?? "none"}-${index}`} className={line.stream === "stderr" ? "is-stderr" : ""}>
+                  <time dateTime={line.timestamp ?? undefined}>{line.timestamp ? formatDateTime(line.timestamp) : "Không có thời gian"}</time>
+                  <span className="log-stream">{line.stream}</span>
+                  <code>{line.message}</code>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      ) : (
+        <div className="log-viewer log-viewer--loading" aria-label="Đang lấy log"><span /><span /><span /><span /></div>
+      )}
+      {logs?.truncated && <p className="bounded-note"><AlertIcon />Một số nội dung đã được rút gọn để bảo vệ giao diện. Có thể chọn tối đa 200 dòng.</p>}
+    </div>
+  );
+}
+
 function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; readonly onLoggedOut: () => void }) {
   const [applications, setApplications] = useState<ApplicationsResponse | null>(null);
   const [operations, setOperations] = useState<readonly OperationItem[]>([]);
@@ -348,7 +479,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           <a className="nav-item" href="#operations"><ServerIcon />Thao tác</a>
           <a className="nav-item" href="#activity"><HistoryIcon />Kiểm toán</a>
           <span className="nav-label nav-label--spaced">QUAN SÁT</span>
-          <span className="nav-item nav-item--disabled"><ActivityIcon />Số liệu tài nguyên<small>P1</small></span>
+          <a className="nav-item" href="#observability"><ActivityIcon />Log và tài nguyên</a>
         </nav>
         <div className="sidebar-footer">
           <div className="environment-card"><span className="pulse-dot" /><div><strong>Môi trường phát triển</strong><small>Một máy · Docker Compose</small></div></div>
@@ -369,7 +500,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           {error && <div className="alert alert--error" role="alert"><AlertIcon /><div><strong>Thao tác chưa hoàn tất</strong><span>{error}</span></div><button onClick={() => void loadData()}>Tải lại dữ liệu</button></div>}
           {notice && <div className="alert alert--success" role="status"><CheckIcon /><div><strong>Yêu cầu đã được tiếp nhận</strong><span>{notice}</span></div><button onClick={() => setNotice("")}>Đóng</button></div>}
           <section className="stage-banner">
-            <div><span className="eyebrow">CONTROL PLANE · P0.2B</span><h2>Vận hành ứng dụng qua một ranh giới quyền rõ ràng</h2><p>Dashboard gửi thao tác có cấu trúc; chỉ Deployment Runner nội bộ được phép giao tiếp với Docker Engine.</p></div>
+            <div><span className="eyebrow">CONTROL PLANE · P0.2C</span><h2>Vận hành và quan sát qua một ranh giới quyền rõ ràng</h2><p>Dashboard gửi yêu cầu có cấu trúc; chỉ Deployment Runner nội bộ được phép giao tiếp với Docker Engine.</p></div>
             <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Dashboard</span><ChevronIcon /><span>Control API</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Docker</span></div>
           </section>
 
@@ -401,6 +532,11 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             <span className="runtime-note__tag runtime-note__tag--ready">Runner hoạt động</span>
           </section>
 
+          <section className="section" id="observability">
+            <div className="section-heading"><div><span className="eyebrow">QUAN SÁT THEO YÊU CẦU</span><h2>Log và tài nguyên container</h2><p>Dữ liệu được lấy trực tiếp từ Docker qua Runner, có xác thực và giới hạn dung lượng phản hồi.</p></div><span className="last-updated">Không tự động làm mới</span></div>
+            <ObservabilityPanel applications={applications?.data ?? []} />
+          </section>
+
           <section className="section" id="operations">
             <div className="section-heading"><div><span className="eyebrow">VÒNG ĐỜI ỨNG DỤNG</span><h2>Lịch sử thao tác</h2><p>Mỗi yêu cầu có trạng thái chờ, đang xử lý, thành công hoặc thất bại và được lưu trong SQLite.</p></div></div>
             <OperationsTable operations={operations} />
@@ -411,7 +547,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             <AuditTable events={auditEvents} />
           </section>
 
-          <footer className="workspace-footer"><span>Mini PaaS · Mốc P0.2B</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
+          <footer className="workspace-footer"><span>Mini PaaS · Mốc P0.2C</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
         </div>
       </main>
     </div>

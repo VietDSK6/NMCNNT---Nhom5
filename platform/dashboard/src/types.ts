@@ -82,3 +82,31 @@ export interface AuditResponse {
 export interface OperationsResponse {
   readonly data: readonly OperationItem[];
 }
+
+export interface ApplicationLogLine {
+  readonly timestamp: string | null;
+  readonly stream: "stdout" | "stderr";
+  readonly message: string;
+}
+
+export interface ApplicationLogs {
+  readonly appId: string;
+  readonly containerId: string;
+  readonly requestedTail: number;
+  readonly lines: readonly ApplicationLogLine[];
+  readonly truncated: boolean;
+  readonly fetchedAt: string;
+}
+
+export interface ApplicationStats {
+  readonly appId: string;
+  readonly containerId: string;
+  readonly cpuPercent: number;
+  readonly memoryWorkingSetBytes: number;
+  readonly memoryLimitBytes: number;
+  readonly memoryPercent: number;
+  readonly pids: number;
+  readonly networkRxBytes: number;
+  readonly networkTxBytes: number;
+  readonly sampledAt: string;
+}

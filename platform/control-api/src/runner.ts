@@ -17,8 +17,38 @@ export interface RunnerActionResult {
   readonly runtime: RunnerStatus;
 }
 
+export interface RunnerLogLine {
+  readonly timestamp: string | null;
+  readonly stream: "stdout" | "stderr";
+  readonly message: string;
+}
+
+export interface RunnerLogs {
+  readonly appId: string;
+  readonly containerId: string;
+  readonly requestedTail: number;
+  readonly lines: readonly RunnerLogLine[];
+  readonly truncated: boolean;
+  readonly fetchedAt: string;
+}
+
+export interface RunnerStats {
+  readonly appId: string;
+  readonly containerId: string;
+  readonly cpuPercent: number;
+  readonly memoryWorkingSetBytes: number;
+  readonly memoryLimitBytes: number;
+  readonly memoryPercent: number;
+  readonly pids: number;
+  readonly networkRxBytes: number;
+  readonly networkTxBytes: number;
+  readonly sampledAt: string;
+}
+
 export interface RunnerClient {
   status(appId: string): Promise<RunnerStatus>;
+  logs(appId: string, tail: number): Promise<RunnerLogs>;
+  stats(appId: string): Promise<RunnerStats>;
   execute(appId: string, action: RunnerAction, version?: string): Promise<RunnerActionResult>;
 }
 
@@ -66,6 +96,14 @@ export class HttpRunnerClient implements RunnerClient {
 
   status(appId: string): Promise<RunnerStatus> {
     return this.request<RunnerStatus>(`/v1/apps/${encodeURIComponent(appId)}`);
+  }
+
+  logs(appId: string, tail: number): Promise<RunnerLogs> {
+    return this.request<RunnerLogs>(`/v1/apps/${encodeURIComponent(appId)}/logs?tail=${tail}`);
+  }
+
+  stats(appId: string): Promise<RunnerStats> {
+    return this.request<RunnerStats>(`/v1/apps/${encodeURIComponent(appId)}/stats`);
   }
 
   execute(appId: string, action: RunnerAction, version?: string): Promise<RunnerActionResult> {

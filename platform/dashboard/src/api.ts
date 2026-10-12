@@ -1,4 +1,6 @@
 import type {
+  ApplicationLogs,
+  ApplicationStats,
   ApplicationsResponse,
   AuditResponse,
   OperationAction,
@@ -54,6 +56,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ action, ...(version ? { version } : {}) }),
     },
+  ),
+  logs: (appId: string, tail: number) => request<{ data: ApplicationLogs }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}/logs?tail=${tail}`,
+  ),
+  stats: (appId: string) => request<{ data: ApplicationStats }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}/stats`,
   ),
   audit: () => request<AuditResponse>("/api/v1/audit-events?limit=12"),
 };

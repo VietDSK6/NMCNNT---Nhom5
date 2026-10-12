@@ -17,3 +17,12 @@ Nội dung tối thiểu:
 - `conclusion.md`: kết quả, sai lệch, giới hạn và kết luận.
 
 Không chỉnh sửa dữ liệu thô để làm đẹp kết quả. Không lưu token, mật khẩu, cookie hoặc khóa riêng.
+
+Minh chứng hiện có:
+
+- `T01`, `T02`: dựng stack và định tuyến P0.1 trên máy phát triển.
+- `T03`, `T04`: cập nhật phiên bản và thao tác vòng đời P0.2B.
+- `T05/2026-10-12-p0.2c`: log, snapshot tài nguyên và responsive P0.2C.
+- `T07`: xác thực, allowlist và ranh giới Docker socket.
+
+Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

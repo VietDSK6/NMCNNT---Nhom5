@@ -1,4 +1,4 @@
-.PHONY: build prepare-images up down status logs smoke test-p0-2 test-p0-2b test-unit test config
+.PHONY: build prepare-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-unit test config
 
 build:
 	docker compose build
@@ -27,12 +27,15 @@ test-p0-2:
 test-p0-2b:
 	./tests/integration/p0_2b.sh
 
+test-p0-2c:
+	./tests/integration/p0_2c.sh
+
 test-unit:
 	cd platform/runner && npm test
 	cd platform/control-api && npm test
 	cd platform/dashboard && npm run build
 
-test: test-unit smoke test-p0-2 test-p0-2b
+test: test-unit smoke test-p0-2 test-p0-2b test-p0-2c
 
 config:
 	docker compose config --quiet

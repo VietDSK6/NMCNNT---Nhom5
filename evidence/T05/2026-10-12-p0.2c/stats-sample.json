@@ -1,0 +1,12 @@
+{
+  "appId": "app-a",
+  "containerId": "639a66371cae",
+  "cpuPercent": 2.41,
+  "memoryWorkingSetBytes": 19058688,
+  "memoryLimitBytes": 134217728,
+  "memoryPercent": 14.2,
+  "pids": 8,
+  "networkRxBytes": 36230,
+  "networkTxBytes": 34805,
+  "sampledAt": "2026-10-12T02:16:52.047073681Z"
+}

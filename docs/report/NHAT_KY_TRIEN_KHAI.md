@@ -129,3 +129,49 @@ Khi App B bị dừng, request có thể chờ lâu trước khi Gateway báo l�
 - Cơ chế phục hồi trong một lần update lỗi chưa phải rollback lịch sử release đầy đủ.
 - Operation không có message broker bền vững; Control API dừng đột ngột có thể cần đối soát thủ công.
 - Kết quả hiện tại chạy trên macOS 27.0 ARM64, OrbStack/Docker Engine 29.4.0; cần nghiệm thu lại trên VPS Linux.
+
+## 12/10/2026 — Hoàn thành P0.2C: log và ảnh chụp tài nguyên
+
+### Phạm vi thực hiện
+
+- Thêm endpoint log và stats tại Runner; chỉ nhận `appId` trong catalog.
+- Thêm API có session cho Dashboard, giới hạn log từ 1 đến 200 dòng.
+- Giải mã log multiplex stdout/stderr, loại mã ANSI, che một số mẫu bí mật thường gặp.
+- Giới hạn 2 MiB log thô mỗi yêu cầu và 4.096 ký tự mỗi dòng.
+- Tính CPU, working set RAM, tỷ lệ RAM, PID và lưu lượng mạng từ Docker stats một lần.
+- Thêm vùng quan sát trên Dashboard, tải log/stats song song, lỗi độc lập và bảo vệ phản hồi cũ.
+- Kiểm tra responsive trở lại sau khi ngoại lệ P0.2B hết hiệu lực.
+- Viết tài liệu kiến trúc, ADR, bằng chứng T05 và bản nháp Chương 3.
+
+### Kết quả kiểm chứng
+
+- Deployment Runner unit test: 9/9 đạt.
+- Control API unit test: 7/7 đạt.
+- Dashboard production build: đạt.
+- Integration P0.2C: 12/12 đạt.
+- Dashboard không tràn ngang tại 1440×900, 768×1024 và 390×844.
+- Ở 390 px, điều khiển quan sát vẫn hiện đầy đủ, thẻ tài nguyên xếp một cột và vùng bấm chính tối thiểu 44 px.
+- Vùng log mobile có `white-space: pre-wrap`, không tạo tràn ngang và có vùng cuộn dọc riêng.
+- Sau kiểm thử, 6/6 service ở trạng thái healthy; App A/App B ở v1.0.0.
+
+### Mẫu dữ liệu phát triển
+
+App A tại `2026-10-12T02:16:52.047073681Z`:
+
+- CPU: 2,41%.
+- Working set RAM: 19.058.688 byte trên giới hạn 134.217.728 byte, tương ứng 14,2%.
+- PID: 8.
+- Network RX/TX: 36.230/34.805 byte kể từ lúc container chạy.
+
+Mẫu trên chỉ chứng minh đường thu thập hoạt động trên macOS/OrbStack. Đây không phải kết quả tải và không dùng làm số liệu hiệu năng chính thức.
+
+### Sự cố và cách xử lý
+
+Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không tồn tại. Runtime được khởi động lại rồi stack mới được build. Kiểm tra mobile lần đầu cho thấy một số điều khiển quan sát cao 38 px; CSS được sửa để các nút/select chính đạt tối thiểu 44 px ở breakpoint mobile, sau đó đo lại đạt.
+
+### Giới hạn cần ghi đúng
+
+- Snapshot không phải chuỗi thời gian hoặc hệ thống cảnh báo.
+- Bộ lọc bí mật trong log không thể phát hiện mọi định dạng dữ liệu nhạy cảm.
+- Log Docker chỉ tồn tại theo chính sách xoay vòng trên host; chưa có lưu trữ tập trung.
+- Cần chạy lại T05 và kiểm thử tải chính thức trên VPS Linux.
