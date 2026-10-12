@@ -83,6 +83,43 @@ export interface OperationsResponse {
   readonly data: readonly OperationItem[];
 }
 
+export interface TrustedSource {
+  readonly id: string;
+  readonly name: string;
+  readonly provider: "github";
+  readonly repositoryUrl: string;
+  readonly appId: string;
+}
+
+export type DeploymentStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface DeploymentItem {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly sourceId: string;
+  readonly repositoryUrl: string;
+  readonly commitSha: string;
+  readonly status: DeploymentStatus;
+  readonly version: string | null;
+  readonly imageReference: string | null;
+  readonly imageId: string | null;
+  readonly buildLog: string | null;
+  readonly message: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+}
+
+export interface SourcesResponse {
+  readonly data: readonly TrustedSource[];
+}
+
+export interface DeploymentsResponse {
+  readonly data: readonly DeploymentItem[];
+}
+
 export interface ApplicationLogLine {
   readonly timestamp: string | null;
   readonly stream: "stdout" | "stderr";

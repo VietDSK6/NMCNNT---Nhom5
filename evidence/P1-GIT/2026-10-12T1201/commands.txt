@@ -1,0 +1,4 @@
+make up
+make test-p1-git COMMIT_SHA=093f1b29341accae2520ba5854db1a5a992b959f
+make test
+docker image inspect mini-paas/app-a:git-093f1b29341a

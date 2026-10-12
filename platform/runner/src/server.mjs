@@ -50,6 +50,34 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
+    if (request.method === "GET" && url.pathname === "/v1/sources") {
+      json(response, 200, { data: runtime.listSources() });
+      return;
+    }
+
+    const sourceDeploymentMatch = url.pathname.match(/^\/v1\/sources\/([a-z0-9-]+)\/deployments$/);
+    if (request.method === "POST" && sourceDeploymentMatch) {
+      try {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.commit !== "string") {
+          json(response, 400, { error: "validation_error", message: "Yêu cầu phải có commit SHA hợp lệ." });
+          return;
+        }
+        const data = await runtime.deploySource(sourceDeploymentMatch[1], body.commit);
+        logger.info?.({ sourceId: sourceDeploymentMatch[1], commit: body.commit, result: "succeeded" }, "source_deployment_completed");
+        json(response, 200, { data });
+      } catch (error) {
+        const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+        const code = typeof error?.code === "string" ? error.code : "runner_internal_error";
+        const message = statusCode < 500 && error instanceof Error
+          ? error.message
+          : "Runner không thể build và triển khai commit. Hãy kiểm tra nhật ký dịch vụ.";
+        logger.error?.({ sourceId: sourceDeploymentMatch[1], code, statusCode }, "source_deployment_failed");
+        json(response, statusCode, { error: code, message });
+      }
+      return;
+    }
+
     const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats))?$/);
     if (!match) {
       json(response, 404, { error: "not_found", message: "Không tìm thấy tài nguyên yêu cầu." });

@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến P0.2C và CI nội bộ ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; luồng sản phẩm triển khai ứng dụng từ Git, Prometheus/Grafana và kiểm thử tải vẫn là nội dung dự kiến của P1.
+> Bản nháp cập nhật đến P1 Git deployment ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry, Prometheus/Grafana và kiểm thử tải vẫn là nội dung dự kiến của P1.
 
 ## 3.1. Phân tích bài toán
 
@@ -22,7 +22,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR06 | Lưu lịch sử operation và audit | Đã triển khai, kiểm thử |
 | FR07 | Xem log gần nhất theo giới hạn | Đã triển khai, kiểm thử |
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
-| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Chưa triển khai; workflow GitHub hiện tại chỉ kiểm tra repository Mini PaaS và không thay thế chức năng sản phẩm |
+| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử phạm vi tối thiểu cho một source/App A theo commit SHA; chưa có registry digest hoặc repository tùy ý |
 | FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Dự kiến P1 |
 
 ### 3.2.2. Yêu cầu phi chức năng
@@ -37,7 +37,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 
 ## 3.3. Kiến trúc tổng thể một máy
 
-Hệ thống được chia thành mặt phẳng điều khiển và mặt phẳng dữ liệu. P0.2C bổ sung đường quan sát nhưng chưa tạo mặt phẳng giám sát chuỗi thời gian riêng.
+Hệ thống được chia thành mặt phẳng điều khiển và mặt phẳng dữ liệu. P1 bổ sung đường tải source Git tin cậy và build image, nhưng chưa tạo mặt phẳng giám sát chuỗi thời gian riêng.
 
 ```text
                         NGƯỜI QUẢN TRỊ
@@ -53,7 +53,10 @@ Hệ thống được chia thành mặt phẳng điều khiển và mặt phẳn
                               |
                               v
                      Deployment Runner
-                              |
+                       /      |      \
+          GitHub archive      |    build log
+                    (egress)  |
+                              v
                     Docker Engine API
                     /       |        \
                  trạng thái log      stats
@@ -79,7 +82,7 @@ Nginx dùng DNS nội bộ Docker và phân giải động để tiếp tục ch
 
 Dashboard dùng React, Vite và TypeScript. Giao diện trình bày riêng health HTTP, trạng thái container, phiên bản mong muốn và phiên bản quan sát được để tránh coi các khái niệm này là tương đương.
 
-Các thao tác vòng đời trả về `202 Accepted`; Dashboard theo dõi operation qua polling. Log và stats chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới. Hai nguồn có trạng thái lỗi độc lập để lỗi stats không che log và ngược lại.
+Các thao tác vòng đời và deployment trả về `202 Accepted`; Dashboard theo dõi trạng thái qua polling. Vùng triển khai Git chỉ hiển thị source allowlist, nhận commit SHA đầy đủ và đọc lịch sử/build log. Log và stats chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới.
 
 ### 3.4.3. Control API
 
@@ -87,9 +90,9 @@ Control API dùng Fastify và TypeScript, thực hiện:
 
 - Xác thực, session và kiểm tra cùng nguồn cho POST.
 - Kiểm tra schema body, params và query.
-- Đọc/ghi metadata, operation và audit trong SQLite.
+- Đọc/ghi metadata, operation, deployment và audit trong SQLite.
 - Kiểm tra health/phiên bản qua đường truy cập Gateway.
-- Chuyển yêu cầu vòng đời và quan sát tới Runner bằng secret nội bộ.
+- Chuyển yêu cầu vòng đời, build/deploy source và quan sát tới Runner bằng secret nội bộ.
 
 Control API không được gắn Docker socket và không thực hiện lệnh shell.
 
@@ -97,7 +100,7 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, logs và stats. Update tạo container thay thế, chờ health rồi mới xóa container cũ; khi thất bại trong quá trình này, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
+Runner cung cấp status, start, stop, restart, update, logs, stats và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
 
 ### 3.4.5. Ứng dụng mẫu
 
@@ -105,15 +108,15 @@ App A và App B là hai Web server Node.js nhỏ, không có thư viện ngoài.
 
 ## 3.5. Thiết kế mạng và cổng
 
-| Thành phần | `edge` | `control` | Cổng host | Docker socket |
-|---|---:|---:|---:|---:|
-| Gateway | Có | Có | `127.0.0.1:8080` | Không |
-| Dashboard | Không | Có | Không | Không |
-| Control API | Không | Có | Không | Không |
-| Runner | Không | Có | Không | Có |
-| App A/App B | Có | Không | Không | Không |
+| Thành phần | `edge` | `control` | `source-egress` | Cổng host | Docker socket |
+|---|---:|---:|---:|---:|---:|
+| Gateway | Có | Có | Không | `127.0.0.1:8080` | Không |
+| Dashboard | Không | Có | Không | Không | Không |
+| Control API | Không | Có | Không | Không | Không |
+| Runner | Không | Có | Có | Không | Có |
+| App A/App B | Có | Không | Không | Không | Không |
 
-Mạng `control` được đặt nội bộ. Việc tách mạng làm giảm kết nối trực tiếp không cần thiết, nhưng không biến Docker socket thành quyền hạn chế. Nếu Runner bị chiếm quyền, host Docker vẫn có nguy cơ cao.
+Mạng `control` được đặt nội bộ. `source-egress` chỉ phục vụ Runner tải archive của repository allowlist và không publish cổng. Việc tách mạng làm giảm kết nối trực tiếp không cần thiết, nhưng không biến Docker socket thành quyền hạn chế. Nếu Runner bị chiếm quyền, host Docker vẫn có nguy cơ cao.
 
 ## 3.6. Thiết kế dữ liệu và trạng thái
 
@@ -123,9 +126,10 @@ SQLite hiện lưu các nhóm dữ liệu:
 - `sessions`: hash của session token và thời gian hết hạn.
 - `applications`: danh mục, route và phiên bản mong muốn.
 - `operations`: action, phiên bản đích, người yêu cầu, trạng thái và thông báo.
+- `deployments`: source, commit, trạng thái, version, image, build log, người yêu cầu và các mốc thời gian.
 - `audit_events`: người thực hiện, tài nguyên, kết quả, địa chỉ nguồn và thời gian.
 
-Operation chuyển qua `queued → running → succeeded|failed`. Partial unique index ngăn hai operation đang hoạt động trên cùng một ứng dụng. Runner còn có khóa trong bộ nhớ để bảo vệ lớp Docker nếu request đi ngoài luồng thông thường.
+Operation và deployment chuyển qua `queued → running → succeeded|failed`. Partial unique index ngăn hai bản ghi cùng loại đang hoạt động trên một ứng dụng; Control API còn đối chiếu chéo operation/deployment trước khi nhận yêu cầu. Runner có khóa trong bộ nhớ để bảo vệ lớp Docker nếu request đi ngoài luồng thông thường.
 
 Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù hợp với cơ sở dữ liệu nghiệp vụ. P1 dự kiến dùng Prometheus cho chuỗi thời gian.
 
@@ -154,7 +158,16 @@ Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù
 4. Runner chờ bản mới khỏe trước khi xóa bản cũ.
 5. Nếu lỗi, bản mới bị loại bỏ và Runner cố gắng trả tên/khởi động bản cũ.
 
-### 3.7.4. Đọc log và tài nguyên
+### 3.7.4. Triển khai từ commit Git
+
+1. Dashboard đọc danh sách source allowlist và gửi `sourceId` cùng SHA đầy đủ.
+2. Control API kiểm tra session, origin, schema, ứng dụng và tác vụ đang hoạt động; sau đó tạo deployment `queued`.
+3. Runner kiểm tra source lần nữa, tải archive cố định, giới hạn dung lượng và giải nén vào tmpfs.
+4. Docker Engine build image `git-<12 ký tự>` với label revision/source.
+5. Runner thay container bằng image vừa build và chờ health.
+6. Control API lưu image ID, build log, kết quả và audit; Dashboard đọc lại bằng polling.
+
+### 3.7.5. Đọc log và tài nguyên
 
 1. Dashboard yêu cầu tối đa 200 dòng log và một snapshot stats cho app đã chọn.
 2. API kiểm tra session và danh mục ứng dụng.
@@ -190,6 +203,6 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 
 ## 3.10. Giới hạn thiết kế và hướng tiếp theo
 
-Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation bất đồng bộ chưa có message broker bền vững. Workflow CI nội bộ đã kiểm tra repository Mini PaaS và tạo image manifest theo commit trên GitHub, nhưng sản phẩm chưa có API/giao diện nhận repository tin cậy, build commit và triển khai theo registry digest. Stats chỉ là snapshot và log chưa được tập trung.
+Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Stats chỉ là snapshot và log chưa được tập trung.
 
-Phần tiếp theo của P1 dự kiến bổ sung luồng repository tin cậy → commit → build log → registry digest → triển khai có kiểm soát, sau đó tích hợp cAdvisor/Prometheus/Grafana, kiểm thử tải và số liệu thực nghiệm. Các thành phần này phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Phần tiếp theo của P1 dự kiến bổ sung registry digest, sau đó tích hợp cAdvisor/Prometheus/Grafana, kiểm thử tải và số liệu thực nghiệm trên Linux/VPS. Các thành phần này phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

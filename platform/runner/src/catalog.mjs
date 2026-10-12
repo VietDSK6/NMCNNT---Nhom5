@@ -20,6 +20,19 @@ export const APP_CATALOG = Object.freeze({
 
 export const ALLOWED_ACTIONS = Object.freeze(["start", "stop", "restart", "update"]);
 
+export const SOURCE_CATALOG = Object.freeze({
+  "github-app-a": Object.freeze({
+    id: "github-app-a",
+    name: "Ứng dụng A từ GitHub",
+    provider: "github",
+    repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
+    archiveBaseUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5/archive",
+    contextPath: "apps/app-a",
+    appId: "app-a",
+    imageRepository: "mini-paas/app-a",
+  }),
+});
+
 export class RunnerInputError extends Error {
   constructor(code, message, statusCode = 400) {
     super(message);
@@ -35,6 +48,25 @@ export function getAppSpec(appId) {
     throw new RunnerInputError("application_not_allowed", "Ứng dụng không nằm trong danh sách Runner được phép quản lý.", 404);
   }
   return spec;
+}
+
+export function getSourceSpec(sourceId) {
+  const source = SOURCE_CATALOG[sourceId];
+  if (!source) {
+    throw new RunnerInputError("source_not_allowed", "Kho mã không nằm trong danh sách Runner được phép sử dụng.", 404);
+  }
+  return source;
+}
+
+export function validateCommitSha(commit) {
+  if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) {
+    throw new RunnerInputError("invalid_commit", "Commit phải là SHA đầy đủ gồm 40 ký tự hexadecimal viết thường.");
+  }
+  return commit;
+}
+
+export function listPublicSources() {
+  return Object.values(SOURCE_CATALOG).map(({ archiveBaseUrl: _archiveBaseUrl, contextPath: _contextPath, imageRepository: _imageRepository, ...source }) => source);
 }
 
 export function validateAction(appId, action, version) {

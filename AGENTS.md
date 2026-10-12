@@ -4,7 +4,7 @@
 >
 > **Ngôn ngữ làm việc:** Tiếng Việt; giải thích dễ hiểu, chính xác về kỹ thuật. Dùng thuật ngữ tiếng Anh khi thực sự cần và giải thích ở lần xuất hiện đầu tiên.
 >
-> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C và một workflow CI nội bộ đã chạy thành công trên GitHub ngày 12/10/2026. Workflow này kiểm tra chính mã nguồn Mini PaaS; **không thay thế tính năng sản phẩm Git → build → image → deploy**, vốn chưa được triển khai. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence.
+> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C, CI nội bộ và lát cắt sản phẩm Git → build → image → deploy cho một repository/App A tin cậy; kiểm thử tích hợp đạt ngày 12/10/2026. Luồng này chưa nhận repository tùy ý, chưa có registry digest và chưa nghiệm thu trên VPS Linux. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence.
 
 ## Quy tắc kiểm tra giao diện — áp dụng cho toàn dự án
 

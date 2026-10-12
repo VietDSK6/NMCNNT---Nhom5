@@ -13,6 +13,12 @@
 | T07 | 11/10/2026; macOS ARM64 | Session thiếu/sai, action/version ngoài allowlist | Gọi API quản trị và Runner với đầu vào không hợp lệ | Trả 401/403/400 phù hợp; không thực thi action cấm; socket chỉ ở Runner | Các trường hợp xác thực, origin, `exec`, `latest` và socket boundary đạt | Đạt vòng phát triển | Chưa gán tên | `evidence/T07/2026-10-11-p0.2a.md`, `evidence/T07/2026-10-11-p0.2b.md` |
 | T08 | Chưa chạy | Chưa có VPS/snapshot sạch release candidate | Dựng lại/khôi phục theo README | Hệ thống phục hồi không cần bước ngoài tài liệu | Chưa có dữ liệu | Chưa đạt/chưa chạy | Chưa phân công | `evidence/T08/` dự kiến |
 
+## Kiểm thử bổ sung cho P1
+
+| Mã | Thời gian/môi trường | Đầu vào hoặc điều kiện trước | Thao tác | Kết quả mong đợi | Kết quả thực tế | Kết quả | Người thực hiện | Bằng chứng |
+|---|---|---|---|---|---|---|---|---|
+| P1-GIT-01 | 12/10/2026 12:01 +07; macOS ARM64, Docker 29.4.0 | Source `github-app-a`; commit `093f1b29341accae2520ba5854db1a5a992b959f`; stack khỏe | Đăng nhập, tạo deployment, chờ build/deploy, kiểm tra Gateway/label rồi khôi phục v1 | Commit hợp lệ được build và deploy; input sai bị từ chối; version/label/lịch sử đúng | 10/10 kiểm tra đạt; image `git-093f1b29341a`; App A trở lại v1 | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-GIT/2026-10-12T1201/` |
+
 ## Khoảng trống phải xử lý
 
 1. Gán tên thật của người chạy từng test.

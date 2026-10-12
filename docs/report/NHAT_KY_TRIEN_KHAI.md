@@ -236,3 +236,40 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - Tạo bảng tài nguyên/IP/quyền từ Compose hiện tại; VPS sẽ có bản đối soát riêng.
 - Phân công 04 người phải tạo ra bốn đầu ra kỹ thuật riêng. Nhiệm vụ chỉ tìm tài liệu không còn đủ điều kiện.
 - Video được rút gọn thành kịch bản khoảng 6 phút; kiểm tra responsive/trình duyệt vẫn không chạy nếu chủ dự án không yêu cầu riêng.
+
+## 12/10/2026 — P1: triển khai App A từ commit Git tin cậy
+
+### Phạm vi thực hiện
+
+- Thêm source catalog cố định tại Runner cho repository GitHub của nhóm và build context `apps/app-a`.
+- Dashboard cho phép chọn source, nhập commit SHA đầy đủ và xem lịch sử/build log.
+- Control API tạo deployment bất đồng bộ; SQLite migration 003 lưu commit, image, log, người yêu cầu và thời gian.
+- Runner tải archive theo commit, giới hạn 16 MiB, giải nén trong tmpfs 128 MiB, build qua Docker Engine API và thay container bằng cơ chế có phục hồi.
+- Thêm mạng `source-egress` chỉ cho Runner; mạng `control` vẫn internal và không service nào mở thêm cổng host.
+- Không nhận URL repository, Dockerfile, image, volume hoặc shell command từ Dashboard.
+
+### Kết quả thực tế
+
+- Runner unit test: 11/11 đạt.
+- Control API unit test: 9/9 đạt.
+- Dashboard production build: đạt; không chạy kiểm tra trình duyệt/responsive theo quy tắc dự án.
+- P1 Git deployment integration: 10/10 đạt với commit `093f1b29341accae2520ba5854db1a5a992b959f`.
+- Archive tải thực tế: 636.145 byte.
+- Image: `mini-paas/app-a:git-093f1b29341a`.
+- Image ID: `sha256:d383955358670002976ec69c45d3ede503790abc4ab884aa4becd2e6baa88c60`.
+- Deployment bắt đầu `2026-10-12T05:01:18.361Z`, kết thúc `2026-10-12T05:01:31.653Z`.
+- Toàn bộ regression P0 tiếp tục đạt: P0.1 9/9, P0.2 15/15, P0.2B 21, P0.2C 12.
+- App A được đưa về `v1.0.0` sau kiểm thử.
+
+### Giới hạn cần ghi đúng
+
+- Mới hỗ trợ một repository công khai/App A trong allowlist; đây không phải sandbox cho mã nguồn bên ngoài.
+- Image chỉ nằm trên Docker Engine cục bộ; `imageId` không phải registry digest.
+- Chưa có webhook, nhánh/tag, hủy build, streaming log hoặc deploy không gián đoạn.
+- Runner vừa có egress vừa giữ Docker socket nên vẫn là ranh giới đặc quyền lớn nhất.
+
+### Bằng chứng
+
+- `evidence/P1-GIT/2026-10-12T1201/`.
+- `docs/architecture/P1_GIT_DEPLOYMENT.md`.
+- `docs/decisions/0006-trusted-git-source-deployment.md`.

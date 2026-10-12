@@ -1,0 +1,17 @@
+{
+  "id": "0bb10650-fea7-4424-9751-bcc58c4a879b",
+  "applicationId": "app-a",
+  "sourceId": "github-app-a",
+  "repositoryUrl": "https://github.com/VietDSK6/NMCNNT---Nhom5",
+  "commitSha": "093f1b29341accae2520ba5854db1a5a992b959f",
+  "status": "succeeded",
+  "version": "git-093f1b29341a",
+  "imageReference": "mini-paas/app-a:git-093f1b29341a",
+  "imageId": "sha256:d383955358670002976ec69c45d3ede503790abc4ab884aa4becd2e6baa88c60",
+  "message": "Đã build commit 093f1b29341a và triển khai Ứng dụng A từ GitHub.",
+  "requestedBy": "admin",
+  "createdAt": "2026-10-12T05:01:18.356Z",
+  "startedAt": "2026-10-12T05:01:18.361Z",
+  "finishedAt": "2026-10-12T05:01:31.653Z",
+  "buildLogChars": 2447
+}

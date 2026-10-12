@@ -23,8 +23,10 @@ import type {
   ApplicationStats,
   ApplicationsResponse,
   AuditEvent,
+  DeploymentItem,
   OperationAction,
   OperationItem,
+  TrustedSource,
   UserSession,
 } from "./types";
 
@@ -40,6 +42,7 @@ const actionLabels: Record<string, string> = {
   "application.stop": "Dừng ứng dụng",
   "application.restart": "Khởi động lại ứng dụng",
   "application.update": "Cập nhật phiên bản",
+  "deployment.create": "Triển khai từ Git",
 };
 
 const operationActionLabels: Record<OperationAction, string> = {
@@ -52,6 +55,13 @@ const operationActionLabels: Record<OperationAction, string> = {
 const operationStatusLabels: Record<OperationItem["status"], string> = {
   queued: "Đang chờ",
   running: "Đang xử lý",
+  succeeded: "Thành công",
+  failed: "Thất bại",
+};
+
+const deploymentStatusLabels: Record<DeploymentItem["status"], string> = {
+  queued: "Đang chờ",
+  running: "Đang build",
   succeeded: "Thành công",
   failed: "Thất bại",
 };
@@ -103,7 +113,7 @@ function LoginScreen({ onAuthenticated }: { readonly onAuthenticated: (session: 
           <div><strong>Mini PaaS</strong><small>Control Center</small></div>
         </div>
         <div className="login-copy">
-          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P0.2C</span>
+          <span className="eyebrow">NỀN TẢNG THỰC HÀNH · P1 GIT</span>
           <h1>Một điểm điều khiển cho toàn bộ vòng đời ứng dụng.</h1>
           <p>Theo dõi và vận hành các ứng dụng mẫu qua Control API, Deployment Runner và Docker Engine.</p>
         </div>
@@ -246,6 +256,110 @@ function OperationsTable({ operations }: { readonly operations: readonly Operati
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function GitDeploymentPanel({
+  sources,
+  deployments,
+  submitting,
+  onDeploy,
+}: {
+  readonly sources: readonly TrustedSource[];
+  readonly deployments: readonly DeploymentItem[];
+  readonly submitting: boolean;
+  readonly onDeploy: (sourceId: string, commit: string) => void;
+}) {
+  const [sourceId, setSourceId] = useState("");
+  const [commit, setCommit] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const selectedSource = sources.find((source) => source.id === sourceId) ?? sources[0];
+
+  useEffect(() => {
+    if (!sourceId && sources[0]) setSourceId(sources[0].id);
+  }, [sourceId, sources]);
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const normalizedCommit = commit.trim().toLowerCase();
+    if (!/^[0-9a-f]{40}$/.test(normalizedCommit)) {
+      setValidationError("Commit phải là SHA đầy đủ gồm đúng 40 ký tự hexadecimal.");
+      return;
+    }
+    if (!selectedSource) {
+      setValidationError("Chưa có kho mã nào được Runner cho phép.");
+      return;
+    }
+    setValidationError("");
+    onDeploy(selectedSource.id, normalizedCommit);
+  }
+
+  return (
+    <div className="deployment-panel">
+      <form className="deployment-form" onSubmit={submit}>
+        <div className="deployment-form__heading">
+          <span className="eyebrow">SOURCE ĐƯỢC KIỂM SOÁT</span>
+          <h3>Build và triển khai một commit</h3>
+          <p>Runner chỉ tải repository đã khai báo sẵn, build đúng thư mục cho phép và không nhận Dockerfile hoặc URL tùy ý.</p>
+        </div>
+        <label>
+          <span>Kho mã</span>
+          <select value={selectedSource?.id ?? ""} onChange={(event) => setSourceId(event.target.value)} disabled={submitting || sources.length === 0}>
+            {sources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Commit SHA đầy đủ</span>
+          <input
+            className="mono"
+            value={commit}
+            onChange={(event) => setCommit(event.target.value)}
+            placeholder="40 ký tự, ví dụ 4dbd6c1…"
+            minLength={40}
+            maxLength={40}
+            autoComplete="off"
+            spellCheck={false}
+            required
+            disabled={submitting || !selectedSource}
+          />
+        </label>
+        {selectedSource && (
+          <div className="source-summary">
+            <div><small>Repository</small><a href={selectedSource.repositoryUrl} target="_blank" rel="noreferrer">{selectedSource.repositoryUrl}<ExternalIcon /></a></div>
+            <div><small>Ứng dụng đích</small><strong>{selectedSource.appId}</strong></div>
+          </div>
+        )}
+        {validationError && <div className="form-error" role="alert"><AlertIcon />{validationError}</div>}
+        <button className="button button--primary deployment-submit" disabled={submitting || !selectedSource}>
+          <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Build và triển khai"}
+        </button>
+      </form>
+
+      <div className="deployment-history">
+        <div className="deployment-history__heading"><strong>Lịch sử deployment</strong><span>{deployments.length} bản ghi gần nhất</span></div>
+        {deployments.length === 0 ? (
+          <div className="deployment-empty"><HistoryIcon /><span><strong>Chưa có deployment từ Git</strong>Nhập commit của source được phép để bắt đầu.</span></div>
+        ) : (
+          <div className="deployment-list">
+            {deployments.map((deployment) => (
+              <article key={deployment.id} className="deployment-item">
+                <div className="deployment-item__top">
+                  <div><strong>{deployment.applicationName}</strong><code>{deployment.commitSha.slice(0, 12)}</code></div>
+                  <span className={`operation-state operation-state--${deployment.status}`}>{deploymentStatusLabels[deployment.status]}</span>
+                </div>
+                <dl>
+                  <div><dt>Phiên bản</dt><dd>{deployment.version ?? "—"}</dd></div>
+                  <div><dt>Image</dt><dd title={deployment.imageReference ?? undefined}>{deployment.imageReference ?? "—"}</dd></div>
+                  <div><dt>Thời gian</dt><dd>{formatDateTime(deployment.createdAt)}</dd></div>
+                </dl>
+                <p>{deployment.message ?? "Runner đang xử lý yêu cầu build và triển khai."}</p>
+                {deployment.buildLog && <details><summary>Xem build log</summary><pre>{deployment.buildLog}</pre></details>}
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -405,9 +519,12 @@ function ObservabilityPanel({ applications }: { readonly applications: readonly 
 function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; readonly onLoggedOut: () => void }) {
   const [applications, setApplications] = useState<ApplicationsResponse | null>(null);
   const [operations, setOperations] = useState<readonly OperationItem[]>([]);
+  const [sources, setSources] = useState<readonly TrustedSource[]>([]);
+  const [deployments, setDeployments] = useState<readonly DeploymentItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [refreshing, setRefreshing] = useState(true);
   const [submittingApp, setSubmittingApp] = useState<string | null>(null);
+  const [submittingDeployment, setSubmittingDeployment] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -415,13 +532,17 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     if (!quiet) setRefreshing(true);
     setError("");
     try {
-      const [apps, operationHistory, audit] = await Promise.all([
+      const [apps, operationHistory, sourceCatalog, deploymentHistory, audit] = await Promise.all([
         api.applications(),
         api.operations(),
+        api.sources(),
+        api.deployments(),
         api.audit(),
       ]);
       setApplications(apps);
       setOperations(operationHistory.data);
+      setSources(sourceCatalog.data);
+      setDeployments(deploymentHistory.data);
       setAuditEvents(audit.data);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
@@ -461,6 +582,21 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     }
   }
 
+  async function deploySource(sourceId: string, commit: string) {
+    setSubmittingDeployment(true);
+    setError("");
+    setNotice("");
+    try {
+      await api.deploySource(sourceId, commit);
+      setNotice(`Đã tiếp nhận yêu cầu build và triển khai commit ${commit.slice(0, 12)}.`);
+      await loadData(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể tạo deployment từ Git.");
+    } finally {
+      setSubmittingDeployment(false);
+    }
+  }
+
   async function logout() {
     try { await api.logout(); } finally { onLoggedOut(); }
   }
@@ -476,6 +612,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           <span className="nav-label">VẬN HÀNH</span>
           <a className="nav-item nav-item--active" href="#overview"><GridIcon />Tổng quan</a>
           <a className="nav-item" href="#applications"><BoxIcon />Ứng dụng<span className="nav-count">{applications?.summary.total ?? "—"}</span></a>
+          <a className="nav-item" href="#deployments"><DeployIcon />Triển khai Git</a>
           <a className="nav-item" href="#operations"><ServerIcon />Thao tác</a>
           <a className="nav-item" href="#activity"><HistoryIcon />Kiểm toán</a>
           <span className="nav-label nav-label--spaced">QUAN SÁT</span>
@@ -500,8 +637,8 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
           {error && <div className="alert alert--error" role="alert"><AlertIcon /><div><strong>Thao tác chưa hoàn tất</strong><span>{error}</span></div><button onClick={() => void loadData()}>Tải lại dữ liệu</button></div>}
           {notice && <div className="alert alert--success" role="status"><CheckIcon /><div><strong>Yêu cầu đã được tiếp nhận</strong><span>{notice}</span></div><button onClick={() => setNotice("")}>Đóng</button></div>}
           <section className="stage-banner">
-            <div><span className="eyebrow">CONTROL PLANE · P0.2C</span><h2>Vận hành và quan sát qua một ranh giới quyền rõ ràng</h2><p>Dashboard gửi yêu cầu có cấu trúc; chỉ Deployment Runner nội bộ được phép giao tiếp với Docker Engine.</p></div>
-            <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Dashboard</span><ChevronIcon /><span>Control API</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Docker</span></div>
+            <div><span className="eyebrow">MINI PAAS · P1</span><h2>Từ commit Git đến container đang hoạt động</h2><p>Dashboard tạo deployment; Control API lưu lịch sử; Runner build source tin cậy và cập nhật ứng dụng qua Docker Engine.</p></div>
+            <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Git commit</span><ChevronIcon /><span>Control API</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Docker</span></div>
           </section>
 
           <section className="metrics-grid" aria-label="Chỉ số tổng quan">
@@ -526,9 +663,19 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             </div>
           </section>
 
+          <section className="section" id="deployments">
+            <div className="section-heading"><div><span className="eyebrow">TRIỂN KHAI TỪ GIT</span><h2>Build theo commit đã chọn</h2><p>Chỉ repository mẫu trong danh sách cho phép; mỗi lần triển khai lưu commit, image, log và kết quả thực tế.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></div>
+            <GitDeploymentPanel
+              sources={sources}
+              deployments={deployments}
+              submitting={submittingDeployment}
+              onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+            />
+          </section>
+
           <section className="runtime-note">
             <div className="runtime-note__icon"><ShieldIcon /></div>
-            <div><span className="eyebrow">RANH GIỚI QUYỀN</span><h3>Docker socket chỉ tồn tại trong Deployment Runner</h3><p>Runner chỉ chấp nhận app-a/app-b cùng bốn thao tác start, stop, restart, update và các phiên bản đã khai báo. Không có API chạy lệnh shell tùy ý.</p></div>
+            <div><span className="eyebrow">RANH GIỚI QUYỀN</span><h3>Docker socket chỉ tồn tại trong Deployment Runner</h3><p>Runner chỉ chấp nhận app/action/source đã khai báo, commit SHA đầy đủ và thư mục build cố định. Không có API nhận URL, Dockerfile hoặc lệnh shell tùy ý.</p></div>
             <span className="runtime-note__tag runtime-note__tag--ready">Runner hoạt động</span>
           </section>
 
@@ -547,7 +694,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             <AuditTable events={auditEvents} />
           </section>
 
-          <footer className="workspace-footer"><span>Mini PaaS · Mốc P0.2C</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
+          <footer className="workspace-footer"><span>Mini PaaS · Mốc P1 triển khai từ Git</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
         </div>
       </main>
     </div>

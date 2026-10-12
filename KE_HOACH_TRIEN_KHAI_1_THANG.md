@@ -13,11 +13,12 @@
 
 - P0.1, P0.2A, P0.2B và P0.2C đã được triển khai, kiểm thử trên máy phát triển macOS/OrbStack.
 - Đã có workflow CI nội bộ, script build ảnh mẫu theo commit và manifest; kiểm thử cục bộ đạt. Workflow run đầu tiên trên GitHub đã thành công và tạo artifact ngày 12/10/2026. Đây là công cụ kiểm tra repository Mini PaaS, chưa phải chức năng triển khai ứng dụng từ Git của sản phẩm.
+- Luồng sản phẩm repository tin cậy → commit SHA → build image → triển khai App A → lưu build log/lịch sử đã đạt 10 kiểm tra tích hợp ngày 12/10/2026. Phạm vi hiện chỉ có một source allowlist và image cục bộ, chưa có registry digest.
 - MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
 - G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
 - T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
 - Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
-- Bước tiếp theo của sản phẩm là luồng repository tin cậy → chọn commit → build image → lưu log/digest → triển khai image đã cho phép. Prometheus/Grafana và k6 vẫn thuộc G3; không mở P2 trước khi các phần này ổn định.
+- Bước tiếp theo của P1 là Prometheus/Grafana, k6 và nghiệm thu lại luồng Git trên Linux/VPS; không mở P2 trước khi các phần này ổn định.
 - Theo quyết định của chủ dự án, từ ngày 12/10/2026 không chạy kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt ở bất kỳ giai đoạn nào, trừ khi được yêu cầu riêng. Dashboard vẫn phải qua typecheck/build và các kiểm thử chức năng qua API/unit/integration; không được ghi responsive là đã xác minh cho thay đổi mới nếu chưa kiểm tra.
 - Yêu cầu nộp mới: báo cáo 12–18 trang nội dung chính, video 5–7 phút, bảng kiểm thử đủ đầu vào/thao tác/kỳ vọng/thực tế/kết quả/bằng chứng có dấu thời gian, dữ liệu đo gốc, bảng tài nguyên/IP/quyền, phiếu đóng góp cá nhân và khai báo nguồn tham khảo/cách dùng AI.
 - Nhóm có 04 thành viên. Mỗi người phải có sản phẩm kỹ thuật riêng; nhiệm vụ chỉ tìm tài liệu hoặc viết báo cáo không đủ điều kiện đóng góp cá nhân.
@@ -159,7 +160,8 @@ Luồng chính:
 ### 5.2. Phân tách mạng
 
 - edge: Nginx và các Web App.
-- control: Nginx, Control API và Deployment Runner.
+- control: Nginx, Control API và Deployment Runner; mạng nội bộ không có egress.
+- source-egress: chỉ Runner dùng để tải commit từ repository allowlist; không publish cổng host.
 - observability: cAdvisor, Prometheus và Grafana.
 
 Chỉ Nginx được publish cổng ra host trong cấu hình demo chuẩn. App A, App B, Control API, Runner và Docker socket không được công khai trực tiếp.
@@ -173,7 +175,7 @@ Chỉ Nginx được publish cổng ra host trong cấu hình demo chuẩn. App 
 - Không cho API truyền tùy ý image, command, volume mount, network mode hoặc host path.
 - Mỗi ứng dụng có khóa thao tác để tránh hai lần triển khai đồng thời.
 - Mọi operation có trạng thái queued, running, succeeded hoặc failed.
-- Runner chỉ tồn tại trong mạng control và không có cổng công khai.
+- Runner nằm trong mạng control và source-egress nhưng không có cổng công khai; egress là đánh đổi có chủ ý để tải source tin cậy.
 - Báo cáo phải ghi rõ Runner vẫn là thành phần quyền cao; nếu Runner bị chiếm quyền thì host có thể bị ảnh hưởng.
 
 ## 6. Cấu trúc repository dự kiến

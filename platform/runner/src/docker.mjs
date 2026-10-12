@@ -1,4 +1,5 @@
 import http from "node:http";
+import { spawn } from "node:child_process";
 
 export class DockerApiError extends Error {
   constructor(statusCode, message, code = "docker_api_error") {
@@ -89,6 +90,92 @@ export class DockerClient {
       request.setTimeout(10_000, () => request.destroy(new Error("Quá thời gian chờ Docker API.")));
       request.on("error", reject);
       request.end();
+    });
+  }
+
+  build(contextPath, imageReference, options = {}) {
+    return new Promise((resolve, reject) => {
+      const query = new URLSearchParams({
+        t: imageReference,
+        dockerfile: "Dockerfile",
+        rm: "1",
+        forcerm: "1",
+        pull: "0",
+        buildargs: JSON.stringify(options.buildArgs ?? {}),
+        labels: JSON.stringify(options.labels ?? {}),
+      });
+      const archive = spawn("tar", ["-C", contextPath, "-cf", "-", "."], {
+        shell: false,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      const request = http.request({
+        socketPath: this.socketPath,
+        path: `/build?${query}`,
+        method: "POST",
+        headers: { "content-type": "application/x-tar" },
+      });
+      let settled = false;
+      let tarError = "";
+
+      const finishWithError = (error) => {
+        if (settled) return;
+        settled = true;
+        archive.kill();
+        request.destroy();
+        reject(error);
+      };
+
+      archive.stderr.on("data", (chunk) => { tarError += chunk.toString("utf8"); });
+      archive.on("error", finishWithError);
+      archive.on("close", (code) => {
+        if (code !== 0 && !settled) {
+          finishWithError(new DockerApiError(500, `Không thể đóng gói build context. ${tarError}`, "build_context_failed"));
+        }
+      });
+
+      request.setTimeout(180_000, () => finishWithError(new DockerApiError(504, "Quá thời gian chờ Docker build.", "docker_build_timeout")));
+      request.on("error", finishWithError);
+      request.on("response", (response) => {
+        const statusCode = response.statusCode ?? 500;
+        let pending = "";
+        let log = "";
+        let buildError = null;
+        const appendLog = (value) => {
+          if (!value || log.includes("[build log đã được rút gọn]")) return;
+          log += value;
+          if (log.length > 64 * 1024) log = `${log.slice(0, 64 * 1024)}\n[build log đã được rút gọn]\n`;
+        };
+        const consumeLine = (line) => {
+          if (!line.trim()) return;
+          let event;
+          try { event = JSON.parse(line); } catch {
+            appendLog(`${line}\n`);
+            return;
+          }
+          if (typeof event.stream === "string") appendLog(event.stream);
+          if (typeof event.status === "string") appendLog(`${event.status}${event.progress ? ` ${event.progress}` : ""}\n`);
+          if (typeof event.error === "string") buildError = event.error;
+        };
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          pending += chunk;
+          const lines = pending.split("\n");
+          pending = lines.pop() ?? "";
+          for (const line of lines) consumeLine(line);
+        });
+        response.on("end", () => {
+          if (settled) return;
+          if (pending) consumeLine(pending);
+          if (statusCode !== 200 || buildError) {
+            finishWithError(new DockerApiError(statusCode, buildError || `Docker build trả về HTTP ${statusCode}.`, "docker_build_failed"));
+            return;
+          }
+          settled = true;
+          resolve({ log });
+        });
+      });
+
+      archive.stdout.pipe(request);
     });
   }
 

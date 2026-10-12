@@ -3,9 +3,12 @@ import type {
   ApplicationStats,
   ApplicationsResponse,
   AuditResponse,
+  DeploymentItem,
+  DeploymentsResponse,
   OperationAction,
   OperationItem,
   OperationsResponse,
+  SourcesResponse,
   UserSession,
 } from "./types";
 
@@ -50,6 +53,12 @@ export const api = {
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
   applications: () => request<ApplicationsResponse>("/api/v1/applications"),
   operations: () => request<OperationsResponse>("/api/v1/operations?limit=12"),
+  sources: () => request<SourcesResponse>("/api/v1/sources"),
+  deployments: () => request<DeploymentsResponse>("/api/v1/deployments?limit=12"),
+  deploySource: (sourceId: string, commit: string) => request<{ data: DeploymentItem }>(
+    "/api/v1/deployments",
+    { method: "POST", body: JSON.stringify({ sourceId, commit }) },
+  ),
   execute: (appId: string, action: OperationAction, version?: string) => request<{ data: OperationItem }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/actions`,
     {

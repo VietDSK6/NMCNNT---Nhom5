@@ -45,7 +45,29 @@ export interface RunnerStats {
   readonly sampledAt: string;
 }
 
+export interface TrustedSource {
+  readonly id: string;
+  readonly name: string;
+  readonly provider: "github";
+  readonly repositoryUrl: string;
+  readonly appId: string;
+}
+
+export interface SourceDeploymentResult {
+  readonly sourceId: string;
+  readonly appId: string;
+  readonly commit: string;
+  readonly version: string;
+  readonly imageReference: string;
+  readonly imageId: string;
+  readonly log: string;
+  readonly message: string;
+  readonly runtime: RunnerStatus;
+}
+
 export interface RunnerClient {
+  sources(): Promise<readonly TrustedSource[]>;
+  deploySource(sourceId: string, commit: string): Promise<SourceDeploymentResult>;
   status(appId: string): Promise<RunnerStatus>;
   logs(appId: string, tail: number): Promise<RunnerLogs>;
   stats(appId: string): Promise<RunnerStats>;
@@ -96,6 +118,18 @@ export class HttpRunnerClient implements RunnerClient {
 
   status(appId: string): Promise<RunnerStatus> {
     return this.request<RunnerStatus>(`/v1/apps/${encodeURIComponent(appId)}`);
+  }
+
+  sources(): Promise<readonly TrustedSource[]> {
+    return this.request<readonly TrustedSource[]>("/v1/sources");
+  }
+
+  deploySource(sourceId: string, commit: string): Promise<SourceDeploymentResult> {
+    return this.request<SourceDeploymentResult>(
+      `/v1/sources/${encodeURIComponent(sourceId)}/deployments`,
+      { method: "POST", body: JSON.stringify({ commit }) },
+      180_000,
+    );
   }
 
   logs(appId: string, tail: number): Promise<RunnerLogs> {

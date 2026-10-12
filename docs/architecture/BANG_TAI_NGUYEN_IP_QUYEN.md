@@ -1,13 +1,13 @@
 # Bảng tài nguyên, mạng/IP và quyền — môi trường phát triển
 
-> Bảng này phản ánh `compose.yaml` tại P0.2C và thời điểm bổ sung CI nội bộ. Cần tạo bản riêng cho VPS release cuối. Docker cấp IP nội bộ động nên hệ thống định tuyến bằng DNS theo tên service, không phụ thuộc một địa chỉ IP container cố định.
+> Bảng này phản ánh `compose.yaml` đến lát cắt P1 Git deployment. Cần tạo bản riêng cho VPS release cuối. Docker cấp IP nội bộ động nên hệ thống định tuyến bằng DNS theo tên service, không phụ thuộc một địa chỉ IP container cố định.
 
 | Thành phần | Mạng/DNS nội bộ | Cổng container | Cổng host | CPU | RAM | Người dùng tiến trình | Dữ liệu/quyền đặc biệt |
 |---|---|---:|---|---:|---:|---|---|
 | Gateway | `edge`, `control`; DNS `gateway` | 8080 | `127.0.0.1:8080` | 0,25 | 64 MiB | `nginx` | Root filesystem chỉ đọc; tmpfs `/tmp`; drop toàn bộ capability |
 | Dashboard | `control`; DNS `dashboard` | 8080 | Không | 0,20 | 64 MiB | `nginx` | Root filesystem chỉ đọc; không có Docker socket |
 | Control API | `control`; DNS `control-api` | 3000 | Không | 0,35 | 192 MiB | `node` | Volume `control-data:/data`; đọc secret qua biến môi trường; không có Docker socket |
-| Deployment Runner | `control`; DNS `runner` | 3001 | Không | 0,25 | 96 MiB | `root` trong container | Gắn `/var/run/docker.sock`; quyền rất cao trên host; API nội bộ có shared secret và allowlist |
+| Deployment Runner | `control`, `source-egress`; DNS `runner` | 3001 | Không | 0,25 | 96 MiB | `root` trong container | Gắn `/var/run/docker.sock`; tmpfs `/tmp` 128 MiB; egress tải source allowlist; API nội bộ có shared secret |
 | App A | `edge`; DNS `app-a` | 3000 | Không | 0,35 | 128 MiB | `node` | Root filesystem chỉ đọc; không volume host; drop capability |
 | App B | `edge`; DNS `app-b` | 3000 | Không | 0,35 | 128 MiB | `node` | Root filesystem chỉ đọc; không volume host; drop capability |
 
@@ -16,6 +16,7 @@
 - Máy phát triển chỉ công khai Gateway tại loopback `127.0.0.1`; máy khác trong mạng không truy cập trực tiếp cấu hình này.
 - `edge` dùng cho lưu lượng Gateway → ứng dụng.
 - `control` là mạng nội bộ cho Gateway, Dashboard, Control API và Runner.
+- `source-egress` chỉ có Runner, phục vụ tải archive của commit từ repository được allowlist; không publish cổng host.
 - Ứng dụng, Dashboard, API và Runner không publish cổng ra host.
 - Nginx dùng Docker DNS `127.0.0.11` để theo địa chỉ container thay đổi sau update.
 - IP public/private của VPS, firewall và HTTPS: chưa chốt; không điền giả trước khi triển khai thật.

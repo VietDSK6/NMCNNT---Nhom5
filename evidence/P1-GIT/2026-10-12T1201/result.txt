@@ -1,0 +1,12 @@
+ĐẠT: Đăng nhập để kiểm thử deployment từ Git
+ĐẠT: Danh sách source chỉ trả repository được phép
+ĐẠT: Từ chối tạo deployment khi chưa đăng nhập
+ĐẠT: Từ chối tên nhánh thay cho commit SHA
+ĐẠT: Tiếp nhận build và deploy commit tin cậy
+ĐẠT: Runner build và triển khai commit thành công
+ĐẠT: App A phản hồi qua Gateway sau deployment
+ĐẠT: Image lưu đúng nhãn commit và lịch sử deployment
+ĐẠT: Tiếp nhận yêu cầu đưa App A về v1.0.0
+ĐẠT: App A trở lại v1.0.0 sau kiểm thử
+
+P1 Git deployment integration test: 10 kiểm tra đạt.

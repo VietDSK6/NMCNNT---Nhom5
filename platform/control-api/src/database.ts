@@ -57,6 +57,27 @@ export interface OperationRecord {
   readonly finishedAt: string | null;
 }
 
+export type DeploymentStatus = "queued" | "running" | "succeeded" | "failed";
+
+export interface DeploymentRecord {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly sourceId: string;
+  readonly repositoryUrl: string;
+  readonly commitSha: string;
+  readonly status: DeploymentStatus;
+  readonly version: string | null;
+  readonly imageReference: string | null;
+  readonly imageId: string | null;
+  readonly buildLog: string | null;
+  readonly message: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+}
+
 const migration001 = `
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
@@ -124,6 +145,30 @@ const migration002 = `
     WHERE status IN ('queued', 'running');
 `;
 
+const migration003 = `
+  CREATE TABLE deployments (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
+    source_id TEXT NOT NULL,
+    repository_url TEXT NOT NULL,
+    commit_sha TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
+    version TEXT,
+    image_reference TEXT,
+    image_id TEXT,
+    build_log TEXT,
+    message TEXT,
+    requested_by TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    started_at TEXT,
+    finished_at TEXT
+  );
+  CREATE INDEX deployments_created_at_idx ON deployments(created_at DESC);
+  CREATE UNIQUE INDEX deployments_one_active_per_app_idx
+    ON deployments(application_id)
+    WHERE status IN ('queued', 'running');
+`;
+
 export class ControlDatabase {
   readonly #db: DatabaseSync;
 
@@ -153,6 +198,17 @@ export class ControlDatabase {
       try {
         this.#db.exec(migration002);
         this.#db.exec("PRAGMA user_version = 2;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
+    }
+    if (version.user_version < 3) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration003);
+        this.#db.exec("PRAGMA user_version = 3;");
         this.#db.exec("COMMIT;");
       } catch (error) {
         this.#db.exec("ROLLBACK;");
@@ -314,6 +370,115 @@ export class ControlDatabase {
       action: String(row.action) as OperationAction,
       requestedVersion: row.requested_version === null ? null : String(row.requested_version),
       status: String(row.status) as OperationStatus,
+      message: row.message === null ? null : String(row.message),
+      requestedBy: String(row.requested_by),
+      createdAt: String(row.created_at),
+      startedAt: row.started_at === null ? null : String(row.started_at),
+      finishedAt: row.finished_at === null ? null : String(row.finished_at),
+    };
+  }
+
+  createDeployment(input: {
+    applicationId: string;
+    sourceId: string;
+    repositoryUrl: string;
+    commitSha: string;
+    requestedBy: string;
+  }): DeploymentRecord {
+    const id = randomUUID();
+    const createdAt = new Date().toISOString();
+    this.#db.prepare(`
+      INSERT INTO deployments (
+        id, application_id, source_id, repository_url, commit_sha,
+        status, requested_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, 'queued', ?, ?)
+    `).run(
+      id,
+      input.applicationId,
+      input.sourceId,
+      input.repositoryUrl,
+      input.commitSha,
+      input.requestedBy,
+      createdAt,
+    );
+    return this.findDeployment(id)!;
+  }
+
+  findActiveDeployment(applicationId: string): DeploymentRecord | undefined {
+    const row = this.#db.prepare(`
+      SELECT deployments.*, applications.name AS application_name
+      FROM deployments
+      JOIN applications ON applications.id = deployments.application_id
+      WHERE deployments.application_id = ? AND deployments.status IN ('queued', 'running')
+      LIMIT 1
+    `).get(applicationId) as Record<string, unknown> | undefined;
+    return row ? this.#deploymentFromRow(row) : undefined;
+  }
+
+  findDeployment(id: string): DeploymentRecord | undefined {
+    const row = this.#db.prepare(`
+      SELECT deployments.*, applications.name AS application_name
+      FROM deployments
+      JOIN applications ON applications.id = deployments.application_id
+      WHERE deployments.id = ?
+    `).get(id) as Record<string, unknown> | undefined;
+    return row ? this.#deploymentFromRow(row) : undefined;
+  }
+
+  markDeploymentRunning(id: string): void {
+    this.#db.prepare(`
+      UPDATE deployments SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'
+    `).run(new Date().toISOString(), id);
+  }
+
+  finishDeployment(input: {
+    id: string;
+    status: "succeeded" | "failed";
+    message: string;
+    version?: string;
+    imageReference?: string;
+    imageId?: string;
+    buildLog?: string;
+  }): void {
+    this.#db.prepare(`
+      UPDATE deployments SET
+        status = ?, message = ?, version = ?, image_reference = ?, image_id = ?, build_log = ?, finished_at = ?
+      WHERE id = ? AND status IN ('queued', 'running')
+    `).run(
+      input.status,
+      input.message,
+      input.version ?? null,
+      input.imageReference ?? null,
+      input.imageId ?? null,
+      input.buildLog?.slice(0, 65_536) ?? null,
+      new Date().toISOString(),
+      input.id,
+    );
+  }
+
+  listDeployments(limit: number): readonly DeploymentRecord[] {
+    const rows = this.#db.prepare(`
+      SELECT deployments.*, applications.name AS application_name
+      FROM deployments
+      JOIN applications ON applications.id = deployments.application_id
+      ORDER BY deployments.created_at DESC LIMIT ?
+    `).all(limit) as readonly Record<string, unknown>[];
+    return rows.map((row) => this.#deploymentFromRow(row));
+  }
+
+  #deploymentFromRow(row: Record<string, unknown>): DeploymentRecord {
+    return {
+      id: String(row.id),
+      applicationId: String(row.application_id),
+      applicationName: String(row.application_name),
+      sourceId: String(row.source_id),
+      repositoryUrl: String(row.repository_url),
+      commitSha: String(row.commit_sha),
+      status: String(row.status) as DeploymentStatus,
+      version: row.version === null ? null : String(row.version),
+      imageReference: row.image_reference === null ? null : String(row.image_reference),
+      imageId: row.image_id === null ? null : String(row.image_id),
+      buildLog: row.build_log === null ? null : String(row.build_log),
       message: row.message === null ? null : String(row.message),
       requestedBy: String(row.requested_by),
       createdAt: String(row.created_at),

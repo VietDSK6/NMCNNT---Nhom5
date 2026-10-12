@@ -29,7 +29,7 @@ Phụ lục dự kiến:
 - [x] Mã nguồn P0, Compose, Nginx, Dashboard, API và Runner.
 - [x] README có yêu cầu môi trường, cách chạy và cách kiểm thử P0.
 - [ ] README release cuối ghi toàn bộ phiên bản công cụ đã dùng trên VPS.
-- [ ] Luồng sản phẩm Git → build → image → deploy cho repository mẫu tin cậy.
+- [x] Luồng sản phẩm Git → build → image → deploy cho một repository/App A tin cậy trên môi trường phát triển; còn phải nghiệm thu lại trên VPS Linux.
 - [ ] Sơ đồ kiến trúc bản cuối.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
 - [ ] Bảng tài nguyên/IP/quyền bản VPS đã đối soát.

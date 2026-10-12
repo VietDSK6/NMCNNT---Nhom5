@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { getAppSpec, RunnerInputError, validateAction } from "./catalog.mjs";
+import {
+  getAppSpec,
+  getSourceSpec,
+  listPublicSources,
+  RunnerInputError,
+  validateAction,
+  validateCommitSha,
+} from "./catalog.mjs";
 import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
 
 export class RunnerRuntimeError extends Error {
@@ -48,6 +55,7 @@ function publicStatus(appId, inspect) {
 export class DeploymentRuntime {
   constructor(docker, options = {}) {
     this.docker = docker;
+    this.sourceBuilder = options.sourceBuilder;
     this.project = options.project || "mini-paas";
     this.waitTimeoutMs = options.waitTimeoutMs || 30_000;
     this.pollIntervalMs = options.pollIntervalMs || 500;
@@ -68,6 +76,37 @@ export class DeploymentRuntime {
   async status(appId) {
     const spec = getAppSpec(appId);
     return publicStatus(appId, await this.findContainer(spec));
+  }
+
+  listSources() {
+    return listPublicSources();
+  }
+
+  async deploySource(sourceId, commit) {
+    const source = getSourceSpec(sourceId);
+    const revision = validateCommitSha(commit);
+    if (!this.sourceBuilder) {
+      throw new RunnerRuntimeError("source_builder_unavailable", "Runner chưa được cấu hình bộ dựng mã nguồn.", 503);
+    }
+    if (this.locks.has(source.appId)) {
+      throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
+    }
+    this.locks.add(source.appId);
+    try {
+      const build = await this.sourceBuilder.build(source, revision);
+      const deployment = await this.update(
+        getAppSpec(source.appId),
+        build.version,
+        build.imageReference,
+      );
+      return {
+        ...build,
+        message: `Đã build commit ${revision.slice(0, 12)} và triển khai ${source.name}.`,
+        runtime: deployment.runtime,
+      };
+    } finally {
+      this.locks.delete(source.appId);
+    }
   }
 
   async logs(appId, tail = OBSERVABILITY_LIMITS.defaultTail) {
@@ -140,8 +179,11 @@ export class DeploymentRuntime {
     }
   }
 
-  async update(spec, version) {
-    const targetImage = spec.versions[version];
+  async update(spec, version, preparedImage) {
+    const targetImage = preparedImage ?? spec.versions[version];
+    if (!targetImage) {
+      throw new RunnerInputError("version_not_allowed", "Phiên bản cập nhật không nằm trong danh sách cho phép.");
+    }
     const image = await this.docker.image(targetImage).catch((error) => {
       if (error?.statusCode === 404) {
         throw new RunnerRuntimeError("image_not_prepared", `Ảnh ${targetImage} chưa được chuẩn bị trên máy chủ.`, 409);

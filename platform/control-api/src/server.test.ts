@@ -37,6 +37,33 @@ const healthy: ApplicationHealth = {
 };
 
 const runnerClient: RunnerClient = {
+  sources: async () => [{
+    id: "github-app-a",
+    name: "Ứng dụng A từ GitHub",
+    provider: "github",
+    repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
+    appId: "app-a",
+  }],
+  deploySource: async (sourceId, commit) => ({
+    sourceId,
+    appId: "app-a",
+    commit,
+    version: `git-${commit.slice(0, 12)}`,
+    imageReference: `mini-paas/app-a:git-${commit.slice(0, 12)}`,
+    imageId: `sha256:${"1".repeat(64)}`,
+    log: "Step 1/2\nStep 2/2\n",
+    message: "Đã build và triển khai commit.",
+    runtime: {
+      appId: "app-a",
+      status: "running",
+      containerId: "0123456789ab",
+      containerName: "mini-paas-app-a-1",
+      image: `mini-paas/app-a:git-${commit.slice(0, 12)}`,
+      observedVersion: `git-${commit.slice(0, 12)}`,
+      health: "healthy",
+      startedAt: "2026-10-12T00:00:00.000Z",
+    },
+  }),
   status: async (appId) => ({
     appId,
     status: "running",
@@ -262,4 +289,73 @@ test("log và số liệu tài nguyên yêu cầu phiên đăng nhập, có gi�
     headers: { cookie },
   });
   assert.equal(unknown.statusCode, 404);
+});
+
+test("tạo deployment từ source tin cậy và lưu build metadata", async () => {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const sources = await server.inject({ method: "GET", url: "/api/v1/sources", headers: { cookie } });
+  assert.equal(sources.statusCode, 200);
+  assert.equal(sources.json().data[0].id, "github-app-a");
+
+  const commit = "a".repeat(40);
+  const created = await server.inject({
+    method: "POST",
+    url: "/api/v1/deployments",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { sourceId: "github-app-a", commit },
+  });
+  assert.equal(created.statusCode, 202);
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (database.listDeployments(1)[0]?.status === "succeeded") break;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  const deployment = database.listDeployments(1)[0];
+  assert.equal(deployment?.status, "succeeded");
+  assert.equal(deployment?.commitSha, commit);
+  assert.equal(deployment?.version, `git-${"a".repeat(12)}`);
+  assert.match(deployment?.buildLog ?? "", /Step 1\/2/);
+  assert.equal(database.findApplication("app-a")?.desiredVersion, `git-${"a".repeat(12)}`);
+
+  const history = await server.inject({ method: "GET", url: "/api/v1/deployments", headers: { cookie } });
+  assert.equal(history.statusCode, 200);
+  assert.equal(history.json().data[0].sourceId, "github-app-a");
+});
+
+test("từ chối source lạ và commit không đúng định dạng", async () => {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const invalidCommit = await server.inject({
+    method: "POST",
+    url: "/api/v1/deployments",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { sourceId: "github-app-a", commit: "main" },
+  });
+  assert.equal(invalidCommit.statusCode, 400);
+
+  const unknownSource = await server.inject({
+    method: "POST",
+    url: "/api/v1/deployments",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { sourceId: "unknown-source", commit: "b".repeat(40) },
+  });
+  assert.equal(unknownSource.statusCode, 404);
+  assert.equal(unknownSource.json().error, "source_not_allowed");
 });

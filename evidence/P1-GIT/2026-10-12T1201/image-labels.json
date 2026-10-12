@@ -1,0 +1,7 @@
+{
+  "io.mini-paas.source-id": "github-app-a",
+  "org.opencontainers.image.revision": "093f1b29341accae2520ba5854db1a5a992b959f",
+  "org.opencontainers.image.source": "https://github.com/VietDSK6/NMCNNT---Nhom5",
+  "org.opencontainers.image.title": "Mini PaaS - Ứng dụng A",
+  "org.opencontainers.image.version": "git-093f1b29341a"
+}

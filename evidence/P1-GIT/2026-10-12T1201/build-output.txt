@@ -1,0 +1,56 @@
+Source: https://github.com/VietDSK6/NMCNNT---Nhom5
+Commit: 093f1b29341accae2520ba5854db1a5a992b959f
+Đã tải 636145 byte mã nguồn.
+Step 1/12 : FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+Pulling from library/node
+Already exists
+Already exists
+Already exists
+Already exists
+Digest: sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+Status: Downloaded newer image for node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
+ ---> 0e3c736f1019
+Step 2/12 : ARG APP_VERSION=v1.0.0
+ ---> Running in 0fe1c8b2629b
+ ---> Removed intermediate container 0fe1c8b2629b
+ ---> 3e1db33a19c3
+Step 3/12 : LABEL org.opencontainers.image.title="Mini PaaS - Ứng dụng A"       org.opencontainers.image.version="${APP_VERSION}"       org.opencontainers.image.description="Ứng dụng mẫu phục vụ kiểm chứng triển khai và cập nhật phiên bản"
+ ---> Running in d6f3956a6a4e
+ ---> Removed intermediate container d6f3956a6a4e
+ ---> 8a4090a8ee6f
+Step 4/12 : ENV NODE_ENV=production     PORT=3000     APP_ID=app-a     APP_NAME="Ứng dụng A"     APP_VERSION="${APP_VERSION}"
+ ---> Running in f3fa401b0333
+ ---> Removed intermediate container f3fa401b0333
+ ---> 7c0310f99831
+Step 5/12 : WORKDIR /app
+ ---> Running in be7ded81ae74
+ ---> Removed intermediate container be7ded81ae74
+ ---> 06c9d941cff0
+Step 6/12 : COPY --chown=node:node server.mjs ./server.mjs
+ ---> 84d67291ea93
+Step 7/12 : USER node
+ ---> Running in 4a6d5f1b0380
+ ---> Removed intermediate container 4a6d5f1b0380
+ ---> 3932ad61dba5
+Step 8/12 : EXPOSE 3000
+ ---> Running in 077253533b41
+ ---> Removed intermediate container 077253533b41
+ ---> 871e1f14c8b7
+Step 9/12 : CMD ["node", "server.mjs"]
+ ---> Running in c321876e4682
+ ---> Removed intermediate container c321876e4682
+ ---> d4210932fbb2
+Step 10/12 : LABEL io.mini-paas.source-id=github-app-a
+ ---> Running in 66b2645bc298
+ ---> Removed intermediate container 66b2645bc298
+ ---> 46e9242b1b58
+Step 11/12 : LABEL org.opencontainers.image.revision=093f1b29341accae2520ba5854db1a5a992b959f
+ ---> Running in d1faaa1dc247
+ ---> Removed intermediate container d1faaa1dc247
+ ---> 339faaed225f
+Step 12/12 : LABEL org.opencontainers.image.source=https://github.com/VietDSK6/NMCNNT---Nhom5
+ ---> Running in d10ce4576968
+ ---> Removed intermediate container d10ce4576968
+ ---> d38395535867
+Successfully built d38395535867
+Successfully tagged mini-paas/app-a:git-093f1b29341a

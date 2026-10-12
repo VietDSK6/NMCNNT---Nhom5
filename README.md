@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Repository có một workflow CI nội bộ đã chạy thành công trên GitHub để kiểm tra, dựng và truy vết chính mã nguồn của Mini PaaS. Đây là công cụ hỗ trợ phát triển, không phải tính năng sản phẩm triển khai ứng dụng từ repository Git.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện có luồng tối thiểu cho phép quản trị viên chọn repository tin cậy, nhập commit SHA, build image, triển khai App A và xem lịch sử/build log. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
 
 ## Trạng thái hiện tại
 
@@ -23,11 +23,15 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Unit/integration test kiểm tra xác thực, định tuyến, allowlist, ranh giới Docker socket và vòng đời thật.
 - Script dựng App A/App B với tag `sha-<12 ký tự>`, nhãn OCI chứa commit đầy đủ và manifest chứa image ID.
 - Workflow CI dùng quyền chỉ đọc, phiên bản Node cố định, action ghim bằng commit SHA; thực hiện build, regression P0 và lưu manifest làm artifact.
+- Dashboard liệt kê source Git tin cậy, nhận commit SHA đầy đủ và hiển thị lịch sử deployment cùng build log.
+- Runner tải archive của commit từ URL cố định, giới hạn 16 MiB, build context cố định qua Docker API và triển khai image `git-<12 ký tự>`.
+- SQLite lưu source, commit, phiên bản, image reference/ID, log, người yêu cầu và các mốc thời gian của deployment.
+- Kiểm thử thật đã build commit `093f1b2…`, triển khai App A qua Gateway, kiểm tra nhãn OCI và đưa ứng dụng về v1.0.0.
 
-Chưa hoàn tất trong luồng triển khai ứng dụng từ Git của sản phẩm:
+Giới hạn còn lại của luồng triển khai từ Git:
 
-- Quản trị viên chưa thể đăng ký repository tin cậy, chọn commit/nhánh, kích hoạt build, theo dõi build log và triển khai image kết quả qua Dashboard.
-- Chưa có registry digest, lịch sử release gắn với commit và quy trình đưa image đã cho phép vào Runner.
+- Source hiện được quản trị bằng allowlist trong mã; chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
+- Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
@@ -94,14 +98,15 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 9/9 đạt.
-- Control API unit test: 7/7 đạt.
+- Deployment Runner unit test: 11/11 đạt.
+- Control API unit test: 9/9 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
 - P0.2: 15/15 kiểm tra đạt.
 - P0.2B: 21 kiểm tra đạt.
 - P0.2C: 12 kiểm tra đạt.
 - CI nội bộ/image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
+- P1 Git deployment: 10/10 kiểm tra tích hợp đạt.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -122,6 +127,18 @@ Xem 100 dòng log gần nhất:
 ```bash
 make logs
 ```
+
+## Triển khai App A từ commit Git
+
+Trong Dashboard, mở mục **Triển khai Git**, chọn source `Ứng dụng A từ GitHub`, nhập SHA đầy đủ 40 ký tự rồi chọn **Build và triển khai**. Source URL và thư mục build do Runner cố định; giao diện không nhận repository hoặc Dockerfile tùy ý.
+
+Chạy lại toàn bộ kịch bản tự động bằng một commit đã tồn tại trên GitHub:
+
+```bash
+make test-p1-git COMMIT_SHA=$(git rev-parse HEAD)
+```
+
+Bộ test kiểm tra xác thực, định dạng commit, allowlist source, build image, phiên bản qua Gateway, nhãn OCI và đưa App A về `v1.0.0` khi hoàn tất. Máy chạy cần truy cập được GitHub; chỉ Runner tham gia mạng `source-egress`, không service nào mở thêm cổng host.
 
 ## CI nội bộ hỗ trợ phát triển
 
@@ -176,6 +193,7 @@ tests/smoke/p0_1.sh         Kiểm thử nhanh P0.1
 tests/integration/p0_2.sh   Kiểm thử tích hợp P0.2
 tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
+tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
 .github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
@@ -191,7 +209,8 @@ compose.yaml                Mô tả toàn bộ stack một máy
 
 - Chỉ chạy các ứng dụng mẫu do nhóm kiểm soát.
 - Chỉ Deployment Runner được gắn Docker socket; đây vẫn là quyền rất cao trên host.
-- Runner không có API chạy shell tùy ý và chỉ nhận app/action/version trong catalog cố định.
+- Runner không có API nhận shell/URL/Dockerfile tùy ý; chỉ nhận app/action/source trong catalog và commit SHA đầy đủ.
+- Runner có mạng `source-egress` để tải source GitHub đã allowlist; mạng `control` vẫn internal và Runner không publish cổng host.
 - API log chỉ đọc App A/App B, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
 - Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
@@ -202,6 +221,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md) và [P1.1A_CI.md](docs/architecture/P1.1A_CI.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md) và [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

@@ -1,7 +1,7 @@
 COMMIT_SHA ?= $(shell git rev-parse HEAD)
 CI_OUTPUT_DIR ?= output/ci
 
-.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-unit test-integration test config
+.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-p1-git test-unit test-integration test config
 
 build:
 	docker compose build
@@ -41,6 +41,9 @@ test-p0-2c:
 
 test-p1-1a:
 	./tests/ci/p1_1a.sh "$(COMMIT_SHA)" "$(CI_OUTPUT_DIR)"
+
+test-p1-git:
+	./tests/integration/p1_git_deploy.sh "$(COMMIT_SHA)"
 
 test-unit:
 	cd platform/runner && npm test

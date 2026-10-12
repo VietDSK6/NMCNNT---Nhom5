@@ -2,12 +2,19 @@ import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } fr
 import type { AppConfig } from "./config.js";
 import {
   ControlDatabase,
+  type DeploymentRecord,
   type OperationAction,
   type OperationRecord,
   type SessionUser,
 } from "./database.js";
 import { inspectApplication } from "./health.js";
-import { HttpRunnerClient, RunnerRequestError, type RunnerClient, type RunnerStatus } from "./runner.js";
+import {
+  HttpRunnerClient,
+  RunnerRequestError,
+  type RunnerClient,
+  type RunnerStatus,
+  type TrustedSource,
+} from "./runner.js";
 import {
   clearSessionCookie,
   createSessionToken,
@@ -25,6 +32,11 @@ interface LoginBody {
 interface ActionBody {
   readonly action: OperationAction;
   readonly version?: string;
+}
+
+interface SourceDeploymentBody {
+  readonly sourceId: string;
+  readonly commit: string;
 }
 
 interface ServerOptions {
@@ -173,6 +185,50 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
         action: `application.${operation.action}`,
         resourceType: "application",
         resourceId: operation.applicationId,
+        outcome: "failed",
+        detail: message,
+        ipAddress,
+      });
+    }
+  }
+
+  async function executeSourceDeployment(
+    deployment: DeploymentRecord,
+    actor: SessionUser,
+    ipAddress: string,
+  ): Promise<void> {
+    db.markDeploymentRunning(deployment.id);
+    try {
+      const result = await runnerClient.deploySource(deployment.sourceId, deployment.commitSha);
+      db.setDesiredVersion(deployment.applicationId, result.version);
+      db.finishDeployment({
+        id: deployment.id,
+        status: "succeeded",
+        message: result.message,
+        version: result.version,
+        imageReference: result.imageReference,
+        imageId: result.imageId,
+        buildLog: result.log,
+      });
+      db.addAudit({
+        actorUserId: actor.id,
+        actorUsername: actor.username,
+        action: "deployment.create",
+        resourceType: "deployment",
+        resourceId: deployment.id,
+        outcome: "succeeded",
+        detail: `${deployment.sourceId}@${deployment.commitSha}`,
+        ipAddress,
+      });
+    } catch (error) {
+      const message = operationFailureMessage(error);
+      db.finishDeployment({ id: deployment.id, status: "failed", message });
+      db.addAudit({
+        actorUserId: actor.id,
+        actorUsername: actor.username,
+        action: "deployment.create",
+        resourceType: "deployment",
+        resourceId: deployment.id,
         outcome: "failed",
         detail: message,
         ipAddress,
@@ -344,6 +400,64 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     return reply.code(202).send({ data: operation });
   });
 
+  server.get("/api/v1/sources", async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    try {
+      return { data: await runnerClient.sources() };
+    } catch (error) {
+      const failure = observationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: "Không thể đọc danh sách kho mã được phép." });
+    }
+  });
+
+  server.post<{ Body: SourceDeploymentBody }>("/api/v1/deployments", {
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourceId", "commit"],
+        properties: {
+          sourceId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 },
+          commit: { type: "string", pattern: "^[0-9a-f]{40}$" },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    if (!enforceSameOrigin(request, reply)) return;
+    const user = requireUser(request, reply);
+    if (!user) return;
+
+    let sources: readonly TrustedSource[];
+    try {
+      sources = await runnerClient.sources();
+    } catch (error) {
+      const failure = observationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: "Không thể xác minh kho mã với Deployment Runner." });
+    }
+    const source = sources.find((item) => item.id === request.body.sourceId);
+    if (!source) {
+      return reply.code(404).send({ error: "source_not_allowed", message: "Kho mã không nằm trong danh sách được phép triển khai." });
+    }
+    const application = db.findApplication(source.appId);
+    if (!application) {
+      return reply.code(409).send({ error: "source_application_missing", message: "Kho mã chưa được gắn với ứng dụng trong hệ thống." });
+    }
+    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id)) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+
+    const deployment = db.createDeployment({
+      applicationId: application.id,
+      sourceId: source.id,
+      repositoryUrl: source.repositoryUrl,
+      commitSha: request.body.commit,
+      requestedBy: user.username,
+    });
+    trackOperation(executeSourceDeployment(deployment, user, requestIp(request)));
+    return reply.code(202).send({ data: deployment });
+  });
+
   server.get<{ Params: { appId: string }; Querystring: { tail?: number } }>("/api/v1/applications/:appId/logs", {
     schema: {
       params: {
@@ -407,6 +521,20 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     const user = requireUser(request, reply);
     if (!user) return;
     return { data: db.listOperations(request.query.limit ?? 20) };
+  });
+
+  server.get<{ Querystring: { limit?: number } }>("/api/v1/deployments", {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: { limit: { type: "integer", minimum: 1, maximum: 100, default: 20 } },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    return { data: db.listDeployments(request.query.limit ?? 20) };
   });
 
   server.get<{ Querystring: { limit?: number } }>("/api/v1/audit-events", {

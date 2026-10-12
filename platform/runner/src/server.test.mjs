@@ -5,6 +5,8 @@ import { createRunnerServer } from "./server.mjs";
 
 const token = "runner-test-secret-at-least-24";
 const runtime = {
+  listSources: () => [{ id: "github-app-a", appId: "app-a" }],
+  deploySource: async (sourceId, commit) => ({ sourceId, commit, version: `git-${commit.slice(0, 12)}` }),
   status: async (appId) => ({ appId, status: "running" }),
   logs: async (appId, tail) => ({ appId, requestedTail: tail, lines: [] }),
   stats: async (appId) => ({ appId, cpuPercent: 1.5 }),
@@ -77,4 +79,21 @@ test("đọc log và số liệu với giới hạn số dòng", async () => {
   const stats = await invoke({ path: "/v1/apps/app-a/stats", headers });
   assert.equal(stats.statusCode, 200);
   assert.equal(stats.body.data.cpuPercent, 1.5);
+});
+
+test("liệt kê source tin cậy và yêu cầu triển khai theo commit", async () => {
+  const headers = { "x-runner-token": token };
+  const sources = await invoke({ path: "/v1/sources", headers });
+  assert.equal(sources.statusCode, 200);
+  assert.equal(sources.body.data[0].id, "github-app-a");
+
+  const commit = "a".repeat(40);
+  const deployment = await invoke({
+    method: "POST",
+    path: "/v1/sources/github-app-a/deployments",
+    headers: { ...headers, "content-type": "application/json" },
+    body: { commit },
+  });
+  assert.equal(deployment.statusCode, 200);
+  assert.equal(deployment.body.data.version, `git-${"a".repeat(12)}`);
 });
