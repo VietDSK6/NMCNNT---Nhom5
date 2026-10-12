@@ -1,0 +1,128 @@
+{
+  "generatedAt": "2026-10-12T15:13:13.464Z",
+  "environment": "development",
+  "acceptance": {
+    "p95MsLessThan": 500,
+    "errorRateLessThanPercent": 1,
+    "checkRateGreaterThanPercent": 99,
+    "droppedIterations": 0,
+    "allApplicationsHealthy": true
+  },
+  "allPassed": true,
+  "results": [
+    {
+      "level": "low",
+      "targetRps": 5,
+      "duration": "20s",
+      "startedAt": "2026-10-12T15:00:15Z",
+      "endedAt": "2026-10-12T15:00:36Z",
+      "status": "passed",
+      "requests": 101,
+      "achievedRps": 5.05,
+      "p95Ms": 4.1,
+      "appAP95Ms": 4.06,
+      "appBP95Ms": 4,
+      "errorRatePercent": 0,
+      "checkRatePercent": 100,
+      "droppedIterations": 0,
+      "thresholdsPassed": true,
+      "observabilityPassed": true,
+      "resources": {
+        "app-a": {
+          "cpuAveragePercent": 1.66,
+          "cpuMaxPercent": 1.67,
+          "memoryAverageMiB": 21.8,
+          "memoryMaxMiB": 35.62,
+          "memoryMaxPercent": 27.83,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        },
+        "app-b": {
+          "cpuAveragePercent": 1.65,
+          "cpuMaxPercent": 1.66,
+          "memoryAverageMiB": 21.71,
+          "memoryMaxMiB": 36.28,
+          "memoryMaxPercent": 28.34,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        }
+      }
+    },
+    {
+      "level": "medium",
+      "targetRps": 15,
+      "duration": "20s",
+      "startedAt": "2026-10-12T15:00:47Z",
+      "endedAt": "2026-10-12T15:01:08Z",
+      "status": "passed",
+      "requests": 301,
+      "achievedRps": 15.04,
+      "p95Ms": 5.51,
+      "appAP95Ms": 5.51,
+      "appBP95Ms": 5.4,
+      "errorRatePercent": 0,
+      "checkRatePercent": 100,
+      "droppedIterations": 0,
+      "thresholdsPassed": true,
+      "observabilityPassed": true,
+      "resources": {
+        "app-a": {
+          "cpuAveragePercent": 1.68,
+          "cpuMaxPercent": 1.7,
+          "memoryAverageMiB": 19.96,
+          "memoryMaxMiB": 20.31,
+          "memoryMaxPercent": 15.87,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        },
+        "app-b": {
+          "cpuAveragePercent": 1.67,
+          "cpuMaxPercent": 1.69,
+          "memoryAverageMiB": 19.77,
+          "memoryMaxMiB": 20.22,
+          "memoryMaxPercent": 15.8,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        }
+      }
+    },
+    {
+      "level": "high",
+      "targetRps": 30,
+      "duration": "20s",
+      "startedAt": "2026-10-12T15:01:19Z",
+      "endedAt": "2026-10-12T15:01:40Z",
+      "status": "passed",
+      "requests": 600,
+      "achievedRps": 30,
+      "p95Ms": 4.54,
+      "appAP95Ms": 4.39,
+      "appBP95Ms": 4.76,
+      "errorRatePercent": 0,
+      "checkRatePercent": 100,
+      "droppedIterations": 0,
+      "thresholdsPassed": true,
+      "observabilityPassed": true,
+      "resources": {
+        "app-a": {
+          "cpuAveragePercent": 1.71,
+          "cpuMaxPercent": 1.73,
+          "memoryAverageMiB": 20.29,
+          "memoryMaxMiB": 21.14,
+          "memoryMaxPercent": 16.51,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        },
+        "app-b": {
+          "cpuAveragePercent": 1.7,
+          "cpuMaxPercent": 1.72,
+          "memoryAverageMiB": 20.17,
+          "memoryMaxMiB": 20.46,
+          "memoryMaxPercent": 15.99,
+          "healthySamples": 7,
+          "totalHealthSamples": 7
+        }
+      }
+    }
+  ]
+}

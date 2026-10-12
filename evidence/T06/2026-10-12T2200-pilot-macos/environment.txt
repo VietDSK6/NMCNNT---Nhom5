@@ -1,0 +1,10 @@
+profile=pilot
+started_at=2026-10-12T15:00:15Z
+base_url=http://gateway:8080
+network=mini-paas-edge
+k6_image=grafana/k6:2.3.0@sha256:9c2dee7f8ed74d317e4027c06a10f169b625638189de8d4555d0b3486a5aeb34
+host_arch=arm64
+node=v24.12.0
+docker=29.8.2
+compose=5.5.0
+commit=b2a92418c5d55d6ebcd85d444ddf558a66661b5a

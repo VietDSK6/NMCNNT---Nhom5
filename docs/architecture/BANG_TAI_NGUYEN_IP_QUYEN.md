@@ -1,6 +1,6 @@
 # Bảng tài nguyên, mạng/IP và quyền — môi trường phát triển
 
-> Bảng này phản ánh `compose.yaml` đến lát cắt P1 giám sát chuỗi thời gian. Cần tạo bản riêng cho VPS release cuối. Docker cấp IP nội bộ động nên hệ thống định tuyến bằng DNS theo tên service, không phụ thuộc một địa chỉ IP container cố định.
+> Bảng này phản ánh `compose.yaml` đến lát cắt P1 kiểm thử tải vòng phát triển. Cần tạo bản riêng cho VPS release cuối. Docker cấp IP nội bộ động nên hệ thống định tuyến bằng DNS theo tên service, không phụ thuộc một địa chỉ IP container cố định.
 
 | Thành phần | Mạng/DNS nội bộ | Cổng container | Cổng host | CPU | RAM | Người dùng tiến trình | Dữ liệu/quyền đặc biệt |
 |---|---|---:|---|---:|---:|---|---|
@@ -12,6 +12,7 @@
 | Grafana | `control`; DNS `grafana` | 3000 | Không; đi qua `/monitoring/` | 0,35 | 384 MiB | Theo image chính thức | Volume `grafana-data`; provisioning chỉ đọc; xác thực riêng; không có Docker socket |
 | App A | `edge`; DNS `app-a` | 3000 | Không | 0,35 | 128 MiB | `node` | Root filesystem chỉ đọc; không volume host; drop capability |
 | App B | `edge`; DNS `app-b` | 3000 | Không | 0,35 | 128 MiB | `node` | Root filesystem chỉ đọc; không volume host; drop capability |
+| k6 (chỉ khi đo tải) | Tham gia tạm thời `edge`; không có DNS cố định | Không phục vụ cổng | Không | Chưa giới hạn riêng ở vòng Mac | Theo image chính thức | Theo image chính thức | Chỉ mount script đọc và thư mục kết quả ghi; không Docker socket; xóa container sau mỗi mức |
 
 ## Chính sách IP và truy cập
 
@@ -19,6 +20,7 @@
 - `edge` dùng cho lưu lượng Gateway → ứng dụng.
 - `control` là mạng nội bộ cho Gateway, Dashboard, Control API, Runner, Prometheus và Grafana.
 - `source-egress` chỉ có Runner, phục vụ tải archive của commit từ repository được allowlist; không publish cổng host.
+- Container k6 chỉ được tạo khi chạy T06, gọi Gateway qua mạng `edge`, không tham gia `control` và không truy cập Prometheus trực tiếp.
 - Ứng dụng, Dashboard, API, Runner, Prometheus và Grafana không publish cổng riêng ra host. Grafana chỉ được truy cập qua route `/monitoring/` của Gateway.
 - Nginx dùng Docker DNS `127.0.0.11` để theo địa chỉ container thay đổi sau update.
 - IP public/private của VPS, firewall và HTTPS: chưa chốt; không điền giả trước khi triển khai thật.

@@ -352,3 +352,38 @@ Grafana 13.2.2 không khởi động ổn định với giới hạn 100 PID. He
 - `evidence/P1-DASH/2026-10-12T2134/`.
 - `docs/architecture/P1_DASHBOARD_NAVIGATION.md`.
 - `tests/integration/p1_dashboard_navigation.sh`.
+
+## 12/10/2026 — P1: kiểm thử tải k6 và đối chiếu Prometheus
+
+### Phạm vi thực hiện
+
+- Thêm kịch bản k6 xen kẽ App A/App B qua Gateway bằng executor `constant-arrival-rate`.
+- Ghim k6 2.3.0 bằng manifest digest; không yêu cầu cài k6 trực tiếp trên Mac/VPS.
+- Thêm profile pilot và standard, warm-up riêng, khoảng nghỉ giữa các mức và threshold tự động.
+- Lưu summary JSON, CSV, log và dữ liệu k6 gốc nén.
+- Ghi mốc thời gian từng mức rồi truy vấn Prometheus range cho CPU, RAM và health của hai app.
+- Bộ tổng hợp trả lỗi nếu k6 threshold thất bại, thiếu dữ liệu quan sát hoặc có mẫu health không khỏe.
+
+### Kết quả thực tế
+
+- Pilot 5/15/30 req/s trong 20 giây/mức: cả ba mức đạt, dùng để kiểm tra pipeline.
+- Vòng chuẩn warm-up 5 req/s trong 10 giây, sau đó 10/25/50 req/s trong 60 giây/mức.
+- Tổng ba mức chuẩn: 5.103 request.
+- Thông lượng thực tế: 10,02; 25,02; 50,01 req/s.
+- p95: 6,19; 5,51; 7,32 ms; cao nhất 7,32 ms.
+- Tỷ lệ lỗi 0%, check nội dung 100%, dropped iteration bằng 0.
+- CPU tối đa App A/App B ở mức high: 1,99%/1,96%; working set RAM tối đa 55,80/37,27 MiB.
+- Mọi mẫu health của hai app trong ba khoảng đo đều bằng 1.
+
+### Phân tích và giới hạn
+
+p95 và RAM không tăng đơn điệu ở mọi mức. Một nguyên nhân hợp lý là thời gian đo ngắn, garbage collection và trạng thái tiến trình, nhưng dữ liệu hiện tại chưa đủ để khẳng định quan hệ nhân quả. Generator và hệ thống cùng chạy trên Mac/OrbStack nên tranh chấp tài nguyên có thể tạo nhiễu; endpoint `/version` cũng có payload nhỏ. Do mỗi mức chuẩn mới đo một lần, kết quả chỉ được đánh dấu “đạt vòng phát triển”, không phải benchmark production hoặc nghiệm thu cuối.
+
+Vòng VPS phải chạy ít nhất ba lần/mức, giữ nguyên ngưỡng/tài nguyên, ghi rõ vị trí nguồn phát tải và báo cáo median cùng độ dao động. Không được gọi 50 req/s là “50 người dùng” vì arrival rate và concurrent users là hai khái niệm khác nhau.
+
+### Bằng chứng
+
+- `evidence/T06/2026-10-12T2200-pilot-macos/`.
+- `evidence/T06/2026-10-12T2202-macos/`.
+- `docs/architecture/P1_LOAD_TESTING.md`.
+- `docs/test-plan/T06_KE_HOACH_KIEM_THU_TAI.md`.

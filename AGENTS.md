@@ -4,7 +4,7 @@
 >
 > **Ngôn ngữ làm việc:** Tiếng Việt; giải thích dễ hiểu, chính xác về kỹ thuật. Dùng thuật ngữ tiếng Anh khi thực sự cần và giải thích ở lần xuất hiện đầu tiên.
 >
-> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C, CI nội bộ, lát cắt sản phẩm Git → build → image → deploy cho một repository/App A tin cậy, giám sát chuỗi thời gian Runner exporter → Prometheus → Grafana và Dashboard tách góc nhìn toàn hệ thống/chi tiết từng ứng dụng; các kiểm thử tích hợp đạt ngày 12/10/2026. Hệ thống chưa nhận repository tùy ý, chưa có registry digest, chưa có kiểm thử tải k6 và chưa nghiệm thu trên VPS Linux. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence.
+> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C, CI nội bộ, lát cắt sản phẩm Git → build → image → deploy cho một repository/App A tin cậy, giám sát chuỗi thời gian Runner exporter → Prometheus → Grafana, Dashboard tách góc nhìn toàn hệ thống/chi tiết từng ứng dụng và kiểm thử tải k6 có dữ liệu gốc vòng phát triển; các kiểm thử đạt ngày 12/10/2026. Hệ thống chưa nhận repository tùy ý, chưa có registry digest và chưa nghiệm thu/lặp lại phép đo trên VPS Linux. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence.
 
 ## Quy tắc kiểm tra giao diện — áp dụng cho toàn dự án
 

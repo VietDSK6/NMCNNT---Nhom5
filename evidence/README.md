@@ -28,5 +28,7 @@ Minh chứng hiện có:
 - `P1-GIT/2026-10-12T1201`: kiểm thử sản phẩm repository tin cậy → commit → build image → deploy App A; 10 kiểm tra đạt.
 - `P1-OBS/2026-10-12T1659`: Runner exporter → Prometheus → Grafana; metric thô, digest image và 15 kiểm tra tích hợp đạt.
 - `P1-DASH/2026-10-12T2134`: cấu trúc Dashboard nhiều trang, 10 route qua Gateway và hồi quy vòng đời/quan sát; không có ảnh hoặc kiểm tra responsive theo quy tắc dự án.
+- `T06/2026-10-12T2200-pilot-macos`: pilot 5/15/30 req/s để xác minh kịch bản, summary và đường thu thập Prometheus.
+- `T06/2026-10-12T2202-macos`: vòng chuẩn 10/25/50 req/s trên macOS/OrbStack; dữ liệu k6 gốc nén, summary JSON/CSV, log và metric CPU/RAM/health cùng khoảng thời gian.
 
 Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

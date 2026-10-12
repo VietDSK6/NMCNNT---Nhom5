@@ -31,12 +31,13 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Grafana được cấp sẵn datasource và dashboard sáu vùng cho health, CPU, RAM, PID và lưu lượng mạng; truy cập qua Gateway và yêu cầu xác thực.
 - Prometheus nạp ba quy tắc cho ứng dụng không khỏe, RAM cao và lỗi đọc Docker stats; hiện chưa có kênh gửi thông báo.
 - Mỗi ứng dụng có đường dẫn riêng cho tổng quan, deployment, log và tài nguyên; các trang toàn hệ thống vẫn giữ riêng để quản trị chéo ứng dụng.
+- Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
 - Source hiện được quản trị bằng allowlist trong mã; chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
-- Chưa có Alertmanager/kênh gửi thông báo, lưu trữ log tập trung và kiểm thử tải k6.
+- Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; kiểm thử tải đã đạt vòng phát triển trên Mac nhưng chưa nghiệm thu lặp lại trên VPS Linux.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
@@ -48,6 +49,7 @@ Dashboard vẫn phân biệt **health HTTP**, **trạng thái container**, **phi
 - Docker Compose phiên bản hỗ trợ lệnh `docker compose up --wait`.
 - Node.js 24 và npm nếu muốn chạy unit test/build trực tiếp ngoài Docker.
 - `curl` và `make` để chạy lệnh tiện ích.
+- Docker có thể tải image k6 đã ghim khi chạy kiểm thử tải lần đầu.
 
 Phát triển có thể thực hiện trên macOS. Kết quả đo chính thức cuối kỳ phải chạy trên VPS Linux và ghi riêng cấu hình môi trường.
 
@@ -118,6 +120,7 @@ Kết quả chuẩn hiện tại:
 - P1 Git deployment: 10/10 kiểm tra tích hợp đạt.
 - P1 observability: 15/15 kiểm tra tích hợp đạt.
 - P1 Dashboard navigation: 10/10 đường dẫn trả entrypoint SPA qua Gateway.
+- T06 k6 vòng phát triển: ba mức 10/25/50 req/s trong 60 giây/mức đều đạt; p95 cao nhất 7,32 ms, lỗi 0%, dropped iteration bằng 0.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -126,6 +129,8 @@ Bộ P0.2C kiểm tra xác thực cho log/stats, giới hạn tối đa 200 dòn
 Theo quy tắc dự án từ ngày 12/10/2026, các thay đổi tiếp theo không được kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt nếu chủ dự án không yêu cầu riêng. Dashboard vẫn phải qua TypeScript/production build và kiểm thử chức năng liên quan. Kết quả responsive nêu trên chỉ là bằng chứng lịch sử của bản P0.2C.
 
 Bộ P1 observability kiểm tra endpoint metric nội bộ, port binding, Prometheus readiness/target/query/rules và Grafana health/xác thực/provisioning. Bộ P1 Dashboard kiểm tra trực tiếp qua HTTP rằng 10 đường dẫn có thể được mở hoặc tải lại qua Gateway. Không dùng kiểm tra trình duyệt, ảnh giao diện hoặc responsive cho các thay đổi này.
+
+Số liệu T06 nêu trên chỉ là bằng chứng vòng phát triển trên macOS/OrbStack. Công cụ phát tải và Mini PaaS cùng chạy trên một máy, endpoint thử là JSON nhỏ và mỗi mức mới đo một lần trong vòng chuẩn. Không dùng số liệu này để tuyên bố năng lực production; release cuối phải chạy lại nhiều lần trên VPS Linux.
 
 Chạy unit test và build riêng khi phát triển:
 
@@ -192,6 +197,30 @@ make test-p1-observability
 
 Dashboard Mini PaaS có liên kết **Mở đồ thị lịch sử** tới Grafana. Dashboard mặc định hiển thị 15 phút gần nhất và tự làm mới 5 giây. Alert rule đã được nạp nhưng chưa có Alertmanager, email hoặc webhook; trạng thái alert chỉ xem được trong Prometheus/Grafana.
 
+## Kiểm thử tải T06
+
+k6 chạy bằng image `grafana/k6:2.3.0` đã ghim digest, tham gia tạm thời mạng `mini-paas-edge` và gửi request tới `/apps/app-a/version` cùng `/apps/app-b/version` thông qua Gateway. Không gửi tải tới hệ thống bên ngoài.
+
+Chạy pilot ngắn để kiểm tra công cụ:
+
+```bash
+make test-p1-load-pilot
+```
+
+Chạy profile chuẩn gồm warm-up, sau đó 10, 25 và 50 req/s trong 60 giây mỗi mức:
+
+```bash
+make test-p1-load
+```
+
+Mặc định kết quả nằm trong `output/performance/`. Để tạo evidence có tên cố định:
+
+```bash
+T06_OUTPUT_DIR=evidence/T06/<thoi-gian>-linux make test-p1-load
+```
+
+Mỗi vòng giữ summary JSON/CSV, log k6, dữ liệu sự kiện k6 nén và chuỗi CPU/RAM/health lấy từ Prometheus trong đúng khoảng thời gian. Ngưỡng vòng phát triển là p95 dưới 500 ms, lỗi dưới 1%, check trên 99% và không rơi iteration. Việc đạt ngưỡng không thay thế phân tích giới hạn môi trường.
+
 ## Dừng hệ thống
 
 ```bash
@@ -237,8 +266,10 @@ tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
 tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
+tests/performance/k6/       Kịch bản tải cố định T06
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
+scripts/performance/        Chạy tải, lấy Prometheus và tổng hợp kết quả
 .github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
 docs/architecture/          Kiến trúc đã chốt
 docs/decisions/             Nhật ký quyết định kiến trúc
@@ -265,7 +296,8 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Health check không thay thế kiểm thử nghiệp vụ.
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
+- Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md) và [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md) và [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

@@ -33,7 +33,7 @@ Phụ lục dự kiến:
 - [ ] Sơ đồ kiến trúc bản cuối.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
 - [ ] Bảng tài nguyên/IP/quyền bản VPS đã đối soát.
-- [x] Script/cấu hình monitoring Prometheus/Grafana và kiểm thử tích hợp; kiểm thử tải k6 còn thiếu.
+- [x] Script/cấu hình monitoring Prometheus/Grafana, kiểm thử tích hợp và kịch bản k6 có dữ liệu vòng phát triển; còn phải chạy lại trên VPS Linux.
 - [ ] Gói release cuối không chứa secret.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.
@@ -48,7 +48,7 @@ Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/swit
 - [ ] Mỗi test đánh dấu đạt/chưa đạt.
 - [ ] Mỗi test có thời gian, commit, môi trường và người thực hiện.
 - [ ] Mỗi test liên kết tới log/JSON/CSV tương ứng.
-- [ ] T06 có dữ liệu k6 gốc và dữ liệu metric cùng khoảng thời gian.
+- [x] T06 có dữ liệu k6 gốc và dữ liệu metric cùng khoảng thời gian ở vòng phát triển; cần tạo bộ release/VPS riêng trước khi nộp.
 - [ ] Không có token, mật khẩu, cookie hoặc khóa trong evidence.
 
 ## 4. Video và bảo vệ

@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến P1 giám sát chuỗi thời gian ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest, kiểm thử tải và nghiệm thu VPS vẫn là nội dung dự kiến của P1.
+> Bản nháp cập nhật đến P1 kiểm thử tải vòng phát triển ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest và nghiệm thu VPS vẫn là nội dung dự kiến của P1.
 
 ## 3.1. Phân tích bài toán
 
@@ -33,7 +33,8 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 - Các container có health check, giới hạn CPU/RAM/PID, filesystem gốc chỉ đọc và xoay vòng log.
 - Dữ liệu đầu vào được kiểm tra schema; thao tác quản trị yêu cầu session.
 - Hệ thống phải có lệnh dựng, kiểm thử và dừng rõ ràng; không dùng lệnh dọn Docker có tính phá hủy.
-- Giao diện hỗ trợ desktop, tablet và mobile; thao tác chính có trạng thái tải, lỗi và rỗng.
+- Giao diện có trạng thái tải, lỗi và rỗng. Kết quả responsive chỉ là bằng chứng lịch sử của P0.2C; cấu trúc điều hướng mới chưa được kiểm tra trực quan theo quy tắc dự án.
+- Kiểm thử tải phải có warm-up, mức tải cố định, ngưỡng chấp nhận, dữ liệu gốc và metric tài nguyên cùng khoảng thời gian.
 
 ## 3.3. Kiến trúc tổng thể một máy
 
@@ -206,6 +207,16 @@ Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù
 4. Prometheus lưu mẫu, đánh giá rule và cung cấp PromQL cho Grafana.
 5. Grafana dùng datasource nội bộ và dashboard provisioning; người quản trị truy cập qua `/monitoring/` sau khi xác thực.
 
+### 3.7.7. Kiểm thử tải có đối chiếu tài nguyên
+
+1. Container k6 tạm thời tham gia mạng `edge` và gửi tải qua DNS `gateway`, không gọi trực tiếp App A/App B.
+2. Sau warm-up, công cụ chạy ba mức arrival rate cố định; mỗi request xen kẽ endpoint `/version` của hai ứng dụng.
+3. k6 ghi request rate, p95, tỷ lệ lỗi, check nội dung và dropped iteration thành dữ liệu gốc nén cùng summary JSON/CSV.
+4. Script ghi mốc bắt đầu/kết thúc và truy vấn Prometheus range tương ứng cho CPU, working set RAM, tỷ lệ RAM và health của hai ứng dụng.
+5. Bộ tổng hợp ghép hai nguồn thành bảng so sánh; nếu một threshold thất bại hoặc thiếu metric, lệnh trả mã lỗi.
+
+k6 không được thêm vào stack chạy thường xuyên và không có Docker socket. Cách này giữ công cụ tạo tải tách khỏi control plane, nhưng vòng Mac vẫn có nhiễu do generator và hệ thống dùng chung host.
+
 ## 3.8. Thiết kế an toàn
 
 Các biện pháp đã triển khai gồm:
@@ -233,9 +244,10 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 - Docker Engine API qua Unix socket tránh ghép command shell từ input, nhưng vẫn phải coi Runner là đặc quyền cao.
 - Quan sát on-demand phục vụ chẩn đoán tức thời; Prometheus/Grafana lưu lịch sử và tách dữ liệu giám sát khỏi SQLite nghiệp vụ.
 - Runner exporter được chọn thay cAdvisor để chỉ xuất metric của allowlist và không thêm một container có mount/quyền nhạy cảm.
+- k6 dùng executor `constant-arrival-rate` để đặt request rate độc lập hơn với thời gian phản hồi; image được ghim version/digest và chỉ chạy theo lệnh riêng, không kéo dài CI mặc định.
 
 ## 3.10. Giới hạn thiết kế và hướng tiếp theo
 
 Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Metric ứng dụng đã có chuỗi thời gian nhưng log chưa được tập trung; Prometheus/Grafana cùng host nên không còn quan sát được nếu host hỏng.
 
-Phần tiếp theo của P1 là viết kịch bản k6, chạy pilot có giới hạn và đối chiếu p95/thông lượng/tỷ lệ lỗi với metric Prometheus; sau đó nghiệm thu trên Linux/VPS. Registry digest có thể bổ sung nếu còn thời gian, nhưng không được trì hoãn kiểm thử tải, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest, biến môi trường và rollback có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

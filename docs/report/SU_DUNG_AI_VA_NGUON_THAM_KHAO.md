@@ -25,5 +25,6 @@ Nguyên tắc khai báo cuối:
 | React/Vite/Fastify | Tài liệu chính thức từng dự án | API/framework và production build | Dashboard, Control API, xác thực và operation flow |
 | Prometheus | <https://prometheus.io/docs/prometheus/latest/installation/>, <https://prometheus.io/download/>; truy cập 12/10/2026 | Image chính thức, cấu hình scrape và lưu TSDB | Runner exporter allowlist, chu kỳ 5 giây, retention 7 ngày/256 MiB và alert rule |
 | Grafana | <https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/>, <https://grafana.com/docs/grafana/latest/administration/provisioning/>; truy cập 12/10/2026 | Image Docker và provisioning từ file | Route `/monitoring/`, datasource nội bộ, dashboard sáu panel, giới hạn tài nguyên và kiểm thử API |
+| Grafana k6 | <https://grafana.com/docs/k6/latest/>, <https://grafana.com/docs/k6/latest/using-k6/scenarios/executors/constant-arrival-rate/> và <https://github.com/grafana/k6/releases/tag/v2.3.0>; truy cập 12/10/2026 | Image chính thức, executor arrival rate, threshold và summary | Ba mức tải giới hạn qua Gateway, ghép dữ liệu k6 với Prometheus và nén dữ liệu gốc |
 
 Khi bổ sung nguồn mới phải lưu URL, ngày truy cập và mục báo cáo sử dụng nguồn đó.
