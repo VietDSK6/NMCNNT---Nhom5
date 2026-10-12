@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển; repository đang ở **P1.1A: tích hợp liên tục và dựng ảnh theo commit**. Workflow GitHub Actions đã được cấu hình, còn kết quả chạy thật trên GitHub chờ repository được gắn remote và đẩy lên GitHub.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển; **P1.1A: tích hợp liên tục và dựng ảnh theo commit** đã chạy thành công trên GitHub. Repository đang chuẩn bị P1.1B để đưa ảnh vào registry và triển khai image đã cho phép.
 
 ## Trạng thái hiện tại
 
@@ -24,9 +24,8 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Script dựng App A/App B với tag `sha-<12 ký tự>`, nhãn OCI chứa commit đầy đủ và manifest chứa image ID.
 - Workflow CI dùng quyền chỉ đọc, phiên bản Node cố định, action ghim bằng commit SHA; thực hiện build, regression P0 và lưu manifest làm artifact.
 
-Chưa hoàn tất trong P1.1:
+Chưa hoàn tất trong P1.1B:
 
-- Chưa có kết quả chạy workflow trên GitHub vì repository local chưa có remote.
 - Chưa đẩy ảnh lên registry, chưa có registry digest và chưa tự động triển khai image theo commit vào Mini PaaS; đây là P1.1B.
 - Chưa có chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
@@ -101,7 +100,7 @@ Kết quả chuẩn hiện tại:
 - P0.2: 15/15 kiểm tra đạt.
 - P0.2B: 21 kiểm tra đạt.
 - P0.2C: 12 kiểm tra đạt.
-- P1.1A image manifest: 8/8 kiểm tra cục bộ đạt; workflow GitHub chưa chạy.
+- P1.1A image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -133,7 +132,7 @@ make test-p1-1a
 
 Đầu ra cục bộ nằm ở `output/ci/image-manifest.json` và không được commit. Manifest ghi commit đầy đủ, tag, nền tảng và image ID của App A/App B. Ở P1.1A, `publishStatus` là `local-only`: image ID này chưa phải registry digest.
 
-Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. Khi đã tạo repository GitHub, một lần chạy thành công là bằng chứng bắt buộc trước khi mở P1.1B.
+Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. [Run đầu tiên](https://github.com/VietDSK6/NMCNNT---Nhom5/actions/runs/38197344603) đã thành công với commit `4dbd6c1` và tạo artifact chứa manifest cùng thông tin môi trường.
 
 ## Dừng hệ thống
 

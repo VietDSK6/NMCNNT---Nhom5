@@ -1,6 +1,6 @@
 # ADR 0005 — Tách CI dựng ảnh theo commit khỏi triển khai tự động
 
-- Trạng thái: đã áp dụng cục bộ trong P1.1A; chờ chạy workflow trên GitHub.
+- Trạng thái: đã áp dụng; kiểm thử cục bộ và workflow GitHub đầu tiên đều đạt.
 - Ngày: 12/10/2026.
 
 ## Bối cảnh

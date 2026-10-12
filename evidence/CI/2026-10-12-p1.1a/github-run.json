@@ -1,0 +1,26 @@
+{
+  "runId": 38197344603,
+  "runNumber": 1,
+  "workflow": "Kiem tra lien tuc",
+  "event": "push",
+  "branch": "main",
+  "commit": "4dbd6c161333b7ef6a5ebc2c3ce2010bedb126fb",
+  "status": "completed",
+  "conclusion": "success",
+  "startedAt": "2026-10-12T02:50:05Z",
+  "completedAt": "2026-10-12T02:51:26Z",
+  "url": "https://github.com/VietDSK6/NMCNNT---Nhom5/actions/runs/38197344603",
+  "job": {
+    "id": 114642859591,
+    "name": "Build, test va tao image manifest",
+    "conclusion": "success",
+    "successfulSteps": 14
+  },
+  "artifact": {
+    "id": 11723841830,
+    "name": "mini-paas-ci-4dbd6c161333b7ef6a5ebc2c3ce2010bedb126fb",
+    "sizeInBytes": 1057,
+    "expired": false,
+    "expiresAt": "2026-10-26T02:51:23Z"
+  }
+}

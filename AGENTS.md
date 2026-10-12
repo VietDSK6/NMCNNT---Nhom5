@@ -4,7 +4,7 @@
 >
 > **Ngôn ngữ làm việc:** Tiếng Việt; giải thích dễ hiểu, chính xác về kỹ thuật. Dùng thuật ngữ tiếng Anh khi thực sự cần và giải thích ở lần xuất hiện đầu tiên.
 >
-> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C và cấu hình P1.1A được kiểm thử cục bộ; trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence. Workflow P1.1A chưa chạy trên GitHub vì repository chưa gắn remote. Không tự coi các mục dự kiến khác là tính năng đã hoàn thành.
+> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C và P1.1A; workflow GitHub đầu tiên đã chạy thành công ngày 12/10/2026. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence. Không tự coi P1.1B hoặc các mục dự kiến khác là tính năng đã hoàn thành.
 
 ## Quy tắc kiểm tra giao diện — áp dụng cho toàn dự án
 

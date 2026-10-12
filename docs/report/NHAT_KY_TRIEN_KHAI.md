@@ -198,10 +198,11 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - P1.1A image manifest: 8/8 đạt.
 - Hai ảnh local có tag theo commit, image ID riêng và nhãn revision/version đúng.
 - Sau regression, 6/6 service healthy; App A/App B trở lại v1.0.0.
+- GitHub Actions run số 1 cho commit `4dbd6c1`: toàn bộ job và 14 bước đạt, gồm regression, manifest, tải artifact và dọn stack.
+- Artifact `mini-paas-ci-4dbd6c161333b7ef6a5ebc2c3ce2010bedb126fb` được GitHub lưu 14 ngày.
 
 ### Giới hạn cần ghi đúng
 
-- Repository chưa có remote nên workflow chưa chạy trên GitHub; kết quả trên chỉ là kiểm thử tương đương ở máy phát triển.
 - `imageId` local không phải registry digest và khác nhau theo kiến trúc CPU.
 - Chưa có quyền ghi package, registry, deploy hook hoặc kết nối từ CI đến VPS.
 - P1.1A chưa phải CI/CD hoàn chỉnh; P1.1B phải bổ sung registry digest và triển khai image nằm trong allowlist.

@@ -25,4 +25,11 @@ P1.1A CI image test: 8/8 ĐẠT
 
 Trạng thái cuối: 6/6 service healthy; App A và App B ở v1.0.0.
 Kiểm tra giao diện bằng trình duyệt: KHÔNG CHẠY theo quy tắc dự án.
-Workflow GitHub Actions: CHƯA CHẠY vì repository chưa có remote.
+Workflow GitHub Actions run số 1: ĐẠT.
+- run ID: 38197344603
+- commit: 4dbd6c161333b7ef6a5ebc2c3ce2010bedb126fb
+- job: success
+- 14/14 bước: success
+- artifact: mini-paas-ci-4dbd6c161333b7ef6a5ebc2c3ce2010bedb126fb
+- artifact size: 1.057 byte
+- hết hạn theo GitHub: 26/10/2026 02:51:23Z
