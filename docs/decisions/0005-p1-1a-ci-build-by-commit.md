@@ -1,35 +1,35 @@
-# ADR 0005 — Tách CI dựng ảnh theo commit khỏi triển khai tự động
+# ADR 0005 — Phân biệt CI nội bộ với luồng triển khai từ Git của sản phẩm
 
 - Trạng thái: đã áp dụng; kiểm thử cục bộ và workflow GitHub đầu tiên đều đạt.
 - Ngày: 12/10/2026.
 
 ## Bối cảnh
 
-G3 yêu cầu truy vết từ commit đến ảnh và lần triển khai. Repository hiện chưa có Git remote, chưa chọn cấu hình GitHub Container Registry và chưa chốt cách VPS nhận lệnh triển khai. Nếu ghép build, push và deploy ngay trong một workflow, lỗi hoặc secret sai có thể làm mờ ranh giới bảo mật và khó xác định bước nào đã thực sự đạt.
+G3 yêu cầu truy vết từ commit đến ảnh và lần triển khai. Workflow GitHub hiện tại chạy trên repository chứa mã nguồn Mini PaaS nên chỉ kiểm tra chính nền tảng. Trong khi đó, chức năng gần với Vercel/Netlify phải là hành vi của sản phẩm: nhận một repository được cho phép, build một commit, lưu log/digest và tạo lần triển khai có thể theo dõi.
 
 ## Quyết định
 
-Chia P1.1 thành hai mốc:
+Tách rõ hai phạm vi:
 
-- P1.1A: kiểm tra mã, regression P0, build ảnh theo commit và lưu manifest/artifact; không có quyền ghi registry hoặc truy cập VPS.
-- P1.1B: sau khi P1.1A chạy thật trên GitHub, thêm registry digest và cơ chế triển khai image nằm trong danh sách cho phép.
+- CI nội bộ: kiểm tra mã, regression P0, build ảnh mẫu theo commit và lưu manifest/artifact; không có quyền ghi registry hoặc truy cập VPS.
+- Luồng sản phẩm: quản trị viên đăng ký repository tin cậy, chọn commit, kích hoạt build, xem log, lưu registry digest và triển khai image nằm trong danh sách cho phép.
 
-Ảnh P1.1A dùng tag `sha-<12 ký tự>`, đồng thời lưu commit đầy đủ trong nhãn OCI. GitHub Actions được ghim bằng SHA đầy đủ.
+Ảnh do CI nội bộ tạo dùng tag `sha-<12 ký tự>`, đồng thời lưu commit đầy đủ trong nhãn OCI. GitHub Actions được ghim bằng SHA đầy đủ.
 
 ## Hệ quả
 
 Ưu điểm:
 
-- Chứng minh CI và khả năng truy vết mà chưa cần cấp secret triển khai.
+- Chứng minh CI nội bộ và khả năng truy vết mà chưa cần cấp secret triển khai.
 - Pull request không có đường tác động tới VPS.
 - Có thể kiểm thử và sửa pipeline độc lập với registry/CD.
 - Phân biệt rõ image ID cục bộ với registry digest.
 
 Đánh đổi:
 
-- P1.1A chưa phải CI/CD hoàn chỉnh.
+- CI nội bộ không được tính là tính năng triển khai ứng dụng từ Git của Mini PaaS.
 - Artifact image manifest không thay thế registry.
-- Cần thêm một mốc để nối image đã phát hành vào Runner và lịch sử deployment.
+- Cần triển khai thêm API, giao diện và lịch sử build/deploy ở bên trong sản phẩm.
 
 ## Phương án không chọn
 

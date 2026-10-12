@@ -1,4 +1,4 @@
-# Môi trường kiểm thử P1.1A
+# Môi trường kiểm thử CI nội bộ
 
 - Thời điểm: 12/10/2026 09:33:37 +0700.
 - Hệ điều hành máy phát triển: Darwin 27.0.0 arm64.

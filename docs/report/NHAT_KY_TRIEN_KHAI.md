@@ -176,7 +176,7 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - Log Docker chỉ tồn tại theo chính sách xoay vòng trên host; chưa có lưu trữ tập trung.
 - Cần chạy lại T05 và kiểm thử tải chính thức trên VPS Linux.
 
-## 12/10/2026 — Bắt đầu P1.1A: CI và ảnh theo commit
+## 12/10/2026 — Bổ sung CI nội bộ và ảnh mẫu theo commit
 
 ### Phạm vi thực hiện
 
@@ -195,7 +195,7 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 - Control API unit test: 7/7 đạt.
 - Dashboard production build: đạt; không chạy kiểm tra trình duyệt theo quy tắc dự án.
 - P0.1: 9/9 đạt; P0.2: 15/15 đạt; P0.2B: 21 đạt; P0.2C: 12 đạt.
-- P1.1A image manifest: 8/8 đạt.
+- Kiểm tra image manifest của CI nội bộ: 8/8 đạt.
 - Hai ảnh local có tag theo commit, image ID riêng và nhãn revision/version đúng.
 - Sau regression, 6/6 service healthy; App A/App B trở lại v1.0.0.
 - GitHub Actions run số 1 cho commit `4dbd6c1`: toàn bộ job và 14 bước đạt, gồm regression, manifest, tải artifact và dọn stack.
@@ -205,10 +205,34 @@ Khi bắt đầu kiểm thử, OrbStack chưa chạy nên Docker socket không t
 
 - `imageId` local không phải registry digest và khác nhau theo kiến trúc CPU.
 - Chưa có quyền ghi package, registry, deploy hook hoặc kết nối từ CI đến VPS.
-- P1.1A chưa phải CI/CD hoàn chỉnh; P1.1B phải bổ sung registry digest và triển khai image nằm trong allowlist.
+- CI nội bộ chưa phải tính năng triển khai ứng dụng từ Git của Mini PaaS. Sản phẩm còn thiếu API/giao diện đăng ký repository tin cậy, chọn commit, theo dõi build log, lưu registry digest và triển khai image nằm trong allowlist.
 
 ### Nội dung có thể dùng cho báo cáo
 
 - Chương 3: tách CI khỏi CD, ranh giới quyền và truy vết commit → tag → image ID.
 - Chương 4: workflow, cách dựng ảnh và cách đọc manifest.
 - Chương 5: kết quả regression, kiểm tra input SHA và nhãn OCI; bổ sung log GitHub sau khi có remote.
+
+## 12/10/2026 — Cập nhật yêu cầu hồ sơ nộp chính thức
+
+### Yêu cầu mới
+
+- Báo cáo 12–18 trang nội dung chính; phụ lục cấu hình không tính vào giới hạn.
+- Có sơ đồ hệ thống, bảng tài nguyên/IP/quyền, mã nguồn/cấu hình/script và README tái lập.
+- Bảng kiểm thử phải có đầu vào, thao tác, kỳ vọng, thực tế, đạt/chưa đạt và bằng chứng có dấu thời gian; đánh giá hiệu năng phải nộp dữ liệu gốc.
+- Video demo 5–7 phút.
+- Đủ phiếu đóng góp cho 04 thành viên; mỗi người có sản phẩm kỹ thuật riêng.
+- Khai báo nguồn mã/cấu hình tham khảo và cách sử dụng AI; sinh viên chịu trách nhiệm giải thích, chỉnh sửa và chạy lại.
+
+### Điều chỉnh cách mô tả sản phẩm
+
+- Phân loại workflow GitHub hiện có là **CI nội bộ hỗ trợ phát triển**, không tính thay cho FR09.
+- FR09 chỉ đạt khi quản trị viên có thể dùng Mini PaaS để đưa một repository tin cậy qua chuỗi commit → build → image/digest → deployment và quan sát trạng thái/log của lần triển khai.
+
+### Điều chỉnh kế hoạch
+
+- Mục tiêu báo cáo được đặt ở 14–16 trang để có biên độ trong giới hạn 12–18 trang.
+- Tạo checklist hồ sơ, mẫu bảng kiểm thử, mẫu phiếu đóng góp và nhật ký AI/nguồn tham khảo.
+- Tạo bảng tài nguyên/IP/quyền từ Compose hiện tại; VPS sẽ có bản đối soát riêng.
+- Phân công 04 người phải tạo ra bốn đầu ra kỹ thuật riêng. Nhiệm vụ chỉ tìm tài liệu không còn đủ điều kiện.
+- Video được rút gọn thành kịch bản khoảng 6 phút; kiểm tra responsive/trình duyệt vẫn không chạy nếu chủ dự án không yêu cầu riêng.

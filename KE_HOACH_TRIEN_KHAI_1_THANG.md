@@ -7,18 +7,20 @@
 - Mục tiêu: hoàn thành sản phẩm chạy được, bộ kiểm thử và minh chứng, báo cáo cuối kỳ, slide và kịch bản demo trong một tháng.
 - Trạng thái ban đầu ngày 11/10/2026: repository mới chỉ có AGENTS.md; chưa có mã nguồn, cấu hình, Git repository hoặc kết quả kiểm thử.
 - Trạng thái phê duyệt đề tài: chưa có thông tin xác nhận giảng viên đã phê duyệt.
-- Quy mô nhóm, thời lượng làm việc mỗi thành viên và cấu hình máy chủ: chưa được cung cấp.
+- Tại thời điểm lập bản đầu ngày 11/10/2026, quy mô nhóm, thời lượng làm việc mỗi thành viên và cấu hình máy chủ chưa được cung cấp; các thông tin đã xác nhận sau đó được ghi ở phần cập nhật thực tế.
 
 ### Cập nhật thực tế ngày 12/10/2026
 
 - P0.1, P0.2A, P0.2B và P0.2C đã được triển khai, kiểm thử trên máy phát triển macOS/OrbStack.
-- P1.1A đã có workflow CI, script build ảnh theo commit và manifest; kiểm thử cục bộ đạt. Workflow run đầu tiên trên GitHub đã thành công và tạo artifact ngày 12/10/2026.
+- Đã có workflow CI nội bộ, script build ảnh mẫu theo commit và manifest; kiểm thử cục bộ đạt. Workflow run đầu tiên trên GitHub đã thành công và tạo artifact ngày 12/10/2026. Đây là công cụ kiểm tra repository Mini PaaS, chưa phải chức năng triển khai ứng dụng từ Git của sản phẩm.
 - MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
 - G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
 - T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
 - Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
-- Bước tiếp theo của CI/CD là P1.1B: chọn cấu hình GitHub Container Registry, lưu registry digest và chỉ triển khai ảnh đã cho phép. Prometheus/Grafana và k6 vẫn thuộc G3; không mở P2 trước khi các phần này ổn định.
+- Bước tiếp theo của sản phẩm là luồng repository tin cậy → chọn commit → build image → lưu log/digest → triển khai image đã cho phép. Prometheus/Grafana và k6 vẫn thuộc G3; không mở P2 trước khi các phần này ổn định.
 - Theo quyết định của chủ dự án, từ ngày 12/10/2026 không chạy kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt ở bất kỳ giai đoạn nào, trừ khi được yêu cầu riêng. Dashboard vẫn phải qua typecheck/build và các kiểm thử chức năng qua API/unit/integration; không được ghi responsive là đã xác minh cho thay đổi mới nếu chưa kiểm tra.
+- Yêu cầu nộp mới: báo cáo 12–18 trang nội dung chính, video 5–7 phút, bảng kiểm thử đủ đầu vào/thao tác/kỳ vọng/thực tế/kết quả/bằng chứng có dấu thời gian, dữ liệu đo gốc, bảng tài nguyên/IP/quyền, phiếu đóng góp cá nhân và khai báo nguồn tham khảo/cách dùng AI.
+- Nhóm có 04 thành viên. Mỗi người phải có sản phẩm kỹ thuật riêng; nhiệm vụ chỉ tìm tài liệu hoặc viết báo cáo không đủ điều kiện đóng góp cá nhân.
 
 Kế hoạch này dùng ba luồng công việc song song:
 
@@ -67,7 +69,11 @@ Nếu chưa có Linux VM trước ngày 18/10/2026, nhóm vẫn phát triển P0
 - Kiểm thử tải với p95, thông lượng, tỷ lệ lỗi và tài nguyên.
 - README, tài liệu kiến trúc, tài liệu vận hành và xử lý lỗi.
 - Kết quả T01 đến T08 kèm bằng chứng.
-- Báo cáo cuối kỳ, slide, kịch bản demo và video dự phòng.
+- Báo cáo 12–18 trang nội dung chính; phụ lục cấu hình và dữ liệu đo gốc tách riêng.
+- Sơ đồ hệ thống và bảng tài nguyên/IP/quyền đúng với mạng Docker, cổng, DNS và ranh giới đặc quyền thực tế.
+- Video demo 5–7 phút, slide và kịch bản demo.
+- Phiếu đóng góp cá nhân cho 04 thành viên, mỗi người có file/sản phẩm kỹ thuật, bằng chứng và lỗi đã xử lý.
+- Mục nguồn tham khảo và cách sử dụng AI.
 
 ### 3.2. Phạm vi không cam kết trong một tháng
 
@@ -101,6 +107,11 @@ Dự án chỉ được tuyên bố hoàn thành khi đồng thời thỏa mãn 
 11. Báo cáo không mô tả tính năng dự kiến như tính năng đã hoàn thành.
 12. Slide và demo thống nhất với mã nguồn và số liệu trong báo cáo.
 13. Có bản đóng gói cuối cùng và hướng dẫn khôi phục nếu demo trực tiếp gặp lỗi.
+14. Báo cáo có 12–18 trang nội dung chính; phụ lục không bị tính lẫn vào nội dung chính.
+15. Mỗi dòng kiểm thử có đầu vào, thao tác, kỳ vọng, thực tế, đạt/chưa đạt, thời gian và bằng chứng.
+16. Có dữ liệu gốc cho các phép đo hiệu năng, không chỉ có bảng tổng hợp hoặc ảnh.
+17. Đủ 04 phiếu đóng góp; mỗi thành viên có sản phẩm kỹ thuật riêng và giải thích được phần mình làm.
+18. Có mục nguồn tham khảo, mã/cấu hình kế thừa và cách sử dụng AI.
 
 ## 5. Kiến trúc mục tiêu
 
@@ -331,6 +342,7 @@ Cổng nghiệm thu G5:
 
 - Gói bàn giao mở được, không chứa secret và có hướng dẫn bắt đầu.
 - Demo chính và phương án dự phòng đều sẵn sàng.
+- Báo cáo đúng 12–18 trang nội dung chính; video nằm trong 5–7 phút; đủ 04 phiếu đóng góp kỹ thuật.
 
 ## 8. Lịch triển khai chi tiết theo ngày
 
@@ -351,8 +363,8 @@ Cổng nghiệm thu G5:
 | 23/10 | Hoàn thiện deploy/update App A v1 sang v2 | Chạy T03; đo thời gian và gián đoạn | Viết mô tả cập nhật phiên bản |
 | 24/10 | Thêm log, health và CPU/RAM snapshot vào Dashboard | Chạy T04 và các trường hợp lỗi | Cập nhật hướng dẫn vận hành |
 | 25/10 | Tích hợp và sửa lỗi MVP | Chạy T03/T04/T07 vòng nghiệm thu | Hoàn thiện bản nháp Chương 3 |
-| 26/10 | Tạo pipeline build image theo commit SHA | Xác minh tag, digest và log pipeline | Viết phần CI/CD dự kiến/thực tế đúng trạng thái |
-| 27/10 | Thêm deploy có kiểm soát từ image được phép | Test pipeline thất bại và secret masking | Cập nhật tài liệu release/deploy |
+| 26/10 | Thêm API/giao diện đăng ký repository tin cậy và build theo commit SHA | Xác minh đầu vào repository, tag, digest và build log | Viết phần luồng Git của sản phẩm đúng trạng thái |
+| 27/10 | Thêm deploy có kiểm soát từ image được phép và lưu lịch sử release | Test build/deploy thất bại, allowlist và che secret | Cập nhật tài liệu release/deploy |
 | 28/10 | Tích hợp cAdvisor, Prometheus, Grafana | Xác minh metric target và timestamp | Viết phần giám sát và chỉ số |
 | 29/10 | Tạo dashboard CPU/RAM/trạng thái | Chạy T05; chụp và xuất dashboard | Ghi cách đọc và giới hạn của metric |
 | 30/10 | Viết kịch bản k6 và chuẩn hóa môi trường đo | Chạy pilot, chọn mức tải an toàn | Viết phương pháp thực nghiệm |
@@ -364,9 +376,9 @@ Cổng nghiệm thu G5:
 | 05/11 | Kiểm tra tài nguyên và cấu hình cuối | Phân tích p95, throughput, error rate, CPU/RAM | Hoàn thiện Chương 5 |
 | 06/11 | Kiểm tra bảo mật cấu hình và secret | Chạy security checklist | Hoàn thiện Chương 6, phụ lục và tài liệu tham khảo |
 | 07/11 | Feature freeze; tạo release candidate cuối | Smoke test toàn hệ thống | Phản biện chéo báo cáo và README |
-| 08/11 | Chỉ sửa lỗi chặn bàn giao | Đối chiếu evidence với báo cáo | Soát hình, bảng, trích dẫn, thuật ngữ và chính tả |
-| 09/11 | Chuẩn bị môi trường demo và bản offline | Diễn tập demo lỗi và phương án phục hồi | Hoàn thiện slide, lời thuyết trình và video dự phòng |
-| 10/11 | Đóng gói release cuối | Smoke test cuối; kiểm tra gói bàn giao | Chốt báo cáo, slide, video và biên bản phân công |
+| 08/11 | Chỉ sửa lỗi chặn bàn giao | Đối chiếu evidence với báo cáo | Soát giới hạn 12–18 trang, hình, bảng, trích dẫn, nguồn tham khảo và mục sử dụng AI |
+| 09/11 | Chuẩn bị môi trường demo và bản offline | Diễn tập demo lỗi và phương án phục hồi | Hoàn thiện slide, video 5–7 phút và 04 phiếu đóng góp cá nhân |
+| 10/11 | Đóng gói release cuối | Smoke test cuối; kiểm tra gói bàn giao và dữ liệu đo gốc | Chốt báo cáo, slide, video, phụ lục và phiếu đóng góp |
 
 Nếu ngày bắt đầu hoặc deadline thực tế khác, giữ nguyên thứ tự và tỷ lệ thời gian:
 
@@ -389,6 +401,8 @@ Nếu ngày bắt đầu hoặc deadline thực tế khác, giữ nguyên thứ 
 - Không cắt ảnh hoặc log theo cách che mất điều kiện thử.
 - Xóa hoặc che token, mật khẩu và cookie trước khi lưu bằng chứng.
 - Không mặc định chụp ảnh hoặc chạy trình duyệt để nghiệm thu giao diện; chỉ thực hiện khi chủ dự án yêu cầu riêng. Với các thay đổi Dashboard, bằng chứng mặc định là typecheck/build, phản hồi API và integration test.
+- Mỗi biên bản test phải có: mã test, yêu cầu liên quan, thời gian, môi trường/commit, đầu vào hoặc điều kiện trước, thao tác, kết quả mong đợi, kết quả thực tế, đạt/chưa đạt, người thực hiện và đường dẫn bằng chứng.
+- T06 và mọi đánh giá hiệu năng phải giữ file dữ liệu gốc; không chỉ lưu ảnh hoặc số liệu đã chép vào báo cáo.
 
 | Mã | Mục tiêu | Cách thực hiện dự kiến | Tiêu chí chấp nhận | Bằng chứng |
 |---|---|---|---|---|
@@ -430,7 +444,7 @@ Các mức trên là điểm xuất phát, không phải cam kết hiệu năng.
 | P0 | Dashboard | React/Vite | T03, T04, T05 | Ảnh thao tác, đối chiếu API |
 | P0 | Xác thực quản trị | Session, middleware, allowlist | T07 | 401/403, audit và log |
 | P0 | Khôi phục | README, Compose, manifest | T01, T08 | Biên bản chạy lại |
-| P1 | CI/CD | P1.1A build theo commit; P1.1B push/deploy kiểm soát | Kiểm thử pipeline | Commit, tag, image ID; registry digest và log pipeline sau P1.1B |
+| P1 | Triển khai từ Git | Đăng ký repository tin cậy, build theo commit, lưu digest và triển khai có kiểm soát | Kiểm thử pipeline của sản phẩm | Repository/commit, build log, tag/digest, operation và phiên bản quan sát được |
 | P1 | Giám sát | cAdvisor, Prometheus, Grafana | T05 | Dữ liệu thô và dashboard |
 | P1 | Kiểm thử tải | k6 | T06 | Script, JSON/CSV, bảng và biểu đồ |
 | P1 | Xử lý sự cố | Health, restart, log | T04, T08 | Timeline và thời gian phục hồi |
@@ -447,8 +461,21 @@ Các mức trên là điểm xuất phát, không phải cam kết hiệu năng.
 - Tính năng đã chạy và đã kiểm thử mới viết ở thì hiện tại.
 - Tính năng chưa làm phải dùng các từ dự kiến, đề xuất hoặc hướng phát triển.
 - Không chép tài liệu công cụ thành nội dung báo cáo; phải giải thích công cụ phục vụ yêu cầu nào.
-- Không ấn định số trang khi chưa có yêu cầu chính thức.
+- Nội dung chính phải nằm trong 12–18 trang. Mục tiêu biên tập là 14–16 trang để còn biên độ điều chỉnh; cấu hình dài, dữ liệu đo gốc và mã nguồn minh họa chuyển sang phụ lục.
 - Lưu nguồn tài liệu ngay khi sử dụng, không bổ sung trích dẫn theo trí nhớ ở cuối dự án.
+- Ghi rõ nguồn mã/cấu hình tham khảo và cách sử dụng AI; không ghi AI là tác giả thay cho trách nhiệm kiểm tra, sửa đổi và chạy lại của sinh viên.
+
+Phân bổ trang dự kiến cho nội dung chính:
+
+| Phần | Số trang mục tiêu |
+|---|---:|
+| Chương 1: yêu cầu, giả định, phạm vi | 1,5–2 |
+| Chương 2: cơ sở lý thuyết có chọn lọc | 2–2,5 |
+| Chương 3: kiến trúc, mạng, tài nguyên và quyền | 3–3,5 |
+| Chương 4: triển khai và sử dụng | 2,5–3 |
+| Chương 5: kiểm thử và đánh giá | 3–4 |
+| Chương 6: kết luận và giới hạn | 1–1,5 |
+| Tài liệu tham khảo | 0,5–1 |
 
 ### 11.2. Tiến độ theo chương
 
@@ -457,7 +484,7 @@ Các mức trên là điểm xuất phát, không phải cam kết hiệu năng.
 | Chương 1: Tổng quan, lý do chọn đề tài | 17/10 | 25/10 | AGENTS.md, yêu cầu đề tài, quyết định phạm vi |
 | Chương 2: Cơ sở lý thuyết | 18/10 | 28/10 | Tài liệu chính thức về Linux, mạng, Docker, Nginx, PaaS |
 | Chương 3: Phân tích yêu cầu và kiến trúc | 25/10 | 02/11 | Sơ đồ, API, mô hình dữ liệu, threat model |
-| Chương 4: Triển khai và sử dụng | 31/10 | 04/11 | Mã nguồn, Compose, README, ảnh thao tác |
+| Chương 4: Triển khai và sử dụng | 31/10 | 04/11 | Mã nguồn, Compose, README, phản hồi API và log triển khai |
 | Chương 5: Kiểm thử và đánh giá | 03/11 | 05/11 | T01–T08, k6, Prometheus/Grafana, log |
 | Chương 6: Kết luận và hướng phát triển | 05/11 | 06/11 | Kết quả thực tế, giới hạn, P2 |
 | Phụ lục | 03/11 | 07/11 | Cấu hình chính, API, dữ liệu đo, tài liệu tham khảo |
@@ -505,18 +532,17 @@ Không đưa quá nhiều ảnh giao diện hoặc danh sách công nghệ mà t
 
 ### Kịch bản demo chính
 
-Thời lượng mục tiêu khoảng 8 đến 12 phút:
+Video nộp chính thức phải dài 5–7 phút. Kịch bản video mục tiêu khoảng 6 phút:
 
-1. Giới thiệu sơ đồ kiến trúc.
-2. Mở Dashboard.
-3. Triển khai App A và App B.
-4. Truy cập hai ứng dụng qua Nginx.
-5. Cập nhật App A từ v1 sang v2.
-6. Xem operation log, application log và metric.
-7. Dừng một app, quan sát lỗi và trạng thái.
-8. Khởi động lại và xác nhận phục hồi.
-9. Trình bày một biểu đồ tải và kết luận.
-10. Nêu điểm lỗi đơn và giới hạn mô hình.
+1. 0:00–0:40 — bài toán, phạm vi và sơ đồ kiến trúc.
+2. 0:40–1:20 — Dashboard, hai ứng dụng và đường truy cập qua Gateway.
+3. 1:20–3:10 — chọn repository/commit mẫu, build image và triển khai qua Mini PaaS.
+4. 3:10–4:15 — cập nhật phiên bản, xem trạng thái, log và metric.
+5. 4:15–5:10 — dừng/khôi phục một ứng dụng hoặc minh họa lỗi có kiểm soát.
+6. 5:10–5:45 — kết quả kiểm thử tải chính.
+7. 5:45–6:15 — giới hạn một host, Docker socket và hướng phát triển.
+
+Demo trực tiếp khi bảo vệ có thể dài hơn nếu giảng viên cho phép, nhưng video nộp vẫn phải nằm trong 5–7 phút.
 
 ### Phương án dự phòng
 
@@ -530,7 +556,7 @@ Thời lượng mục tiêu khoảng 8 đến 12 phút:
 
 ## 13. Phân công theo vai trò
 
-Do chưa biết số thành viên, kế hoạch dùng vai trò thay vì tên.
+Nhóm có 04 thành viên. Chưa có tên và phân công cuối, vì vậy tạm dùng mã TV1–TV4. Mỗi vai trò dưới đây phải kết thúc bằng file kỹ thuật, commit hoặc cấu hình chạy được; chỉ tìm tài liệu không được tính là sản phẩm kỹ thuật riêng.
 
 ### Vai trò A — Hạ tầng và orchestration
 
@@ -548,13 +574,19 @@ Do chưa biết số thành viên, kế hoạch dùng vai trò thay vì tên.
 - Integration test.
 - Đồng tác giả Chương 3 và 4.
 
-### Vai trò C — Quan sát, kiểm thử và tài liệu
+### Vai trò C — Quan sát và kiểm thử tải
 
 - Prometheus, Grafana, cAdvisor.
 - k6 và T01–T08.
-- Quản lý evidence.
-- Điều phối báo cáo, slide và video.
-- Chủ trì Chương 5 và 6.
+- Tạo cấu hình monitoring và dữ liệu T05.
+- Tạo script k6, dữ liệu đo gốc và bảng T06.
+
+### Vai trò D — QA, bằng chứng và tích hợp hồ sơ
+
+- Tạo/duy trì test runner hoặc script tái lập T01/T08.
+- Chuẩn hóa bảng tài nguyên/IP/quyền và bảng kiểm thử.
+- Kiểm tra README trên môi trường sạch; ghi lỗi và bản sửa tương ứng.
+- Tích hợp hồ sơ, video 5–7 phút và phiếu đóng góp, nhưng vẫn phải có script/cấu hình kỹ thuật riêng.
 
 Tất cả thành viên:
 
@@ -562,13 +594,9 @@ Tất cả thành viên:
 - Viết phần báo cáo liên quan đến phần mình làm.
 - Tham gia chạy test chính thức.
 - Hiểu toàn bộ kiến trúc để bảo vệ.
+- Duy trì phiếu đóng góp gồm nhiệm vụ, file/commit, bằng chứng, lỗi đã xử lý và cách chạy lại.
 
-### Điều chỉnh theo số người
-
-- Một người: bỏ toàn bộ P2; Dashboard giữ tối giản; CI/CD chỉ cần một pipeline; mỗi ngày chia thời gian cho code, test và báo cáo. Rủi ro trễ cao, cần ưu tiên P0 tuyệt đối.
-- Hai người: một người phụ trách hạ tầng/Runner; một người phụ trách Dashboard/app/test; báo cáo chia theo chương và review chéo.
-- Ba người: dùng ba vai trò A/B/C.
-- Bốn người trở lên: tách riêng một người phụ trách QA/evidence/report integration; không tạo thêm tính năng chỉ để đủ việc.
+Phân công cuối phải ánh xạ đủ 04 người vào A/B/C/D. Một người có thể hỗ trợ nhiều vai trò, nhưng không được ghi sản phẩm kỹ thuật của cùng một file/commit cho nhiều người nếu không chỉ ra phần đóng góp riêng và bằng chứng review/sửa lỗi.
 
 ## 14. Ước lượng công sức
 
@@ -640,6 +668,7 @@ Nội dung tối thiểu:
 - screenshots/: ảnh cần thiết.
 - logs/: log đã làm sạch.
 - conclusion.md: kết quả, sai lệch, giới hạn và kết luận.
+- test-record.md hoặc bảng tổng hợp: đầu vào, thao tác, kết quả mong đợi, kết quả thực tế, đạt/chưa đạt, dấu thời gian, người thực hiện và đường dẫn dữ liệu.
 
 Ảnh chụp không thay thế dữ liệu thô. Dữ liệu thô không thay thế phần giải thích.
 
@@ -712,6 +741,7 @@ Không được cắt:
 
 ### Báo cáo và tài liệu
 
+- [ ] Nội dung chính nằm trong 12–18 trang; phụ lục tách riêng.
 - [ ] Chương 1 hoàn chỉnh.
 - [ ] Chương 2 hoàn chỉnh.
 - [ ] Chương 3 hoàn chỉnh.
@@ -721,13 +751,17 @@ Không được cắt:
 - [ ] Phụ lục và tài liệu tham khảo hoàn chỉnh.
 - [ ] Phân biệt rõ đã làm, dự kiến và hướng phát triển.
 - [ ] Có sơ đồ kiến trúc, mạng, luồng triển khai và ranh giới bảo mật.
+- [ ] Có bảng tài nguyên/IP/quyền phù hợp với hệ thống thực.
+- [ ] Có bảng kiểm thử đủ đầu vào, thao tác, kỳ vọng, thực tế, đạt/chưa đạt và bằng chứng có dấu thời gian.
+- [ ] Có dữ liệu đo gốc cho phần hiệu năng.
+- [ ] Có nguồn mã/cấu hình tham khảo và mục mô tả cách sử dụng AI.
 - [ ] README được kiểm chứng bởi người khác.
 
 ### Bảo vệ
 
 - [ ] Slide thống nhất với báo cáo.
-- [ ] Demo trực tiếp dưới 12 phút.
-- [ ] Có video dự phòng.
+- [ ] Video nộp dài 5–7 phút.
+- [ ] Có 04 phiếu đóng góp cá nhân, mỗi người có sản phẩm kỹ thuật riêng.
 - [ ] Có bản export dashboard và dữ liệu tải.
 - [ ] Mọi thành viên giải thích được control plane, data plane, Docker, Nginx, health check, restart policy và giới hạn một host.
 - [ ] Có câu trả lời trung thực về điểm lỗi đơn, Docker socket, downtime và khả năng mở rộng.
@@ -736,11 +770,11 @@ Không được cắt:
 
 1. Giảng viên đã duyệt đề tài hay chưa.
 2. Deadline chính xác và định dạng bàn giao.
-3. Số thành viên và thời gian mỗi người có thể dành.
+3. Tên 04 thành viên, thời gian mỗi người có thể dành và ánh xạ vai trò A/B/C/D.
 4. Máy Linux/VM, CPU, RAM và dung lượng.
 5. Git provider và CI/CD provider được phép dùng.
 6. Demo chỉ trong mạng nội bộ hay cần domain/Internet.
-7. Mẫu báo cáo, quy định trích dẫn và quy định slide nếu có.
+7. Mẫu định dạng báo cáo, quy định trích dẫn và quy định slide nếu có; giới hạn nội dung chính đã xác nhận là 12–18 trang.
 8. Hai ứng dụng mẫu cuối cùng.
 
 Nếu chưa có câu trả lời ngay, nhóm vẫn bắt đầu G0 và G1 theo giả định trong Mục 2, nhưng không triển khai tính năng P2 hoặc mua dịch vụ.

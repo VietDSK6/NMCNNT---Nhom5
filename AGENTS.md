@@ -4,7 +4,7 @@
 >
 > **Ngôn ngữ làm việc:** Tiếng Việt; giải thích dễ hiểu, chính xác về kỹ thuật. Dùng thuật ngữ tiếng Anh khi thực sự cần và giải thích ở lần xuất hiện đầu tiên.
 >
-> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C và P1.1A; workflow GitHub đầu tiên đã chạy thành công ngày 12/10/2026. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence. Không tự coi P1.1B hoặc các mục dự kiến khác là tính năng đã hoàn thành.
+> **Tình trạng:** Nhóm đã **chốt hướng đề xuất Mini PaaS**; đã soạn báo cáo **đề xuất đề tài** để gửi giảng viên. **Chưa có thông tin xác nhận giảng viên đã phê duyệt.** Repository đã có P0.1–P0.2C và một workflow CI nội bộ đã chạy thành công trên GitHub ngày 12/10/2026. Workflow này kiểm tra chính mã nguồn Mini PaaS; **không thay thế tính năng sản phẩm Git → build → image → deploy**, vốn chưa được triển khai. Trạng thái chi tiết phải đối chiếu mã nguồn, README, nhật ký và evidence.
 
 ## Quy tắc kiểm tra giao diện — áp dụng cho toàn dự án
 
@@ -14,6 +14,16 @@
 - Khi thay đổi Dashboard vẫn phải chạy typecheck/production build và kiểm thử API, unit, integration liên quan; không được coi việc bỏ kiểm tra trình duyệt là bỏ kiểm thử chức năng.
 - Không tuyên bố một thay đổi giao diện mới đã được xác minh responsive nếu chưa có lần kiểm tra riêng. Các kết quả responsive của P0.2A/P0.2C chỉ là bằng chứng lịch sử cho đúng phiên bản đã kiểm tra khi đó.
 - Khi viết kế hoạch, bằng chứng và báo cáo, ảnh giao diện chỉ là tùy chọn; ưu tiên log, phản hồi API, kết quả build và dữ liệu kiểm thử để giảm chi phí thực hiện.
+
+## Yêu cầu hồ sơ nộp chính thức — bổ sung ngày 12/10/2026
+
+Các yêu cầu dưới đây là chỉ đạo mới nhất của giảng viên và được ưu tiên hơn các giả định cũ trong repository:
+
+- Báo cáo có **12–18 trang nội dung chính**, gồm yêu cầu, giả định, kiến trúc, triển khai, kiểm thử, đánh giá và tài liệu tham khảo. Phụ lục cấu hình không tính vào giới hạn trang.
+- Hồ sơ có sơ đồ hệ thống, bảng tài nguyên/IP/quyền phù hợp đề tài, cấu hình/script/mã nguồn cần thiết và README ghi phiên bản, cách dựng lại, cách chạy kiểm thử. File `.pkt` chỉ cần khi mô hình Packet Tracer phù hợp; Mini PaaS ưu tiên sơ đồ hệ thống, mạng Docker, cổng, DNS và ranh giới quyền đúng với hệ thống thực.
+- Bảng kiểm thử phải ghi đầu vào, thao tác, kết quả mong đợi, kết quả thực tế, đạt/chưa đạt và đường dẫn bằng chứng có dấu thời gian. Nếu đánh giá hiệu năng phải nộp dữ liệu đo gốc.
+- Video demo dài **5–7 phút**. Mỗi thành viên có phiếu đóng góp cá nhân ghi nhiệm vụ, file tạo ra, bằng chứng và lỗi đã xử lý; mỗi thành viên bắt buộc có ít nhất một sản phẩm kỹ thuật riêng có thể giải thích và chạy lại.
+- Chỉ dùng dữ liệu giả và môi trường được phép. Không bắt buộc mua thiết bị, thuê Cloud hoặc xây ứng dụng nghiệp vụ hoàn chỉnh. Báo cáo phải nêu nguồn mã/cấu hình tham khảo, cách sử dụng AI và trách nhiệm của sinh viên trong việc giải thích, chỉnh sửa, kiểm thử và chạy lại sản phẩm.
 
 ---
 
@@ -25,7 +35,8 @@
 - **Mục tiêu của nhóm:** Đầu tư một bài chất lượng cao nhằm tối đa hóa kết quả học tập/điểm số; ưu tiên sản phẩm hoạt động thật, demo thuyết phục, thiết kế rõ ràng, thực nghiệm có số liệu, tài liệu chỉn chu.
 - **Điều kiện:** Nhóm **không làm phần cứng**, không cần mua thiết bị IoT. Ưu tiên mô hình phần mềm có thể chạy trên máy tính cá nhân hoặc máy chủ ảo, sử dụng công cụ mã nguồn mở/chi phí thấp.
 - **Năng lực đã biết của một thành viên:** Có kinh nghiệm thực tế với React Native, JavaScript/TypeScript, tích hợp API, Git, gỡ lỗi ứng dụng Android/iOS và luồng build/phát hành ứng dụng. **Chưa xác nhận** kinh nghiệm Linux server, Docker, Nginx, CI/CD hạ tầng, Prometheus/Grafana của cả nhóm; không được mặc định các mảng đó đã thành thạo.
-- **Các thông tin chưa biết:** Số thành viên, thời hạn nộp, tài nguyên máy, ngân sách Cloud, mẫu báo cáo/quy chế chấm, mức độ chấp thuận đề tài, danh sách công nghệ bắt buộc. Hỏi khi chúng thực sự ảnh hưởng đến quyết định triển khai.
+- **Quy mô nhóm:** 04 thành viên. Một thành viên dự kiến thực hiện phần lớn sản phẩm; các thành viên còn lại hỗ trợ tìm hiểu tài liệu và một số phần giao diện. Do yêu cầu mới bắt buộc mỗi thành viên có sản phẩm kỹ thuật riêng, phân công cuối phải bổ sung đầu ra kỹ thuật, file và kiểm thử cụ thể cho cả bốn người.
+- **Các thông tin chưa biết:** Thời hạn nộp chính thức, tài nguyên VPS, mẫu định dạng báo cáo/trích dẫn, mức độ chấp thuận đề tài và danh sách công nghệ bắt buộc. Hỏi khi chúng thực sự ảnh hưởng đến quyết định triển khai.
 
 ### Trọng tâm học thuật cần luôn thể hiện
 
@@ -221,10 +232,11 @@ Sản phẩm cuối kỳ mong muốn bao gồm:
 4. **Tài liệu kiến trúc:** Sơ đồ thành phần, luồng HTTP, mạng và phân quyền, giải thích lý do chọn công nghệ.
 5. **Kế hoạch và kết quả kiểm thử:** Kịch bản, bảng số liệu thực tế, log/screenshot, đối chiếu kỳ vọng–thực tế, điểm hạn chế.
 6. **Báo cáo cuối kỳ:** Bài toán, tổng quan kiến thức nền tảng, phân tích yêu cầu, thiết kế, triển khai, thực nghiệm, nhận xét, kết luận, hướng phát triển.
-7. **Slide và video/demo trực tiếp:** Diễn giải trọng tâm, có một kịch bản xử lý sự cố trực quan.
-8. **Phân công nhiệm vụ nhóm:** Nếu có, ghi trách nhiệm, đóng góp và tiến độ thật, không suy diễn.
+7. **Video demo 5–7 phút và slide:** Diễn giải trọng tâm, có một kịch bản triển khai hoặc xử lý sự cố trực quan.
+8. **Phiếu đóng góp cá nhân:** Đủ 04 thành viên; ghi nhiệm vụ, file tạo ra, bằng chứng, lỗi đã xử lý và sản phẩm kỹ thuật riêng.
+9. **Nguồn tham khảo và sử dụng AI:** Ghi nguồn mã/cấu hình tham khảo, phạm vi AI hỗ trợ và phần sinh viên đã kiểm tra, sửa đổi, chạy lại.
 
-Không có yêu cầu chính thức về số trang, cấu trúc báo cáo hay thang điểm; chờ giảng viên xác nhận. Văn phong tài liệu gửi giảng viên nên **trang trọng, dễ đọc, thiên hướng hành chính Việt Nam, không màu mè, hạn chế tiếng Anh không cần thiết**.
+Báo cáo phải giữ phần nội dung chính trong **12–18 trang**; cấu hình dài, dữ liệu đo gốc và trích đoạn mã nên chuyển sang phụ lục để không làm loãng nội dung. Chưa có mẫu trình bày/trích dẫn hoặc thang điểm chi tiết. Văn phong tài liệu gửi giảng viên nên **trang trọng, dễ đọc, thiên hướng hành chính Việt Nam, không màu mè, hạn chế tiếng Anh không cần thiết**.
 
 ### Gợi ý bố cục báo cáo cuối kỳ
 

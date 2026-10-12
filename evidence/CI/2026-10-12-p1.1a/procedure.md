@@ -1,4 +1,4 @@
-# Quy trình kiểm thử P1.1A
+# Quy trình kiểm thử CI nội bộ
 
 ## Mục tiêu
 

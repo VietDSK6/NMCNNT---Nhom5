@@ -24,6 +24,6 @@ Minh chứng hiện có:
 - `T03`, `T04`: cập nhật phiên bản và thao tác vòng đời P0.2B.
 - `T05/2026-10-12-p0.2c`: log, snapshot tài nguyên và responsive P0.2C.
 - `T07`: xác thực, allowlist và ranh giới Docker socket.
-- `CI/2026-10-12-p1.1a`: kiểm thử cục bộ workflow logic, ảnh theo commit và manifest P1.1A; chưa phải log chạy GitHub Actions.
+- `CI/2026-10-12-p1.1a`: kiểm thử cục bộ, image manifest và metadata GitHub Actions run số 1 của CI nội bộ; không phải bằng chứng FR09 của sản phẩm.
 
 Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

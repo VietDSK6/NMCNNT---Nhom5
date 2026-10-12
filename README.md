@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển; **P1.1A: tích hợp liên tục và dựng ảnh theo commit** đã chạy thành công trên GitHub. Repository đang chuẩn bị P1.1B để đưa ảnh vào registry và triển khai image đã cho phép.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Repository có một workflow CI nội bộ đã chạy thành công trên GitHub để kiểm tra, dựng và truy vết chính mã nguồn của Mini PaaS. Đây là công cụ hỗ trợ phát triển, không phải tính năng sản phẩm triển khai ứng dụng từ repository Git.
 
 ## Trạng thái hiện tại
 
@@ -24,9 +24,10 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Script dựng App A/App B với tag `sha-<12 ký tự>`, nhãn OCI chứa commit đầy đủ và manifest chứa image ID.
 - Workflow CI dùng quyền chỉ đọc, phiên bản Node cố định, action ghim bằng commit SHA; thực hiện build, regression P0 và lưu manifest làm artifact.
 
-Chưa hoàn tất trong P1.1B:
+Chưa hoàn tất trong luồng triển khai ứng dụng từ Git của sản phẩm:
 
-- Chưa đẩy ảnh lên registry, chưa có registry digest và chưa tự động triển khai image theo commit vào Mini PaaS; đây là P1.1B.
+- Quản trị viên chưa thể đăng ký repository tin cậy, chọn commit/nhánh, kích hoạt build, theo dõi build log và triển khai image kết quả qua Dashboard.
+- Chưa có registry digest, lịch sử release gắn với commit và quy trình đưa image đã cho phép vào Runner.
 - Chưa có chuỗi thời gian Prometheus, Grafana, cảnh báo và kiểm thử tải k6.
 - Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
@@ -100,7 +101,7 @@ Kết quả chuẩn hiện tại:
 - P0.2: 15/15 kiểm tra đạt.
 - P0.2B: 21 kiểm tra đạt.
 - P0.2C: 12 kiểm tra đạt.
-- P1.1A image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
+- CI nội bộ/image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -122,7 +123,7 @@ Xem 100 dòng log gần nhất:
 make logs
 ```
 
-## Tích hợp liên tục P1.1A
+## CI nội bộ hỗ trợ phát triển
 
 Chạy riêng quy trình dựng ảnh theo commit hiện tại và kiểm tra manifest:
 
@@ -130,9 +131,9 @@ Chạy riêng quy trình dựng ảnh theo commit hiện tại và kiểm tra ma
 make test-p1-1a
 ```
 
-Đầu ra cục bộ nằm ở `output/ci/image-manifest.json` và không được commit. Manifest ghi commit đầy đủ, tag, nền tảng và image ID của App A/App B. Ở P1.1A, `publishStatus` là `local-only`: image ID này chưa phải registry digest.
+Đầu ra cục bộ nằm ở `output/ci/image-manifest.json` và không được commit. Manifest ghi commit đầy đủ, tag, nền tảng và image ID của App A/App B. `publishStatus` là `local-only`: image ID này chưa phải registry digest.
 
-Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. [Run đầu tiên](https://github.com/VietDSK6/NMCNNT---Nhom5/actions/runs/38197344603) đã thành công với commit `4dbd6c1` và tạo artifact chứa manifest cùng thông tin môi trường.
+Workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) chạy khi push vào `main`, mở/cập nhật pull request hoặc kích hoạt thủ công. Workflow không nhận secret triển khai, không có quyền ghi package và không đẩy ảnh ra registry. [Run đầu tiên](https://github.com/VietDSK6/NMCNNT---Nhom5/actions/runs/38197344603) đã thành công với commit `4dbd6c1` và tạo artifact chứa manifest cùng thông tin môi trường. Kết quả này chỉ chứng minh quy trình kiểm tra repository Mini PaaS, không được dùng để tuyên bố FR09 “triển khai ứng dụng từ Git” đã hoàn thành.
 
 ## Dừng hệ thống
 
@@ -177,10 +178,11 @@ tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
-.github/workflows/ci.yml    Pipeline GitHub Actions P1.1A
+.github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
 docs/architecture/          Kiến trúc đã chốt
 docs/decisions/             Nhật ký quyết định kiến trúc
 docs/report/                Nội dung viết báo cáo song song
+docs/test-plan/             Mẫu bảng kiểm thử và kế hoạch nghiệm thu
 evidence/                   Minh chứng T01–T08
 compose.yaml                Mô tả toàn bộ stack một máy
 ```
@@ -201,3 +203,5 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
 Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md) và [P1.1A_CI.md](docs/architecture/P1.1A_CI.md).
+
+Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.
