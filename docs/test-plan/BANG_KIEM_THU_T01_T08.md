@@ -19,6 +19,7 @@
 |---|---|---|---|---|---|---|---|---|
 | P1-GIT-01 | 12/10/2026 12:01 +07; macOS ARM64, Docker 29.4.0 | Source `github-app-a`; commit `093f1b29341accae2520ba5854db1a5a992b959f`; stack khỏe | Đăng nhập, tạo deployment, chờ build/deploy, kiểm tra Gateway/label rồi khôi phục v1 | Commit hợp lệ được build và deploy; input sai bị từ chối; version/label/lịch sử đúng | 10/10 kiểm tra đạt; image `git-093f1b29341a`; App A trở lại v1 | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-GIT/2026-10-12T1201/` |
 | P1-OBS-01 | 12/10/2026 16:59 +07; macOS ARM64, Docker 29.4.0 | App A/B v1 khỏe; Prometheus 3.14.0 và Grafana 13.2.2 ghim digest | Dựng stack, gọi exporter, truy vấn Prometheus, kiểm tra rule, Grafana datasource/dashboard và regression | Hai app có chuỗi nhiều mẫu; target/rule/provisioning đúng; cổng nội bộ không publish; regression đạt | 15/15 kiểm tra observability đạt; tám service healthy; toàn bộ regression và P1 Git 10/10 đạt | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-OBS/2026-10-12T1659/` |
+| P1-DASH-01 | 12/10/2026 21:34–21:39 +07; macOS ARM64, Docker 29.8.2 | Stack tám service khỏe; Dashboard image `p1-dashboard-navigation` | Typecheck/build Dashboard; gọi trực tiếp 10 route qua Gateway; chạy toàn bộ `make test` | Route hệ thống và ứng dụng trả SPA; chức năng cũ không hồi quy | 10/10 route; Runner 16/16; API 9/9; P0.1 9/9; P0.2 15/15; P0.2B 21/21; P0.2C 12/12; observability 15/15; tám service healthy | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-DASH/2026-10-12T2134/` |
 
 ## Khoảng trống phải xử lý
 

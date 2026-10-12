@@ -94,6 +94,10 @@ Dashboard dùng React, Vite và TypeScript. Giao diện trình bày riêng healt
 
 Các thao tác vòng đời và deployment trả về `202 Accepted`; Dashboard theo dõi trạng thái qua polling. Vùng triển khai Git chỉ hiển thị source allowlist, nhận commit SHA đầy đủ và đọc lịch sử/build log. Log và stats snapshot chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới. Liên kết đồ thị lịch sử mở dashboard Grafana đã được cấp sẵn.
 
+Kiến trúc thông tin của Dashboard có hai tầng. Tầng toàn hệ thống gồm tổng quan, danh sách ứng dụng, deployment, thao tác, kiểm toán và quan sát chung. Tầng ứng dụng dùng `appId` trên URL và có ba tab: tổng quan, triển khai, log và tài nguyên. Nhờ đó người quản trị không nhầm dữ liệu App A với App B, trong khi vẫn có góc nhìn tổng hợp khi cần vận hành toàn nền tảng.
+
+Ứng dụng dùng History API của trình duyệt cho tập route nhỏ, không thêm thư viện định tuyến. Nginx có cơ chế trả `index.html` cho đường dẫn Dashboard nên người dùng có thể tải lại trực tiếp `/applications/app-a/deployments`. Cách này phù hợp quy mô hiện tại; nếu số route, phân quyền hoặc bố cục lồng nhau tăng mạnh thì cần chuyển sang thư viện router chuyên dụng.
+
 ### 3.4.3. Control API
 
 Control API dùng Fastify và TypeScript, thực hiện:

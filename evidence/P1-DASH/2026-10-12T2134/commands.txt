@@ -1,0 +1,10 @@
+npm run typecheck --prefix platform/dashboard
+npm run build --prefix platform/dashboard
+docker compose config --quiet
+docker compose up -d --build --wait
+make test
+make test-p1-dashboard
+make test-p0-2b
+make test-p0-2c
+make test-p1-observability
+docker compose ps

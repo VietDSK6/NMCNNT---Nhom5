@@ -1,0 +1,38 @@
+Thời gian bắt đầu: 12/10/2026 21:34 +07
+Thời gian kết thúc: 12/10/2026 21:39 +07
+
+Dashboard typecheck: ĐẠT
+Dashboard production build: ĐẠT
+JavaScript bundle: khoảng 264,35 kB; gzip khoảng 79,27 kB
+CSS bundle: khoảng 38,45 kB; gzip khoảng 8,54 kB
+Compose config: ĐẠT
+
+P1 Dashboard navigation:
+- Trang Tổng quan: ĐẠT
+- Danh sách ứng dụng: ĐẠT
+- Chi tiết App A: ĐẠT
+- Deployment của App A: ĐẠT
+- Quan sát App A: ĐẠT
+- Chi tiết App B: ĐẠT
+- Triển khai toàn hệ thống: ĐẠT
+- Lịch sử thao tác: ĐẠT
+- Nhật ký kiểm toán: ĐẠT
+- Quan sát toàn hệ thống: ĐẠT
+- Tổng: 10/10
+
+Hồi quy:
+- Deployment Runner unit: 16/16 kiểm tra đạt
+- Control API unit: 9/9 kiểm tra đạt
+- P0.1: 9/9 kiểm tra đạt
+- P0.2: 15/15 kiểm tra đạt
+- P0.2B: 21/21 kiểm tra đạt
+- P0.2C: 12/12 kiểm tra đạt
+- P1 observability: 15/15 kiểm tra đạt
+
+Trạng thái cuối:
+- 8/8 service healthy
+- App A: v1.0.0
+- App B: running/healthy
+- Gateway là service duy nhất publish cổng host tại 127.0.0.1:8080
+
+Không chạy kiểm tra trình duyệt hoặc responsive.

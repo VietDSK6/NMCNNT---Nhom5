@@ -1,4 +1,4 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "./api";
 import {
   ActivityIcon,
@@ -75,6 +75,81 @@ function formatDateTime(value: string): string {
     minute: "2-digit",
     second: "2-digit",
   }).format(new Date(value));
+}
+
+type ApplicationTab = "overview" | "deployments" | "observability";
+type DashboardRoute =
+  | { readonly kind: "overview" }
+  | { readonly kind: "applications" }
+  | { readonly kind: "application"; readonly appId: string; readonly tab: ApplicationTab }
+  | { readonly kind: "deployments" }
+  | { readonly kind: "operations" }
+  | { readonly kind: "audit" }
+  | { readonly kind: "observability" }
+  | { readonly kind: "not-found" };
+
+function normalizePathname(pathname: string): string {
+  if (!pathname || pathname === "/dashboard") return "/";
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+function resolveRoute(pathname: string): DashboardRoute {
+  const normalized = normalizePathname(pathname);
+  if (normalized === "/") return { kind: "overview" };
+  if (normalized === "/applications") return { kind: "applications" };
+  if (normalized === "/deployments") return { kind: "deployments" };
+  if (normalized === "/operations") return { kind: "operations" };
+  if (normalized === "/audit") return { kind: "audit" };
+  if (normalized === "/observability") return { kind: "observability" };
+
+  const applicationMatch = normalized.match(/^\/applications\/([^/]+)(?:\/(deployments|observability))?$/);
+  if (applicationMatch) {
+    let appId: string;
+    try {
+      appId = decodeURIComponent(applicationMatch[1] ?? "");
+    } catch {
+      return { kind: "not-found" };
+    }
+    return {
+      kind: "application",
+      appId,
+      tab: (applicationMatch[2] as ApplicationTab | undefined) ?? "overview",
+    };
+  }
+  return { kind: "not-found" };
+}
+
+function useDashboardPath(): string {
+  const [pathname, setPathname] = useState(() => normalizePathname(window.location.pathname));
+  useEffect(() => {
+    const update = () => setPathname(normalizePathname(window.location.pathname));
+    window.addEventListener("popstate", update);
+    return () => window.removeEventListener("popstate", update);
+  }, []);
+  return pathname;
+}
+
+function AppLink({
+  to,
+  children,
+  className,
+  active = false,
+}: {
+  readonly to: string;
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly active?: boolean;
+}) {
+  function navigate(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (normalizePathname(window.location.pathname) === normalizePathname(to)) return;
+    window.history.pushState({}, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.scrollTo({ top: 0 });
+  }
+
+  return <a href={to} className={className} aria-current={active ? "page" : undefined} onClick={navigate}>{children}</a>;
 }
 
 function LoadingScreen() {
@@ -168,7 +243,7 @@ function RuntimeBadge({ status }: { readonly status: ApplicationItem["runtime"][
   return <span className={`status status--${tone}`}><i />{labels[status]}</span>;
 }
 
-function ApplicationCard({
+function ApplicationControlPanel({
   application,
   submitting,
   onAction,
@@ -183,22 +258,15 @@ function ApplicationCard({
   const targetVersion = currentVersion === "v2.0.0" ? "v1.0.0" : "v2.0.0";
 
   return (
-    <article className="app-card">
-      <div className="app-card__top">
-        <div className="app-icon"><BoxIcon /></div>
+    <section className="service-control" aria-labelledby="service-control-title">
+      <div className="service-control__heading">
+        <div>
+          <span className="eyebrow">VÒNG ĐỜI CONTAINER</span>
+          <h2 id="service-control-title">Điều khiển vận hành</h2>
+          <p>Thao tác được xếp hàng, chuyển qua Deployment Runner và lưu kết quả vào lịch sử.</p>
+        </div>
         <div className="status-stack"><RuntimeBadge status={application.runtime.status} /><StatusBadge status={application.health.status} /></div>
       </div>
-      <div className="app-card__title">
-        <div><span className="app-slug">{application.slug}</span><h3>{application.name}</h3></div>
-        <a className="icon-button" href={application.route} target="_blank" rel="noreferrer" aria-label={`Mở ${application.name}`}><ExternalIcon /></a>
-      </div>
-      <p className="app-description">{application.description}</p>
-      <dl className="app-facts">
-        <div><dt>Phiên bản thực tế</dt><dd>{application.observedVersion || application.runtime.observedVersion || "Chưa đọc được"}</dd></div>
-        <div><dt>Phiên bản mong muốn</dt><dd>{application.desiredVersion}</dd></div>
-        <div><dt>Container</dt><dd title={application.runtime.containerName || undefined}>{application.runtime.containerName || "Chưa đọc được"}</dd></div>
-      </dl>
-
       <div className="operation-controls" aria-label={`Thao tác ${application.name}`}>
         <div className="operation-controls__group">
           <span>Vòng đời</span>
@@ -227,12 +295,7 @@ function ApplicationCard({
           <span>{operationStatusLabels[application.activeOperation.status]}: {operationActionLabels[application.activeOperation.action].toLowerCase()} {application.name}</span>
         </div>
       )}
-
-      <div className="app-card__footer">
-        <span><ActivityIcon /> Kiểm tra {formatDateTime(application.health.checkedAt)}</span>
-        <a href={application.route} target="_blank" rel="noreferrer">Mở ứng dụng <ExternalIcon /></a>
-      </div>
-    </article>
+    </section>
   );
 }
 
@@ -303,37 +366,43 @@ function GitDeploymentPanel({
           <h3>Build và triển khai một commit</h3>
           <p>Runner chỉ tải repository đã khai báo sẵn, build đúng thư mục cho phép và không nhận Dockerfile hoặc URL tùy ý.</p>
         </div>
-        <label>
-          <span>Kho mã</span>
-          <select value={selectedSource?.id ?? ""} onChange={(event) => setSourceId(event.target.value)} disabled={submitting || sources.length === 0}>
-            {sources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Commit SHA đầy đủ</span>
-          <input
-            className="mono"
-            value={commit}
-            onChange={(event) => setCommit(event.target.value)}
-            placeholder="40 ký tự, ví dụ 4dbd6c1…"
-            minLength={40}
-            maxLength={40}
-            autoComplete="off"
-            spellCheck={false}
-            required
-            disabled={submitting || !selectedSource}
-          />
-        </label>
-        {selectedSource && (
-          <div className="source-summary">
-            <div><small>Repository</small><a href={selectedSource.repositoryUrl} target="_blank" rel="noreferrer">{selectedSource.repositoryUrl}<ExternalIcon /></a></div>
-            <div><small>Ứng dụng đích</small><strong>{selectedSource.appId}</strong></div>
-          </div>
+        {sources.length === 0 ? (
+          <div className="source-unavailable"><AlertIcon /><div><strong>Chưa cấu hình source Git</strong><span>Ứng dụng này hiện được dựng từ Docker Compose và chưa nhận deployment từ repository.</span></div></div>
+        ) : (
+          <>
+            <label>
+              <span>Kho mã</span>
+              <select value={selectedSource?.id ?? ""} onChange={(event) => setSourceId(event.target.value)} disabled={submitting}>
+                {sources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Commit SHA đầy đủ</span>
+              <input
+                className="mono"
+                value={commit}
+                onChange={(event) => setCommit(event.target.value)}
+                placeholder="40 ký tự, ví dụ 4dbd6c1…"
+                minLength={40}
+                maxLength={40}
+                autoComplete="off"
+                spellCheck={false}
+                required
+                disabled={submitting || !selectedSource}
+              />
+            </label>
+            {selectedSource && (
+              <div className="source-summary">
+                <div><small>Repository</small><a href={selectedSource.repositoryUrl} target="_blank" rel="noreferrer">{selectedSource.repositoryUrl}<ExternalIcon /></a></div>
+                <div><small>Ứng dụng đích</small><strong>{selectedSource.appId}</strong></div>
+              </div>
+            )}
+            {validationError && <div className="form-error" role="alert"><AlertIcon />{validationError}</div>}
+            <button className="button button--primary deployment-submit" disabled={submitting || !selectedSource}>
+              <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Build và triển khai"}
+            </button>
+          </>
         )}
-        {validationError && <div className="form-error" role="alert"><AlertIcon />{validationError}</div>}
-        <button className="button button--primary deployment-submit" disabled={submitting || !selectedSource}>
-          <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Build và triển khai"}
-        </button>
       </form>
 
       <div className="deployment-history">
@@ -396,7 +465,7 @@ function formatBytes(value: number): string {
 }
 
 function ObservabilityPanel({ applications }: { readonly applications: readonly ApplicationItem[] }) {
-  const [selectedAppId, setSelectedAppId] = useState("app-a");
+  const [selectedAppId, setSelectedAppId] = useState(applications[0]?.id ?? "app-a");
   const [tail, setTail] = useState(100);
   const [stats, setStats] = useState<ApplicationStats | null>(null);
   const [logs, setLogs] = useState<ApplicationLogs | null>(null);
@@ -443,18 +512,20 @@ function ObservabilityPanel({ applications }: { readonly applications: readonly 
   return (
     <div className="observability-panel">
       <div className="observability-toolbar">
-        <div className="application-switcher" role="group" aria-label="Chọn ứng dụng cần quan sát">
-          {applications.map((application) => (
-            <button
-              key={application.id}
-              className={application.id === selectedApplication.id ? "is-selected" : ""}
-              aria-pressed={application.id === selectedApplication.id}
-              onClick={() => setSelectedAppId(application.id)}
-            >
-              <BoxIcon />{application.name}
-            </button>
-          ))}
-        </div>
+        {applications.length > 1 ? (
+          <div className="application-switcher" role="group" aria-label="Chọn ứng dụng cần quan sát">
+            {applications.map((application) => (
+              <button
+                key={application.id}
+                className={application.id === selectedApplication.id ? "is-selected" : ""}
+                aria-pressed={application.id === selectedApplication.id}
+                onClick={() => setSelectedAppId(application.id)}
+              >
+                <BoxIcon />{application.name}
+              </button>
+            ))}
+          </div>
+        ) : <span className="observation-scope"><BoxIcon />{selectedApplication.name}</span>}
         <div className="observability-actions">
           <label htmlFor="log-tail">Số dòng log</label>
           <select id="log-tail" value={tail} onChange={(event) => setTail(Number(event.target.value))}>
@@ -516,6 +587,106 @@ function ObservabilityPanel({ applications }: { readonly applications: readonly 
   );
 }
 
+function ApplicationDirectory({ applications }: { readonly applications: readonly ApplicationItem[] }) {
+  if (applications.length === 0) {
+    return (
+      <div className="page-empty">
+        <BoxIcon />
+        <div><h2>Chưa có ứng dụng</h2><p>Ứng dụng được đăng ký trong danh mục Control API sẽ xuất hiện tại đây.</p></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="service-directory">
+      {applications.map((application) => {
+        const observedVersion = application.observedVersion || application.runtime.observedVersion || "Chưa đọc được";
+        return (
+          <article className="service-row" key={application.id}>
+            <div className="service-row__identity">
+              <span className="app-icon"><BoxIcon /></span>
+              <div>
+                <span className="app-slug">{application.slug}</span>
+                <AppLink to={`/applications/${application.id}`}><h2>{application.name}</h2></AppLink>
+                <p>{application.description}</p>
+              </div>
+            </div>
+            <div className="service-row__state">
+              <RuntimeBadge status={application.runtime.status} />
+              <StatusBadge status={application.health.status} />
+            </div>
+            <dl className="service-row__facts">
+              <div><dt>Phiên bản</dt><dd>{observedVersion}</dd></div>
+              <div><dt>Đường dẫn</dt><dd>{application.route}</dd></div>
+              <div><dt>Cập nhật</dt><dd>{formatDateTime(application.health.checkedAt)}</dd></div>
+            </dl>
+            <div className="service-row__actions">
+              <a className="icon-button" href={application.route} target="_blank" rel="noreferrer" aria-label={`Mở ${application.name}`}><ExternalIcon /></a>
+              <AppLink className="button button--secondary" to={`/applications/${application.id}`}>Xem chi tiết<ChevronIcon /></AppLink>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function ApplicationIdentity({ application }: { readonly application: ApplicationItem }) {
+  return (
+    <section className="service-identity">
+      <div className="service-identity__main">
+        <span className="app-icon app-icon--large"><BoxIcon /></span>
+        <div>
+          <span className="app-slug">{application.slug}</span>
+          <h2>{application.name}</h2>
+          <p>{application.description}</p>
+        </div>
+      </div>
+      <div className="service-identity__aside">
+        <div className="status-stack"><RuntimeBadge status={application.runtime.status} /><StatusBadge status={application.health.status} /></div>
+        <a className="button button--secondary" href={application.route} target="_blank" rel="noreferrer">Mở ứng dụng<ExternalIcon /></a>
+      </div>
+    </section>
+  );
+}
+
+function ApplicationFacts({ application, latestDeployment }: { readonly application: ApplicationItem; readonly latestDeployment?: DeploymentItem }) {
+  const observedVersion = application.observedVersion || application.runtime.observedVersion || "Chưa đọc được";
+  return (
+    <section className="service-facts" aria-labelledby="service-facts-title">
+      <div className="panel-heading"><div><span className="eyebrow">TRẠNG THÁI HIỆN TẠI</span><h2 id="service-facts-title">Thông tin dịch vụ</h2></div></div>
+      <dl>
+        <div><dt>URL truy cập</dt><dd><a href={application.route} target="_blank" rel="noreferrer">{application.route}<ExternalIcon /></a></dd></div>
+        <div><dt>Phiên bản thực tế</dt><dd className="mono">{observedVersion}</dd></div>
+        <div><dt>Phiên bản mong muốn</dt><dd className="mono">{application.desiredVersion}</dd></div>
+        <div><dt>Container</dt><dd className="mono">{application.runtime.containerName || "Chưa đọc được"}</dd></div>
+        <div><dt>Image</dt><dd className="mono">{application.runtime.image || "Chưa đọc được"}</dd></div>
+        <div><dt>Commit gần nhất</dt><dd className="mono">{latestDeployment?.commitSha.slice(0, 12) || "Chưa có deployment Git"}</dd></div>
+      </dl>
+    </section>
+  );
+}
+
+function DeploymentSnapshot({ deployments }: { readonly deployments: readonly DeploymentItem[] }) {
+  return (
+    <section className="release-snapshot" aria-labelledby="release-snapshot-title">
+      <div className="panel-heading">
+        <div><span className="eyebrow">RELEASE GẦN ĐÂY</span><h2 id="release-snapshot-title">Lần triển khai mới nhất</h2></div>
+      </div>
+      {deployments[0] ? (
+        <div className="release-snapshot__body">
+          <div className="release-snapshot__status"><span className={`operation-state operation-state--${deployments[0].status}`}>{deploymentStatusLabels[deployments[0].status]}</span><time dateTime={deployments[0].createdAt}>{formatDateTime(deployments[0].createdAt)}</time></div>
+          <code>{deployments[0].commitSha}</code>
+          <p>{deployments[0].message || "Runner đang xử lý lần triển khai này."}</p>
+          {deployments[0].imageReference && <small>{deployments[0].imageReference}</small>}
+        </div>
+      ) : (
+        <div className="panel-empty"><DeployIcon /><div><strong>Chưa có deployment từ Git</strong><span>Dịch vụ hiện được khởi tạo từ cấu hình Docker Compose.</span></div></div>
+      )}
+    </section>
+  );
+}
+
 function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; readonly onLoggedOut: () => void }) {
   const [applications, setApplications] = useState<ApplicationsResponse | null>(null);
   const [operations, setOperations] = useState<readonly OperationItem[]>([]);
@@ -527,6 +698,8 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
   const [submittingDeployment, setSubmittingDeployment] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const pathname = useDashboardPath();
+  const route = resolveRoute(pathname);
 
   const loadData = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
@@ -601,44 +774,90 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     try { await api.logout(); } finally { onLoggedOut(); }
   }
 
-  return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand">
-          <div className="brand-mark"><span /><span /><span /></div>
-          <div><strong>Mini PaaS</strong><small>Control Center</small></div>
-        </div>
-        <nav aria-label="Điều hướng chính">
-          <span className="nav-label">VẬN HÀNH</span>
-          <a className="nav-item nav-item--active" href="#overview"><GridIcon />Tổng quan</a>
-          <a className="nav-item" href="#applications"><BoxIcon />Ứng dụng<span className="nav-count">{applications?.summary.total ?? "—"}</span></a>
-          <a className="nav-item" href="#deployments"><DeployIcon />Triển khai Git</a>
-          <a className="nav-item" href="#operations"><ServerIcon />Thao tác</a>
-          <a className="nav-item" href="#activity"><HistoryIcon />Kiểm toán</a>
-          <span className="nav-label nav-label--spaced">QUAN SÁT</span>
-          <a className="nav-item" href="#observability"><ActivityIcon />Log và tài nguyên</a>
-          <a className="nav-item" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer"><ActivityIcon />Đồ thị lịch sử<ExternalIcon /></a>
+  const currentApplication = route.kind === "application"
+    ? applications?.data.find((application) => application.id === route.appId)
+    : undefined;
+
+  const pageTitle = (() => {
+    if (route.kind === "applications") return "Ứng dụng";
+    if (route.kind === "deployments") return "Triển khai từ Git";
+    if (route.kind === "operations") return "Lịch sử thao tác";
+    if (route.kind === "audit") return "Nhật ký quản trị";
+    if (route.kind === "observability") return "Log và tài nguyên";
+    if (route.kind === "application") return currentApplication?.name ?? "Chi tiết ứng dụng";
+    if (route.kind === "not-found") return "Không tìm thấy trang";
+    return "Tổng quan hệ thống";
+  })();
+
+  function renderApplicationPage(application: ApplicationItem, tab: ApplicationTab) {
+    const applicationDeployments = deployments.filter((deployment) => deployment.applicationId === application.id);
+    const applicationOperations = operations.filter((operation) => operation.applicationId === application.id);
+    const applicationSources = sources.filter((source) => source.appId === application.id);
+    const basePath = `/applications/${application.id}`;
+
+    return (
+      <>
+        <ApplicationIdentity application={application} />
+        <nav className="detail-tabs" aria-label={`Khu vực ${application.name}`}>
+          <AppLink to={basePath} active={tab === "overview"}>Tổng quan</AppLink>
+          <AppLink to={`${basePath}/deployments`} active={tab === "deployments"}>Triển khai</AppLink>
+          <AppLink to={`${basePath}/observability`} active={tab === "observability"}>Nhật ký &amp; tài nguyên</AppLink>
         </nav>
-        <div className="sidebar-footer">
-          <div className="environment-card"><span className="pulse-dot" /><div><strong>Môi trường phát triển</strong><small>Một máy · Docker Compose</small></div></div>
-          <button className="nav-item nav-item--button" onClick={logout}><LogOutIcon />Đăng xuất</button>
-        </div>
-      </aside>
 
-      <main className="workspace" id="overview">
-        <header className="topbar">
-          <div><span className="breadcrumb">Mini PaaS <ChevronIcon /> Tổng quan</span><h1>Tổng quan hệ thống</h1></div>
-          <div className="topbar-actions">
-            <button className="button button--secondary" onClick={() => void loadData()} disabled={refreshing}><RefreshIcon className={refreshing ? "is-spinning" : ""} />{refreshing ? "Đang cập nhật" : "Làm mới"}</button>
-            <div className="profile"><span>{session.user.username.slice(0, 1).toUpperCase()}</span><div><strong>{session.user.username}</strong><small>Quản trị viên</small></div></div>
+        {tab === "overview" && (
+          <div className="detail-content">
+            <ApplicationControlPanel
+              application={application}
+              submitting={submittingApp === application.id}
+              onAction={(item, action, version) => void executeAction(item, action, version)}
+            />
+            <div className="detail-grid">
+              <ApplicationFacts application={application} latestDeployment={applicationDeployments[0]} />
+              <DeploymentSnapshot deployments={applicationDeployments} />
+            </div>
+            <section className="page-section">
+              <div className="section-heading">
+                <div><span className="eyebrow">HOẠT ĐỘNG CỦA ỨNG DỤNG</span><h2>Lịch sử thao tác gần đây</h2><p>Chỉ hiển thị các thao tác thuộc {application.name}.</p></div>
+                <AppLink className="text-link" to="/operations">Xem toàn hệ thống<ChevronIcon /></AppLink>
+              </div>
+              <OperationsTable operations={applicationOperations} />
+            </section>
           </div>
-        </header>
+        )}
 
-        <div className="workspace-content">
-          {error && <div className="alert alert--error" role="alert"><AlertIcon /><div><strong>Thao tác chưa hoàn tất</strong><span>{error}</span></div><button onClick={() => void loadData()}>Tải lại dữ liệu</button></div>}
-          {notice && <div className="alert alert--success" role="status"><CheckIcon /><div><strong>Yêu cầu đã được tiếp nhận</strong><span>{notice}</span></div><button onClick={() => setNotice("")}>Đóng</button></div>}
+        {tab === "deployments" && (
+          <section className="detail-content">
+            <div className="page-intro page-intro--compact">
+              <div><span className="eyebrow">TRIỂN KHAI RIÊNG CHO ỨNG DỤNG</span><h2>Source, commit và build log</h2><p>Mọi bản ghi dưới đây đều thuộc {application.name}.</p></div>
+            </div>
+            <GitDeploymentPanel
+              sources={applicationSources}
+              deployments={applicationDeployments}
+              submitting={submittingDeployment}
+              onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+            />
+          </section>
+        )}
+
+        {tab === "observability" && (
+          <section className="detail-content">
+            <div className="page-intro page-intro--compact">
+              <div><span className="eyebrow">QUAN SÁT RIÊNG CHO ỨNG DỤNG</span><h2>Log và tài nguyên container</h2><p>Số liệu và nhật ký chỉ lấy từ container của {application.name}.</p></div>
+              <a className="button button--secondary" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer">Mở Grafana<ExternalIcon /></a>
+            </div>
+            <ObservabilityPanel applications={[application]} />
+          </section>
+        )}
+      </>
+    );
+  }
+
+  function renderPage() {
+    if (route.kind === "overview") {
+      return (
+        <>
           <section className="stage-banner">
-            <div><span className="eyebrow">MINI PAAS · P1</span><h2>Triển khai và quan sát ứng dụng trên một nền tảng</h2><p>Runner build source tin cậy, vận hành container và xuất số liệu cho Prometheus/Grafana.</p></div>
+            <div><span className="eyebrow">MINI PAAS · P1</span><h2>Một điểm vận hành cho các Web Service của nhóm</h2><p>Từ commit Git tin cậy tới container, đường dẫn truy cập, nhật ký và chỉ số tài nguyên.</p></div>
             <div className="stage-banner__flow" aria-label="Luồng hệ thống"><span>Git commit</span><ChevronIcon /><span>Runner</span><ChevronIcon /><span>Container</span><ChevronIcon /><span>Metrics</span></div>
           </section>
 
@@ -649,53 +868,107 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
             <article><span className="metric-icon metric-icon--amber"><ShieldIcon /></span><div><small>Ranh giới quyền</small><strong>Đã tách</strong><span>Socket chỉ gắn vào Runner</span></div></article>
           </section>
 
-          <section className="section" id="applications">
-            <div className="section-heading"><div><span className="eyebrow">DANH MỤC ỨNG DỤNG</span><h2>Trạng thái và thao tác</h2><p>Health HTTP và trạng thái container được hiển thị riêng để tránh kết luận sai.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></div>
-            <div className="application-grid">
-              {applications?.data.map((application) => (
-                <ApplicationCard
-                  key={application.id}
-                  application={application}
-                  submitting={submittingApp === application.id}
-                  onAction={(item, action, version) => void executeAction(item, action, version)}
-                />
-              ))}
-              {!applications && <><div className="skeleton-card" /><div className="skeleton-card" /></>}
-            </div>
+          <section className="page-section">
+            <div className="section-heading"><div><span className="eyebrow">DỊCH VỤ ĐANG QUẢN LÝ</span><h2>Ứng dụng</h2><p>Mở một ứng dụng để xem deployment, log và tài nguyên trong đúng ngữ cảnh.</p></div><AppLink className="text-link" to="/applications">Xem danh sách đầy đủ<ChevronIcon /></AppLink></div>
+            {applications ? <ApplicationDirectory applications={applications.data} /> : <div className="skeleton-list"><i /><i /></div>}
           </section>
 
-          <section className="section" id="deployments">
-            <div className="section-heading"><div><span className="eyebrow">TRIỂN KHAI TỪ GIT</span><h2>Build theo commit đã chọn</h2><p>Chỉ repository mẫu trong danh sách cho phép; mỗi lần triển khai lưu commit, image, log và kết quả thực tế.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></div>
-            <GitDeploymentPanel
-              sources={sources}
-              deployments={deployments}
-              submitting={submittingDeployment}
-              onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
-            />
+          <section className="page-section">
+            <div className="section-heading"><div><span className="eyebrow">HOẠT ĐỘNG GẦN ĐÂY</span><h2>Thao tác toàn hệ thống</h2><p>Theo dõi yêu cầu đang chờ, thành công hoặc thất bại.</p></div><AppLink className="text-link" to="/operations">Xem tất cả<ChevronIcon /></AppLink></div>
+            <OperationsTable operations={operations.slice(0, 6)} />
           </section>
+        </>
+      );
+    }
 
-          <section className="runtime-note">
-            <div className="runtime-note__icon"><ShieldIcon /></div>
-            <div><span className="eyebrow">RANH GIỚI QUYỀN</span><h3>Docker socket chỉ tồn tại trong Deployment Runner</h3><p>Runner chỉ chấp nhận app/action/source đã khai báo, commit SHA đầy đủ và thư mục build cố định. Không có API nhận URL, Dockerfile hoặc lệnh shell tùy ý.</p></div>
-            <span className="runtime-note__tag runtime-note__tag--ready">Runner hoạt động</span>
-          </section>
+    if (route.kind === "applications") {
+      return (
+        <>
+          <section className="page-intro"><div><span className="eyebrow">DANH MỤC DỊCH VỤ</span><h2>Ứng dụng</h2><p>Mỗi ứng dụng có không gian vận hành riêng cho vòng đời, deployment và quan sát.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
+          {applications ? <ApplicationDirectory applications={applications.data} /> : <div className="skeleton-list"><i /><i /></div>}
+        </>
+      );
+    }
 
-          <section className="section" id="observability">
-            <div className="section-heading"><div><span className="eyebrow">QUAN SÁT HỆ THỐNG</span><h2>Log và tài nguyên container</h2><p>Ảnh chụp và log được lấy có giới hạn; Prometheus lưu chuỗi thời gian để Grafana vẽ đồ thị.</p></div><a className="button button--secondary" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer">Mở đồ thị lịch sử<ExternalIcon /></a></div>
-            <ObservabilityPanel applications={applications?.data ?? []} />
-          </section>
+    if (route.kind === "application") {
+      if (!applications) return <div className="skeleton-detail"><i /><i /><i /></div>;
+      if (!currentApplication) {
+        return <div className="page-empty"><AlertIcon /><div><h2>Không tìm thấy ứng dụng</h2><p>ID ứng dụng không nằm trong danh mục Control API.</p><AppLink className="button button--secondary" to="/applications">Về danh sách ứng dụng</AppLink></div></div>;
+      }
+      return renderApplicationPage(currentApplication, route.tab);
+    }
 
-          <section className="section" id="operations">
-            <div className="section-heading"><div><span className="eyebrow">VÒNG ĐỜI ỨNG DỤNG</span><h2>Lịch sử thao tác</h2><p>Mỗi yêu cầu có trạng thái chờ, đang xử lý, thành công hoặc thất bại và được lưu trong SQLite.</p></div></div>
-            <OperationsTable operations={operations} />
-          </section>
+    if (route.kind === "deployments") {
+      return (
+        <>
+          <section className="page-intro"><div><span className="eyebrow">TRIỂN KHAI TỪ GIT</span><h2>Build theo commit đã chọn</h2><p>Góc nhìn toàn hệ thống cho source được phép và lịch sử deployment gần đây.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
+          <GitDeploymentPanel sources={sources} deployments={deployments} submitting={submittingDeployment} onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)} />
+        </>
+      );
+    }
 
-          <section className="section" id="activity">
-            <div className="section-heading"><div><span className="eyebrow">KIỂM TOÁN</span><h2>Nhật ký quản trị</h2><p>Kết quả đăng nhập và thao tác ứng dụng được lưu kèm người thực hiện.</p></div></div>
-            <AuditTable events={auditEvents} />
-          </section>
+    if (route.kind === "operations") {
+      return <><section className="page-intro"><div><span className="eyebrow">VÒNG ĐỜI ỨNG DỤNG</span><h2>Lịch sử thao tác</h2><p>Tất cả yêu cầu Start, Stop, Restart và Update trên các ứng dụng.</p></div></section><OperationsTable operations={operations} /></>;
+    }
 
-          <footer className="workspace-footer"><span>Mini PaaS · Mốc P1 triển khai và quan sát</span><span><CheckIcon /> Control API không giữ quyền Docker trực tiếp</span></footer>
+    if (route.kind === "audit") {
+      return <><section className="page-intro"><div><span className="eyebrow">KIỂM TOÁN</span><h2>Nhật ký quản trị</h2><p>Kết quả đăng nhập và thao tác được lưu cùng người thực hiện và địa chỉ nguồn.</p></div></section><AuditTable events={auditEvents} /></>;
+    }
+
+    if (route.kind === "observability") {
+      return (
+        <>
+          <section className="page-intro"><div><span className="eyebrow">QUAN SÁT HỆ THỐNG</span><h2>Log và tài nguyên</h2><p>Chọn ứng dụng để đọc log gần nhất và ảnh chụp tài nguyên container.</p></div><a className="button button--secondary" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer">Mở Grafana<ExternalIcon /></a></section>
+          <ObservabilityPanel applications={applications?.data ?? []} />
+        </>
+      );
+    }
+
+    return <div className="page-empty"><AlertIcon /><div><h2>Không tìm thấy trang</h2><p>Đường dẫn không thuộc Dashboard Mini PaaS.</p><AppLink className="button button--secondary" to="/">Về Tổng quan</AppLink></div></div>;
+  }
+
+  return (
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">Bỏ qua điều hướng</a>
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-mark"><span /><span /><span /></div>
+          <div><strong>Mini PaaS</strong><small>Control Center</small></div>
+        </div>
+        <nav aria-label="Điều hướng chính">
+          <span className="nav-label">VẬN HÀNH</span>
+          <AppLink className={`nav-item ${pathname === "/" ? "nav-item--active" : ""}`} to="/" active={pathname === "/"}><GridIcon />Tổng quan</AppLink>
+          <AppLink className={`nav-item ${pathname.startsWith("/applications") ? "nav-item--active" : ""}`} to="/applications" active={pathname.startsWith("/applications")}><BoxIcon />Ứng dụng<span className="nav-count">{applications?.summary.total ?? "—"}</span></AppLink>
+          <AppLink className={`nav-item ${pathname === "/deployments" ? "nav-item--active" : ""}`} to="/deployments" active={pathname === "/deployments"}><DeployIcon />Triển khai Git</AppLink>
+          <AppLink className={`nav-item ${pathname === "/operations" ? "nav-item--active" : ""}`} to="/operations" active={pathname === "/operations"}><ServerIcon />Thao tác</AppLink>
+          <AppLink className={`nav-item ${pathname === "/audit" ? "nav-item--active" : ""}`} to="/audit" active={pathname === "/audit"}><HistoryIcon />Kiểm toán</AppLink>
+          <span className="nav-label nav-label--spaced">QUAN SÁT</span>
+          <AppLink className={`nav-item ${pathname === "/observability" ? "nav-item--active" : ""}`} to="/observability" active={pathname === "/observability"}><ActivityIcon />Log và tài nguyên</AppLink>
+          <a className="nav-item" href="/monitoring/d/mini-paas-overview/mini-paas-tai-nguyen-ung-dung" target="_blank" rel="noreferrer"><ActivityIcon />Đồ thị lịch sử<ExternalIcon /></a>
+        </nav>
+        <div className="sidebar-footer">
+          <div className="environment-card"><span className="pulse-dot" /><div><strong>Môi trường phát triển</strong><small>Một máy · Docker Compose</small></div></div>
+          <button className="nav-item nav-item--button" onClick={logout}><LogOutIcon />Đăng xuất</button>
+        </div>
+      </aside>
+
+      <main className="workspace" id="main-content">
+        <header className="topbar">
+          <div>
+            <span className="breadcrumb"><AppLink to="/">Mini PaaS</AppLink><ChevronIcon />{route.kind === "application" && <><AppLink to="/applications">Ứng dụng</AppLink><ChevronIcon /></>}{pageTitle}</span>
+            <h1>{pageTitle}</h1>
+          </div>
+          <div className="topbar-actions">
+            <button className="button button--secondary" onClick={() => void loadData()} disabled={refreshing}><RefreshIcon className={refreshing ? "is-spinning" : ""} />{refreshing ? "Đang cập nhật" : "Làm mới"}</button>
+            <div className="profile"><span>{session.user.username.slice(0, 1).toUpperCase()}</span><div><strong>{session.user.username}</strong><small>Quản trị viên</small></div></div>
+          </div>
+        </header>
+
+        <div className="workspace-content">
+          {error && <div className="alert alert--error" role="alert"><AlertIcon /><div><strong>Thao tác chưa hoàn tất</strong><span>{error}</span></div><button onClick={() => void loadData()}>Tải lại dữ liệu</button></div>}
+          {notice && <div className="alert alert--success" role="status"><CheckIcon /><div><strong>Yêu cầu đã được tiếp nhận</strong><span>{notice}</span></div><button onClick={() => setNotice("")}>Đóng</button></div>}
+          {renderPage()}
+          <footer className="workspace-footer"><span>Mini PaaS · Control plane một máy</span><span><CheckIcon /> Mỗi ứng dụng có không gian vận hành riêng</span></footer>
         </div>
       </main>
     </div>

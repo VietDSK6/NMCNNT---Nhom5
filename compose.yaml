@@ -48,7 +48,7 @@ services:
   dashboard:
     build:
       context: ./platform/dashboard
-    image: mini-paas/dashboard:p1-observability
+    image: mini-paas/dashboard:p1-dashboard-navigation
     expose:
       - "8080"
     networks:

@@ -8,7 +8,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 
 - Hai ứng dụng Web mẫu có endpoint `/health` và `/version`.
 - Nginx Gateway là cổng duy nhất được công khai trên máy phát triển.
-- Dashboard dùng React, Vite và TypeScript; giao diện thích ứng cho máy tính và điện thoại.
+- Dashboard dùng React, Vite và TypeScript; thông tin được tách thành tổng quan hệ thống, danh sách ứng dụng và khu vực chi tiết của từng ứng dụng.
 - Control API dùng Fastify và TypeScript; Dashboard/API không mở cổng trực tiếp ra host.
 - SQLite lưu tài khoản quản trị, phiên đăng nhập, danh mục ứng dụng và audit event.
 - Session dùng cookie `HttpOnly`, `SameSite=Strict`; POST từ Origin không hợp lệ bị từ chối.
@@ -30,6 +30,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Runner xuất metric của App A/App B trong allowlist; Prometheus thu thập mỗi 5 giây và giữ chuỗi thời gian tối đa 7 ngày/256 MiB.
 - Grafana được cấp sẵn datasource và dashboard sáu vùng cho health, CPU, RAM, PID và lưu lượng mạng; truy cập qua Gateway và yêu cầu xác thực.
 - Prometheus nạp ba quy tắc cho ứng dụng không khỏe, RAM cao và lỗi đọc Docker stats; hiện chưa có kênh gửi thông báo.
+- Mỗi ứng dụng có đường dẫn riêng cho tổng quan, deployment, log và tài nguyên; các trang toàn hệ thống vẫn giữ riêng để quản trị chéo ứng dụng.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
@@ -98,7 +99,7 @@ make status
 make smoke
 ```
 
-Chạy toàn bộ unit/build, regression P0 và kiểm thử P1 observability:
+Chạy toàn bộ unit/build, regression P0, observability và các đường dẫn Dashboard:
 
 ```bash
 make test
@@ -116,6 +117,7 @@ Kết quả chuẩn hiện tại:
 - CI nội bộ/image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
 - P1 Git deployment: 10/10 kiểm tra tích hợp đạt.
 - P1 observability: 15/15 kiểm tra tích hợp đạt.
+- P1 Dashboard navigation: 10/10 đường dẫn trả entrypoint SPA qua Gateway.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -123,7 +125,7 @@ Bộ P0.2C kiểm tra xác thực cho log/stats, giới hạn tối đa 200 dòn
 
 Theo quy tắc dự án từ ngày 12/10/2026, các thay đổi tiếp theo không được kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt nếu chủ dự án không yêu cầu riêng. Dashboard vẫn phải qua TypeScript/production build và kiểm thử chức năng liên quan. Kết quả responsive nêu trên chỉ là bằng chứng lịch sử của bản P0.2C.
 
-Bộ P1 observability kiểm tra endpoint metric nội bộ, port binding, Prometheus readiness/target/query/rules và Grafana health/xác thực/provisioning. Không dùng kiểm tra trình duyệt hoặc ảnh giao diện cho thay đổi này.
+Bộ P1 observability kiểm tra endpoint metric nội bộ, port binding, Prometheus readiness/target/query/rules và Grafana health/xác thực/provisioning. Bộ P1 Dashboard kiểm tra trực tiếp qua HTTP rằng 10 đường dẫn có thể được mở hoặc tải lại qua Gateway. Không dùng kiểm tra trình duyệt, ảnh giao diện hoặc responsive cho các thay đổi này.
 
 Chạy unit test và build riêng khi phát triển:
 
@@ -139,9 +141,24 @@ Xem 100 dòng log gần nhất:
 make logs
 ```
 
+## Điều hướng Dashboard
+
+Dashboard phân biệt hai phạm vi:
+
+- Phạm vi toàn hệ thống: `/`, `/applications`, `/deployments`, `/operations`, `/audit` và `/observability`.
+- Phạm vi một ứng dụng: `/applications/:appId`, `/applications/:appId/deployments` và `/applications/:appId/observability`.
+
+Trang tổng quan chỉ tóm tắt tình trạng chung. Từ danh sách **Ứng dụng**, người quản trị mở App A hoặc App B để thao tác vòng đời, triển khai và quan sát đúng ngữ cảnh. Nginx trả entrypoint React cho đường dẫn Dashboard hợp lệ nên có thể tải lại trang chi tiết trực tiếp.
+
+Kiểm tra riêng các đường dẫn:
+
+```bash
+make test-p1-dashboard
+```
+
 ## Triển khai App A từ commit Git
 
-Trong Dashboard, mở mục **Triển khai Git**, chọn source `Ứng dụng A từ GitHub`, nhập SHA đầy đủ 40 ký tự rồi chọn **Build và triển khai**. Source URL và thư mục build do Runner cố định; giao diện không nhận repository hoặc Dockerfile tùy ý.
+Trong Dashboard, mở **Ứng dụng → Ứng dụng A → Triển khai**, chọn source `Ứng dụng A từ GitHub`, nhập SHA đầy đủ 40 ký tự rồi chọn **Build và triển khai**. Trang **Triển khai từ Git** ở menu chính vẫn cung cấp góc nhìn toàn hệ thống. Source URL và thư mục build do Runner cố định; giao diện không nhận repository hoặc Dockerfile tùy ý.
 
 Chạy lại toàn bộ kịch bản tự động bằng một commit đã tồn tại trên GitHub:
 
@@ -185,7 +202,7 @@ Lệnh này dừng và xóa container cùng mạng do Compose tạo, nhưng khô
 
 ## Thử bản v2 của Ứng dụng A
 
-Sau khi đăng nhập Dashboard, tại thẻ Ứng dụng A chọn **Cập nhật lên v2.0.0**. Theo dõi trạng thái tại mục **Lịch sử thao tác**; khi thành công, phiên bản thực tế đổi sang `v2.0.0`. Nút tại cùng vị trí cho phép đưa app về `v1.0.0`.
+Sau khi đăng nhập Dashboard, mở **Ứng dụng → Ứng dụng A → Tổng quan** rồi chọn **Cập nhật lên v2.0.0**. Theo dõi trạng thái tại mục **Lịch sử thao tác**; khi thành công, phiên bản thực tế đổi sang `v2.0.0`. Nút tại cùng vị trí cho phép đưa app về `v1.0.0`.
 
 Có thể chạy lại toàn bộ kịch bản bằng:
 
@@ -201,7 +218,7 @@ Kiểm tra riêng log và ảnh chụp tài nguyên:
 make test-p0-2c
 ```
 
-Sau khi đăng nhập Dashboard, mở mục **Log và tài nguyên**, chọn ứng dụng và số dòng cần đọc rồi dùng **Làm mới quan sát**. CPU/RAM hiển thị là một mẫu tại thời điểm yêu cầu, không phải đồ thị lịch sử.
+Sau khi đăng nhập Dashboard, có thể mở **Log và tài nguyên** để quan sát toàn hệ thống hoặc vào tab cùng tên của từng ứng dụng. Chọn số dòng cần đọc rồi dùng **Làm mới quan sát**. CPU/RAM hiển thị là một mẫu tại thời điểm yêu cầu, không phải đồ thị lịch sử.
 
 ## Cấu trúc chính
 
@@ -219,6 +236,7 @@ tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
 tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
+tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
 .github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
@@ -248,6 +266,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md) và [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md) và [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

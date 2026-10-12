@@ -314,3 +314,41 @@ Grafana 13.2.2 không khởi động ổn định với giới hạn 100 PID. He
 - `evidence/P1-OBS/2026-10-12T1659/`.
 - `docs/architecture/P1_OBSERVABILITY.md`.
 - `docs/decisions/0007-runner-prometheus-exporter.md`.
+
+## 12/10/2026 — P1: tách Dashboard theo hệ thống và từng ứng dụng
+
+### Vấn đề trước thay đổi
+
+- Dashboard dùng một trang dài và các liên kết `#...`; menu luôn làm nổi mục Tổng quan.
+- Thông tin App A và App B xuất hiện cạnh nhau trong cùng vùng nên chưa phản ánh mô hình quản lý nhiều dịch vụ giống một PaaS.
+- Chưa có URL riêng để mở lại màn deployment hoặc quan sát của một ứng dụng.
+
+### Phạm vi thực hiện
+
+- Thêm định tuyến phía trình duyệt bằng History API, không thêm phụ thuộc mới.
+- Tách các trang toàn hệ thống: tổng quan, danh sách ứng dụng, deployment, thao tác, kiểm toán và quan sát.
+- Tạo màn chi tiết cho từng `appId` với ba tab: tổng quan, triển khai, log và tài nguyên.
+- Lọc deployment và operation theo ứng dụng tại màn chi tiết; giữ màn tổng hợp cho vận hành toàn hệ thống.
+- Bổ sung empty state khi ứng dụng không có source Git và trang báo lỗi khi route/app không tồn tại.
+- Thêm integration test gọi trực tiếp 10 URL qua Gateway để kiểm tra cơ chế SPA fallback.
+
+### Kết quả thực tế
+
+- Dashboard typecheck: đạt.
+- Dashboard production build: đạt; bundle JavaScript khoảng 264,35 kB và CSS khoảng 38,45 kB trước nén.
+- Toàn bộ `make test` đạt: Runner 16/16, Control API 9/9, P0.1 9/9, P0.2 15/15, P0.2B 21/21, P0.2C 12/12, P1 observability 15/15 và Dashboard navigation 10/10.
+- P1 Dashboard navigation: 10/10 đường dẫn đạt HTTP 200 và trả entrypoint React.
+- Tám service ở trạng thái `healthy`; App A được đưa về v1.0.0 và App B tiếp tục chạy sau kiểm thử.
+- Không chạy trình duyệt, chụp ảnh hoặc responsive theo quy tắc dự án. Vì vậy không tuyên bố phiên bản Dashboard mới đã được kiểm tra trực quan/responsive.
+
+### Giới hạn cần ghi đúng
+
+- Router tự viết phù hợp tập route nhỏ hiện tại; chưa hỗ trợ route lồng/phân quyền phức tạp như router chuyên dụng.
+- API deployment và operation vẫn trả tập gần nhất rồi Dashboard lọc theo `appId`; nếu số lượng ứng dụng tăng cần bổ sung lọc/phân trang phía máy chủ.
+- Chưa có màn biến môi trường, rollback hoặc đăng ký repository mới.
+
+### Bằng chứng
+
+- `evidence/P1-DASH/2026-10-12T2134/`.
+- `docs/architecture/P1_DASHBOARD_NAVIGATION.md`.
+- `tests/integration/p1_dashboard_navigation.sh`.
