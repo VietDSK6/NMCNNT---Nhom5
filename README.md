@@ -101,6 +101,7 @@ Kết quả chuẩn hiện tại:
 - P0.2: 15/15 kiểm tra đạt.
 - P0.2B: 21 kiểm tra đạt.
 - P0.2C: 12 kiểm tra đạt.
+- P1.1A image manifest: 8/8 kiểm tra cục bộ đạt; workflow GitHub chưa chạy.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 

@@ -1,0 +1,12 @@
+sh -n scripts/ci/build-commit-images.sh
+sh -n tests/ci/p1_1a.sh
+node --check scripts/ci/verify-image-manifest.mjs
+ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
+git diff --check
+make test-unit
+make config
+make up
+make test-integration
+make test-p1-1a
+make status
+docker image inspect mini-paas/app-a:sha-b107a5255436 mini-paas/app-b:sha-b107a5255436

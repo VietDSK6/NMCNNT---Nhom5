@@ -1,0 +1,28 @@
+KẾT QUẢ KIỂM THỬ CỤC BỘ P1.1A
+
+Cú pháp shell/JavaScript/YAML: ĐẠT
+docker compose config --quiet: ĐẠT
+Deployment Runner unit test: 9/9 ĐẠT
+Control API unit test: 7/7 ĐẠT
+Dashboard production build: ĐẠT
+P0.1 smoke test: 9/9 ĐẠT
+P0.2 integration test: 15/15 ĐẠT
+P0.2B integration test: 21 ĐẠT
+P0.2C integration test: 12 ĐẠT
+P1.1A CI image test: 8/8 ĐẠT
+
+Ảnh App A:
+- reference: mini-paas/app-a:sha-b107a5255436
+- image ID: sha256:b7d20bac4e7a552dde6bfdbc6bdf55845ca574cf13e01087d335215374f7c583
+- revision: b107a5255436c88334b0693603b45a45182b260b
+- version: sha-b107a5255436
+
+Ảnh App B:
+- reference: mini-paas/app-b:sha-b107a5255436
+- image ID: sha256:9dc5cd56a7399f82780656d82a2224f2c79cd061fde97b9faad1a919d727df61
+- revision: b107a5255436c88334b0693603b45a45182b260b
+- version: sha-b107a5255436
+
+Trạng thái cuối: 6/6 service healthy; App A và App B ở v1.0.0.
+Kiểm tra giao diện bằng trình duyệt: KHÔNG CHẠY theo quy tắc dự án.
+Workflow GitHub Actions: CHƯA CHẠY vì repository chưa có remote.

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "commit": "b107a5255436c88334b0693603b45a45182b260b",
+  "tag": "sha-b107a5255436",
+  "publishStatus": "local-only",
+  "images": [
+    {
+      "application": "app-a",
+      "reference": "mini-paas/app-a:sha-b107a5255436",
+      "imageId": "sha256:b7d20bac4e7a552dde6bfdbc6bdf55845ca574cf13e01087d335215374f7c583",
+      "platform": "linux/arm64"
+    },
+    {
+      "application": "app-b",
+      "reference": "mini-paas/app-b:sha-b107a5255436",
+      "imageId": "sha256:9dc5cd56a7399f82780656d82a2224f2c79cd061fde97b9faad1a919d727df61",
+      "platform": "linux/arm64"
+    }
+  ]
+}

@@ -392,12 +392,12 @@ Nếu ngày bắt đầu hoặc deadline thực tế khác, giữ nguyên thứ 
 
 | Mã | Mục tiêu | Cách thực hiện dự kiến | Tiêu chí chấp nhận | Bằng chứng |
 |---|---|---|---|---|
-| T01 | Dựng từ máy sạch | Làm đúng README trên VM sạch hoặc snapshot sạch | Không cần bước thủ công ngoài tài liệu; mọi service bắt buộc healthy | Lệnh, thời gian, phiên bản, log Compose, ảnh truy cập |
+| T01 | Dựng từ máy sạch | Làm đúng README trên VM sạch hoặc snapshot sạch | Không cần bước thủ công ngoài tài liệu; mọi service bắt buộc healthy | Lệnh, thời gian, phiên bản, log Compose, phản hồi HTTP |
 | T02 | Triển khai App A và B | Khởi tạo hai app rồi truy cập qua Nginx | Đúng nội dung, version và mã HTTP; app không mở cổng host trực tiếp | curl, access log, inspect network; ảnh chỉ khi được yêu cầu |
 | T03 | Cập nhật App A v1 lên v2 | Deploy v1, ghi trạng thái, cập nhật v2, kiểm tra health | Version/digest thay đổi đúng; ghi được thời gian và gián đoạn thực tế | Phản hồi API trước/sau, operation log, digest, timestamp |
-| T04 | Dừng/khởi động lại | Stop/restart app, quan sát API, UI và truy cập | Trạng thái phản ánh đúng; log ghi nguyên nhân/kết quả; truy cập phục hồi | Timeline, health, HTTP response, container log |
-| T05 | Giám sát tài nguyên | Tạo tải nhẹ và quan sát CPU/RAM | Có metric thật, cùng timestamp và giải thích đúng ý nghĩa | Export Grafana/Prometheus, ảnh, dữ liệu thô |
-| T06 | Kiểm thử tải | Warm-up rồi chạy các mức tải cố định | Có p95, throughput, error rate, CPU/RAM; điều kiện so sánh giữ nguyên | File k6, JSON/CSV, dashboard, bảng tổng hợp |
+| T04 | Dừng/khởi động lại | Stop/restart app, quan sát API và truy cập | Trạng thái phản ánh đúng; log ghi nguyên nhân/kết quả; truy cập phục hồi | Timeline, health, HTTP response, container log |
+| T05 | Giám sát tài nguyên | Tạo tải nhẹ và quan sát CPU/RAM | Có metric thật, cùng timestamp và giải thích đúng ý nghĩa | Export Prometheus/Grafana và dữ liệu thô; ảnh chỉ khi được yêu cầu |
+| T06 | Kiểm thử tải | Warm-up rồi chạy các mức tải cố định | Có p95, throughput, error rate, CPU/RAM; điều kiện so sánh giữ nguyên | File k6, JSON/CSV, dữ liệu metric và bảng tổng hợp |
 | T07 | Truy cập quản trị không hợp lệ | Gọi API không đăng nhập, session sai và action không cho phép | Trả 401/403; không thực thi Docker action; có audit phù hợp | HTTP transcript, API log, operation table |
 | T08 | Khôi phục theo tài liệu | Dừng/xóa container có kiểm soát rồi redeploy theo README | Dịch vụ và cấu hình cần thiết được phục hồi; không dùng lệnh phá hủy ngoài phạm vi | Lệnh, thời gian, log, ảnh trước/sau |
 
