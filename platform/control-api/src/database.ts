@@ -86,6 +86,24 @@ export interface DeploymentRecord {
   readonly finishedAt: string | null;
 }
 
+export type ReleaseOrigin = "catalog" | "source" | "rollback";
+
+export interface ReleaseRecord {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly origin: ReleaseOrigin;
+  readonly version: string;
+  readonly imageReference: string;
+  readonly imageId: string;
+  readonly sourceId: string | null;
+  readonly commitSha: string | null;
+  readonly deploymentId: string | null;
+  readonly rollbackOfReleaseId: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+}
+
 const migration001 = `
   CREATE TABLE users (
     id TEXT PRIMARY KEY,
@@ -191,6 +209,39 @@ const migration004 = `
     ON application_environment_variables(application_id);
 `;
 
+const migration005 = `
+  CREATE TABLE releases (
+    id TEXT PRIMARY KEY,
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
+    origin TEXT NOT NULL CHECK(origin IN ('catalog', 'source', 'rollback')),
+    version TEXT NOT NULL,
+    image_reference TEXT NOT NULL,
+    image_id TEXT NOT NULL,
+    source_id TEXT,
+    commit_sha TEXT,
+    deployment_id TEXT UNIQUE REFERENCES deployments(id) ON DELETE SET NULL,
+    rollback_of_release_id TEXT REFERENCES releases(id) ON DELETE SET NULL,
+    requested_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX releases_application_created_idx
+    ON releases(application_id, created_at DESC);
+
+  INSERT INTO releases (
+    id, application_id, origin, version, image_reference, image_id,
+    source_id, commit_sha, deployment_id, requested_by, created_at
+  )
+  SELECT
+    lower(hex(randomblob(16))), application_id, 'source', version,
+    image_reference, image_id, source_id, commit_sha, id, requested_by,
+    COALESCE(finished_at, created_at)
+  FROM deployments
+  WHERE status = 'succeeded'
+    AND version IS NOT NULL
+    AND image_reference IS NOT NULL
+    AND image_id IS NOT NULL;
+`;
+
 export class ControlDatabase {
   readonly #db: DatabaseSync;
 
@@ -242,6 +293,17 @@ export class ControlDatabase {
       try {
         this.#db.exec(migration004);
         this.#db.exec("PRAGMA user_version = 4;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
+    }
+    if (version.user_version < 5) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration005);
+        this.#db.exec("PRAGMA user_version = 5;");
         this.#db.exec("COMMIT;");
       } catch (error) {
         this.#db.exec("ROLLBACK;");
@@ -563,6 +625,91 @@ export class ControlDatabase {
       createdAt: String(row.created_at),
       startedAt: row.started_at === null ? null : String(row.started_at),
       finishedAt: row.finished_at === null ? null : String(row.finished_at),
+    };
+  }
+
+  createRelease(input: {
+    applicationId: string;
+    origin: ReleaseOrigin;
+    version: string;
+    imageReference: string;
+    imageId: string;
+    sourceId?: string;
+    commitSha?: string;
+    deploymentId?: string;
+    rollbackOfReleaseId?: string;
+    requestedBy: string;
+  }): ReleaseRecord {
+    const id = randomUUID();
+    this.#db.prepare(`
+      INSERT INTO releases (
+        id, application_id, origin, version, image_reference, image_id,
+        source_id, commit_sha, deployment_id, rollback_of_release_id,
+        requested_by, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      input.applicationId,
+      input.origin,
+      input.version,
+      input.imageReference,
+      input.imageId,
+      input.sourceId ?? null,
+      input.commitSha ?? null,
+      input.deploymentId ?? null,
+      input.rollbackOfReleaseId ?? null,
+      input.requestedBy,
+      new Date().toISOString(),
+    );
+    return this.findRelease(id)!;
+  }
+
+  findRelease(id: string): ReleaseRecord | undefined {
+    const row = this.#db.prepare(`
+      SELECT releases.*, applications.name AS application_name
+      FROM releases
+      JOIN applications ON applications.id = releases.application_id
+      WHERE releases.id = ?
+    `).get(id) as Record<string, unknown> | undefined;
+    return row ? this.#releaseFromRow(row) : undefined;
+  }
+
+  listReleases(limit: number, applicationId?: string): readonly ReleaseRecord[] {
+    const query = applicationId
+      ? `
+        SELECT releases.*, applications.name AS application_name
+        FROM releases
+        JOIN applications ON applications.id = releases.application_id
+        WHERE releases.application_id = ?
+        ORDER BY releases.created_at DESC LIMIT ?
+      `
+      : `
+        SELECT releases.*, applications.name AS application_name
+        FROM releases
+        JOIN applications ON applications.id = releases.application_id
+        ORDER BY releases.created_at DESC LIMIT ?
+      `;
+    const rows = applicationId
+      ? this.#db.prepare(query).all(applicationId, limit)
+      : this.#db.prepare(query).all(limit);
+    return (rows as readonly Record<string, unknown>[]).map((row) => this.#releaseFromRow(row));
+  }
+
+  #releaseFromRow(row: Record<string, unknown>): ReleaseRecord {
+    return {
+      id: String(row.id),
+      applicationId: String(row.application_id),
+      applicationName: String(row.application_name),
+      origin: String(row.origin) as ReleaseOrigin,
+      version: String(row.version),
+      imageReference: String(row.image_reference),
+      imageId: String(row.image_id),
+      sourceId: row.source_id === null ? null : String(row.source_id),
+      commitSha: row.commit_sha === null ? null : String(row.commit_sha),
+      deploymentId: row.deployment_id === null ? null : String(row.deployment_id),
+      rollbackOfReleaseId: row.rollback_of_release_id === null ? null : String(row.rollback_of_release_id),
+      requestedBy: String(row.requested_by),
+      createdAt: String(row.created_at),
     };
   }
 

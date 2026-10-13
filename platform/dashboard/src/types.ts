@@ -43,6 +43,7 @@ export interface ApplicationItem {
     readonly containerId: string | null;
     readonly containerName: string | null;
     readonly image: string | null;
+    readonly imageId: string | null;
     readonly observedVersion: string | null;
     readonly health: string | null;
     readonly startedAt: string | null;
@@ -119,6 +120,28 @@ export interface SourcesResponse {
 
 export interface DeploymentsResponse {
   readonly data: readonly DeploymentItem[];
+}
+
+export type ReleaseOrigin = "catalog" | "source" | "rollback";
+
+export interface ReleaseItem {
+  readonly id: string;
+  readonly applicationId: string;
+  readonly applicationName: string;
+  readonly origin: ReleaseOrigin;
+  readonly version: string;
+  readonly imageReference: string;
+  readonly imageId: string;
+  readonly sourceId: string | null;
+  readonly commitSha: string | null;
+  readonly deploymentId: string | null;
+  readonly rollbackOfReleaseId: string | null;
+  readonly requestedBy: string;
+  readonly createdAt: string;
+}
+
+export interface ReleasesResponse {
+  readonly data: readonly ReleaseItem[];
 }
 
 export interface ApplicationLogLine {

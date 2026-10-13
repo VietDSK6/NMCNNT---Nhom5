@@ -9,6 +9,8 @@ import type {
   OperationAction,
   OperationItem,
   OperationsResponse,
+  ReleaseItem,
+  ReleasesResponse,
   SourcesResponse,
   UserSession,
 } from "./types";
@@ -56,9 +58,14 @@ export const api = {
   operations: () => request<OperationsResponse>("/api/v1/operations?limit=12"),
   sources: () => request<SourcesResponse>("/api/v1/sources"),
   deployments: () => request<DeploymentsResponse>("/api/v1/deployments?limit=12"),
+  releases: () => request<ReleasesResponse>("/api/v1/releases?limit=30"),
   deploySource: (sourceId: string, commit: string) => request<{ data: DeploymentItem }>(
     "/api/v1/deployments",
     { method: "POST", body: JSON.stringify({ sourceId, commit }) },
+  ),
+  rollbackRelease: (releaseId: string) => request<{ data: ReleaseItem; message: string }>(
+    `/api/v1/releases/${encodeURIComponent(releaseId)}/rollback`,
+    { method: "POST" },
   ),
   execute: (appId: string, action: OperationAction, version?: string) => request<{ data: OperationItem }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/actions`,

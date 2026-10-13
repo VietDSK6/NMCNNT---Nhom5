@@ -427,3 +427,37 @@ Lần chạy tích hợp đầu tiên nhận HTTP 504 ở Gateway. Nguyên nhân
 - `docs/architecture/P1_ENVIRONMENT_VARIABLES.md`.
 - `docs/decisions/0008-encrypted-application-environment.md`.
 - `tests/integration/p1_environment.sh`.
+
+## 13/10/2026 — P2: lịch sử release và rollback
+
+### Phạm vi thực hiện
+
+- Thêm migration 005 và bảng release bất biến cho cập nhật catalog, deployment Git và rollback.
+- Lưu version, image reference, image ID, source/commit, người thực hiện và release đích.
+- Thêm API đọc release và rollback theo `releaseId`; Dashboard không gửi image tùy ý.
+- Runner kiểm tra allowlist và image ID trước khi thay container, giữ biến môi trường đang quản lý.
+- Thêm vùng **Release có thể rollback** trong tab Triển khai của từng ứng dụng.
+- Thêm audit `release.rollback`, tài liệu kiến trúc, ADR và kịch bản tích hợp container thật.
+
+### Kết quả thực tế
+
+- Runner unit test: 23/23 đạt.
+- Control API unit/API test: 13/13 đạt.
+- Dashboard production build: đạt; không chạy trình duyệt/responsive theo quy tắc dự án.
+- P2 Release History / Rollback: 17 kiểm tra tích hợp đạt.
+- App A được đưa v2 → v1 → rollback đúng image ID v2 → dọn về v1.
+- Audit ghi nhận rollback; yêu cầu chưa đăng nhập bị từ chối.
+
+### Giới hạn cần ghi đúng
+
+- Rollback phụ thuộc image còn trên cùng Docker host; metadata SQLite không thay thế registry.
+- Nếu tag trỏ sang image ID khác, Runner từ chối thay vì chạy nhầm.
+- Thay một replica gây gián đoạn ngắn và chưa phải zero-downtime.
+- Chưa nghiệm thu trên VPS Linux.
+
+### Bằng chứng
+
+- `evidence/P2-rollback/2026-10-13-macos/`.
+- `docs/architecture/P2_RELEASE_ROLLBACK.md`.
+- `docs/decisions/0009-local-release-rollback.md`.
+- `tests/integration/p2_release_rollback.sh`.

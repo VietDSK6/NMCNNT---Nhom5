@@ -17,9 +17,11 @@
 - Lát cắt giám sát chuỗi thời gian đã hoàn thành ngày 12/10/2026: Runner exporter → Prometheus → Grafana, 15/15 kiểm tra tích hợp đạt. Dashboard Grafana có sáu vùng và ba alert rule đã được nạp; chưa có Alertmanager/kênh thông báo.
 - MVP hiện có hai app, Gateway, Dashboard, Control API, SQLite, Runner, vòng đời ứng dụng, cập nhật v1/v2, log gần nhất và snapshot CPU/RAM/PID/mạng.
 - G1 và phần kỹ thuật của G2 đã đạt trên môi trường phát triển sớm hơn lịch dự kiến; chưa thay thế nghiệm thu máy Linux sạch hoặc VPS.
-- T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T01/T02 cần chạy lại trên môi trường sạch; T06/T08 và kết quả VPS chưa hoàn tất.
+- T03, T04, T05 phần phát triển và T07 đã có bằng chứng. T06 đã có vòng phát triển cùng dữ liệu gốc; T01/T02/T06 cần nghiệm thu lại trên VPS Linux và T08 chưa chạy.
+- Quản lý biến môi trường có mã hóa/che secret đã đạt 21 kiểm tra tích hợp ngày 13/10/2026.
+- Lịch sử release và rollback theo image ID cục bộ đã đạt 17 kiểm tra tích hợp ngày 13/10/2026; chưa có registry digest.
 - Bản nháp Chương 3 đã được tạo song song tại `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
-- Bước tiếp theo của P1 là k6, dữ liệu đo gốc và nghiệm thu lại luồng Git/giám sát trên Linux/VPS; không mở P2 trước khi các phần này ổn định.
+- Bước ưu tiên tiếp theo là tạo release candidate trên Linux/VPS, nghiệm thu lại luồng Git/giám sát/biến môi trường/rollback và lặp phép đo k6; các mở rộng khác không được trì hoãn hồ sơ nộp.
 - Theo quyết định của chủ dự án, từ ngày 12/10/2026 không chạy kiểm tra responsive hoặc kiểm tra trực quan bằng trình duyệt ở bất kỳ giai đoạn nào, trừ khi được yêu cầu riêng. Dashboard vẫn phải qua typecheck/build và các kiểm thử chức năng qua API/unit/integration; không được ghi responsive là đã xác minh cho thay đổi mới nếu chưa kiểm tra.
 - Yêu cầu nộp mới: báo cáo 12–18 trang nội dung chính, video 5–7 phút, bảng kiểm thử đủ đầu vào/thao tác/kỳ vọng/thực tế/kết quả/bằng chứng có dấu thời gian, dữ liệu đo gốc, bảng tài nguyên/IP/quyền, phiếu đóng góp cá nhân và khai báo nguồn tham khảo/cách dùng AI.
 - Nhóm có 04 thành viên. Mỗi người phải có sản phẩm kỹ thuật riêng; nhiệm vụ chỉ tìm tài liệu hoặc viết báo cáo không đủ điều kiện đóng góp cá nhân.

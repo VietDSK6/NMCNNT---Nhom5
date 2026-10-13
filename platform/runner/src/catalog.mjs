@@ -89,3 +89,36 @@ export function validateAction(appId, action, version) {
 
   return { spec, action, version };
 }
+
+export function validateRollbackTarget(appId, input) {
+  const spec = getAppSpec(appId);
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new RunnerInputError("invalid_rollback_target", "Release cần rollback không hợp lệ.");
+  }
+  const { version, imageReference, imageId, sourceId, commitSha } = input;
+  if (typeof version !== "string" || typeof imageReference !== "string") {
+    throw new RunnerInputError("invalid_rollback_target", "Release thiếu phiên bản hoặc image reference.");
+  }
+  if (typeof imageId !== "string" || !/^sha256:[0-9a-f]{64}$/.test(imageId)) {
+    throw new RunnerInputError("invalid_release_image_id", "Image ID của release không hợp lệ.");
+  }
+
+  if (sourceId !== undefined || commitSha !== undefined) {
+    if (typeof sourceId !== "string" || typeof commitSha !== "string") {
+      throw new RunnerInputError("invalid_rollback_source", "Release Git thiếu source hoặc commit.");
+    }
+    const source = getSourceSpec(sourceId);
+    const commit = validateCommitSha(commitSha);
+    const expectedVersion = `git-${commit.slice(0, 12)}`;
+    const expectedReference = `${source.imageRepository}:${expectedVersion}`;
+    if (source.appId !== appId || version !== expectedVersion || imageReference !== expectedReference) {
+      throw new RunnerInputError("rollback_target_not_allowed", "Release Git không thuộc ứng dụng được phép rollback.", 409);
+    }
+    return { spec, version, imageReference, imageId, sourceId, commitSha: commit };
+  }
+
+  if (spec.versions[version] !== imageReference) {
+    throw new RunnerInputError("rollback_target_not_allowed", "Release không thuộc danh mục phiên bản của ứng dụng.", 409);
+  }
+  return { spec, version, imageReference, imageId };
+}

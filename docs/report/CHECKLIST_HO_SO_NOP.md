@@ -35,6 +35,7 @@ Phụ lục dự kiến:
 - [ ] Bảng tài nguyên/IP/quyền bản VPS đã đối soát.
 - [x] Script/cấu hình monitoring Prometheus/Grafana, kiểm thử tích hợp và kịch bản k6 có dữ liệu vòng phát triển; còn phải chạy lại trên VPS Linux.
 - [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và kiểm thử tích hợp vòng phát triển; còn phải nghiệm thu trên VPS Linux.
+- [x] Lịch sử release và rollback theo image ID cục bộ có kiểm thử tích hợp; còn phải nghiệm thu VPS và chưa có registry digest.
 - [ ] Gói release cuối không chứa secret.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.

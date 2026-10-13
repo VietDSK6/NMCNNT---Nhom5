@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAppSpec, getSourceSpec, listPublicSources, validateAction, validateCommitSha } from "./catalog.mjs";
+import { getAppSpec, getSourceSpec, listPublicSources, validateAction, validateCommitSha, validateRollbackTarget } from "./catalog.mjs";
 
 test("chỉ chấp nhận ứng dụng trong danh sách cho phép", () => {
   assert.equal(getAppSpec("app-a").service, "app-a");
@@ -28,4 +28,35 @@ test("chỉ chấp nhận source được khai báo và commit SHA đầy đủ"
     repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
     appId: "app-a",
   }]);
+});
+
+test("rollback chỉ chấp nhận image thuộc catalog hoặc source tin cậy", () => {
+  const imageId = `sha256:${"1".repeat(64)}`;
+  assert.equal(validateRollbackTarget("app-a", {
+    version: "v2.0.0",
+    imageReference: "mini-paas/app-a:v2.0.0",
+    imageId,
+  }).version, "v2.0.0");
+
+  const commit = "a".repeat(40);
+  assert.equal(validateRollbackTarget("app-a", {
+    version: `git-${"a".repeat(12)}`,
+    imageReference: `mini-paas/app-a:git-${"a".repeat(12)}`,
+    imageId,
+    sourceId: "github-app-a",
+    commitSha: commit,
+  }).commitSha, commit);
+
+  assert.throws(() => validateRollbackTarget("app-a", {
+    version: "latest",
+    imageReference: "attacker.example/image:latest",
+    imageId,
+  }), { code: "rollback_target_not_allowed" });
+  assert.throws(() => validateRollbackTarget("app-b", {
+    version: `git-${"a".repeat(12)}`,
+    imageReference: `mini-paas/app-a:git-${"a".repeat(12)}`,
+    imageId,
+    sourceId: "github-app-a",
+    commitSha: commit,
+  }), { code: "rollback_target_not_allowed" });
 });

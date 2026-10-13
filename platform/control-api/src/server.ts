@@ -5,6 +5,7 @@ import {
   type DeploymentRecord,
   type OperationAction,
   type OperationRecord,
+  type ReleaseRecord,
   type SessionUser,
 } from "./database.js";
 import { inspectApplication } from "./health.js";
@@ -82,6 +83,19 @@ function observationFailure(error: unknown): { statusCode: number; code: string;
   return { statusCode: 502, code: "runner_unavailable", message: "Không thể đọc dữ liệu quan sát từ Deployment Runner." };
 }
 
+function runnerMutationFailure(error: unknown): { statusCode: number; code: string; message: string } {
+  if (error instanceof RunnerRequestError) {
+    if ([400, 404, 409, 413].includes(error.statusCode)) {
+      return { statusCode: error.statusCode, code: error.code, message: error.message };
+    }
+    return { statusCode: 502, code: "runner_unavailable", message: "Deployment Runner không thể hoàn tất thao tác." };
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return { statusCode: 504, code: "runner_timeout", message: "Quá thời gian chờ Deployment Runner phản hồi." };
+  }
+  return { statusCode: 502, code: "runner_unavailable", message: "Deployment Runner không thể hoàn tất thao tác." };
+}
+
 export function createServer(config: AppConfig, db: ControlDatabase, options: ServerOptions = {}) {
   const server = Fastify({
     logger: options.logger ?? true,
@@ -96,6 +110,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
   const environmentCipher = new EnvironmentCipher(config.environmentEncryptionKey);
   const activeTasks = new Set<Promise<void>>();
   const activeEnvironmentUpdates = new Set<string>();
+  const activeRollbacks = new Set<string>();
 
   server.addHook("onRequest", async (_request, reply) => {
     reply
@@ -142,6 +157,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     readonly containerId: null;
     readonly containerName: null;
     readonly image: null;
+    readonly imageId: null;
     readonly observedVersion: null;
     readonly health: null;
     readonly startedAt: null;
@@ -157,6 +173,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
         containerId: null,
         containerName: null,
         image: null,
+        imageId: null,
         observedVersion: null,
         health: null,
         startedAt: null,
@@ -180,6 +197,14 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
       );
       if (operation.action === "update" && operation.requestedVersion) {
         db.setDesiredVersion(operation.applicationId, operation.requestedVersion);
+        db.createRelease({
+          applicationId: operation.applicationId,
+          origin: "catalog",
+          version: operation.requestedVersion,
+          imageReference: result.runtime.image,
+          imageId: result.runtime.imageId,
+          requestedBy: actor.username,
+        });
       }
       db.finishOperation(operation.id, "succeeded", result.message);
       db.addAudit({
@@ -225,6 +250,17 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
         imageReference: result.imageReference,
         imageId: result.imageId,
         buildLog: result.log,
+      });
+      db.createRelease({
+        applicationId: deployment.applicationId,
+        origin: "source",
+        version: result.version,
+        imageReference: result.imageReference,
+        imageId: result.imageId,
+        sourceId: deployment.sourceId,
+        commitSha: deployment.commitSha,
+        deploymentId: deployment.id,
+        requestedBy: actor.username,
       });
       db.addAudit({
         actorUserId: actor.id,
@@ -438,7 +474,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     if (request.body.action !== "update" && request.body.version) {
       return reply.code(400).send({ error: "unexpected_version", message: "Thao tác này không nhận phiên bản đích." });
     }
-    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id)) {
+    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id) || activeRollbacks.has(application.id)) {
       return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
     }
 
@@ -513,7 +549,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     if (!application) {
       return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần cấu hình." });
     }
-    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id)) {
+    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id) || activeRollbacks.has(application.id)) {
       return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
     }
 
@@ -616,7 +652,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     if (!application) {
       return reply.code(409).send({ error: "source_application_missing", message: "Kho mã chưa được gắn với ứng dụng trong hệ thống." });
     }
-    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id)) {
+    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id) || activeRollbacks.has(application.id)) {
       return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
     }
 
@@ -629,6 +665,101 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     });
     trackOperation(executeSourceDeployment(deployment, user, requestIp(request)));
     return reply.code(202).send({ data: deployment });
+  });
+
+  server.get<{ Querystring: { limit?: number; applicationId?: string } }>("/api/v1/releases", {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+          applicationId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    if (request.query.applicationId && !db.findApplication(request.query.applicationId)) {
+      return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần đọc lịch sử release." });
+    }
+    return { data: db.listReleases(request.query.limit ?? 20, request.query.applicationId) };
+  });
+
+  server.post<{ Params: { releaseId: string } }>("/api/v1/releases/:releaseId/rollback", {
+    schema: {
+      params: {
+        type: "object",
+        additionalProperties: false,
+        required: ["releaseId"],
+        properties: { releaseId: { type: "string", minLength: 1, maxLength: 64 } },
+      },
+    },
+  }, async (request, reply) => {
+    if (!enforceSameOrigin(request, reply)) return;
+    const user = requireUser(request, reply);
+    if (!user) return;
+    const target = db.findRelease(request.params.releaseId);
+    if (!target) {
+      return reply.code(404).send({ error: "release_not_found", message: "Không tìm thấy release cần rollback." });
+    }
+    const application = db.findApplication(target.applicationId);
+    if (!application) {
+      return reply.code(409).send({ error: "release_application_missing", message: "Ứng dụng của release không còn trong hệ thống." });
+    }
+    if (db.findActiveOperation(application.id) || db.findActiveDeployment(application.id) || activeEnvironmentUpdates.has(application.id) || activeRollbacks.has(application.id)) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+
+    activeRollbacks.add(application.id);
+    try {
+      const result = await runnerClient.rollback(application.id, {
+        version: target.version,
+        imageReference: target.imageReference,
+        imageId: target.imageId,
+        ...(target.sourceId ? { sourceId: target.sourceId } : {}),
+        ...(target.commitSha ? { commitSha: target.commitSha } : {}),
+      });
+      db.setDesiredVersion(application.id, target.version);
+      const createdRelease: ReleaseRecord = db.createRelease({
+        applicationId: application.id,
+        origin: "rollback",
+        version: target.version,
+        imageReference: target.imageReference,
+        imageId: target.imageId,
+        ...(target.sourceId ? { sourceId: target.sourceId } : {}),
+        ...(target.commitSha ? { commitSha: target.commitSha } : {}),
+        rollbackOfReleaseId: target.id,
+        requestedBy: user.username,
+      });
+      db.addAudit({
+        actorUserId: user.id,
+        actorUsername: user.username,
+        action: "release.rollback",
+        resourceType: "release",
+        resourceId: createdRelease.id,
+        outcome: "succeeded",
+        detail: `Rollback ${application.id} về ${target.version} từ release ${target.id}.`,
+        ipAddress: requestIp(request),
+      });
+      return { data: createdRelease, runtime: result.runtime, message: result.message };
+    } catch (error) {
+      const failure = runnerMutationFailure(error);
+      db.addAudit({
+        actorUserId: user.id,
+        actorUsername: user.username,
+        action: "release.rollback",
+        resourceType: "release",
+        resourceId: target.id,
+        outcome: "failed",
+        detail: failure.message,
+        ipAddress: requestIp(request),
+      });
+      return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
+    } finally {
+      activeRollbacks.delete(application.id);
+    }
   });
 
   server.get<{ Params: { appId: string }; Querystring: { tail?: number } }>("/api/v1/applications/:appId/logs", {

@@ -13,6 +13,7 @@ const runtime = {
   prometheusMetrics: async () => '# TYPE mini_paas_app_running gauge\nmini_paas_app_running{app_id="app-a"} 1\n',
   execute: async (appId, action, version) => ({ message: "done", runtime: { appId, action, version } }),
   configureEnvironment: async (appId, variables) => ({ message: "configured", runtime: { appId, variableCount: variables.length } }),
+  rollback: async (appId, target) => ({ message: "rolled back", runtime: { appId, version: target.version, imageId: target.imageId } }),
 };
 const logger = { info() {}, error() {} };
 const server = createRunnerServer({ runtime, token, logger });
@@ -105,6 +106,22 @@ test("cấu hình biến môi trường qua API nội bộ mà không ghi giá t
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.data.runtime.variableCount, 1);
   assert.doesNotMatch(JSON.stringify(response.body), /Xin chào/);
+});
+
+test("rollback release qua API nội bộ có xác thực", async () => {
+  const imageId = `sha256:${"1".repeat(64)}`;
+  const response = await invoke({
+    method: "POST",
+    path: "/v1/apps/app-a/rollbacks",
+    headers: { "x-runner-token": token, "content-type": "application/json" },
+    body: {
+      version: "v1.0.0",
+      imageReference: "mini-paas/app-a:v1.0.0",
+      imageId,
+    },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.data.runtime.imageId, imageId);
 });
 
 test("liệt kê source tin cậy và yêu cầu triển khai theo commit", async () => {

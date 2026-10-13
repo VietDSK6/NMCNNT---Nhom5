@@ -26,6 +26,7 @@ import type {
   DeploymentItem,
   OperationAction,
   OperationItem,
+  ReleaseItem,
   TrustedSource,
   UserSession,
 } from "./types";
@@ -44,6 +45,7 @@ const actionLabels: Record<string, string> = {
   "application.update": "Cập nhật phiên bản",
   "application.environment.update": "Cập nhật biến môi trường",
   "deployment.create": "Triển khai từ Git",
+  "release.rollback": "Khôi phục phiên bản",
 };
 
 const operationActionLabels: Record<OperationAction, string> = {
@@ -65,6 +67,12 @@ const deploymentStatusLabels: Record<DeploymentItem["status"], string> = {
   running: "Đang build",
   succeeded: "Thành công",
   failed: "Thất bại",
+};
+
+const releaseOriginLabels: Record<ReleaseItem["origin"], string> = {
+  catalog: "Cập nhật phiên bản",
+  source: "Triển khai từ Git",
+  rollback: "Khôi phục phiên bản",
 };
 
 function formatDateTime(value: string): string {
@@ -431,6 +439,83 @@ function GitDeploymentPanel({
         )}
       </div>
     </div>
+  );
+}
+
+function ReleaseHistoryPanel({
+  application,
+  releases,
+  submittingReleaseId,
+  onRollback,
+}: {
+  readonly application: ApplicationItem;
+  readonly releases: readonly ReleaseItem[];
+  readonly submittingReleaseId: string | null;
+  readonly onRollback: (release: ReleaseItem) => void;
+}) {
+  const observedVersion = application.observedVersion || application.runtime.observedVersion;
+  const [confirmingReleaseId, setConfirmingReleaseId] = useState<string | null>(null);
+  const currentReleaseId = releases.find((release) => (
+    release.version === observedVersion
+      && release.imageId === application.runtime.imageId
+  ))?.id;
+  return (
+    <section className="release-history" aria-labelledby="release-history-title">
+      <div className="release-history__heading">
+        <div>
+          <span className="eyebrow">LỊCH SỬ PHIÊN BẢN</span>
+          <h3 id="release-history-title">Các mốc có thể rollback</h3>
+          <p>Runner chỉ dùng image còn tồn tại và có image ID khớp với bản ghi đã lưu trên Docker host.</p>
+        </div>
+        <span>{releases.length} release gần nhất</span>
+      </div>
+      {releases.length === 0 ? (
+        <div className="deployment-empty"><HistoryIcon /><span><strong>Chưa có release</strong>Cập nhật phiên bản hoặc triển khai một commit thành công để tạo mốc rollback.</span></div>
+      ) : (
+        <div className="release-history__list">
+          {releases.map((release) => {
+            const isCurrent = release.id === currentReleaseId;
+            const isSubmitting = submittingReleaseId === release.id;
+            return (
+              <article className="release-history__item" key={release.id}>
+                <div className="release-history__identity">
+                  <span>{releaseOriginLabels[release.origin]}</span>
+                  <strong className="mono">{release.version}</strong>
+                  <small>{release.commitSha ? `Commit ${release.commitSha.slice(0, 12)}` : release.imageReference}</small>
+                </div>
+                <div className="release-history__meta">
+                  <span>{formatDateTime(release.createdAt)}</span>
+                  <span>{release.requestedBy}</span>
+                </div>
+                {confirmingReleaseId === release.id ? (
+                  <div className="release-history__actions">
+                    <button className="button button--secondary" type="button" onClick={() => setConfirmingReleaseId(null)}>Giữ phiên bản hiện tại</button>
+                    <button
+                      className="button button--danger"
+                      type="button"
+                      onClick={() => {
+                        setConfirmingReleaseId(null);
+                        onRollback(release);
+                      }}
+                    >Xác nhận rollback</button>
+                  </div>
+                ) : (
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    disabled={isCurrent || submittingReleaseId !== null}
+                    onClick={() => setConfirmingReleaseId(release.id)}
+                  >
+                    <HistoryIcon />{isCurrent ? "Đang chạy" : isSubmitting ? "Đang rollback…" : "Rollback về đây"}
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+      <p className="bounded-note"><AlertIcon />Rollback hiện dùng image cục bộ trên một host. Nếu image đã bị xóa hoặc thay đổi nội dung, hệ thống sẽ từ chối thao tác.</p>
+    </section>
   );
 }
 
@@ -879,10 +964,12 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
   const [operations, setOperations] = useState<readonly OperationItem[]>([]);
   const [sources, setSources] = useState<readonly TrustedSource[]>([]);
   const [deployments, setDeployments] = useState<readonly DeploymentItem[]>([]);
+  const [releases, setReleases] = useState<readonly ReleaseItem[]>([]);
   const [auditEvents, setAuditEvents] = useState<readonly AuditEvent[]>([]);
   const [refreshing, setRefreshing] = useState(true);
   const [submittingApp, setSubmittingApp] = useState<string | null>(null);
   const [submittingDeployment, setSubmittingDeployment] = useState(false);
+  const [submittingReleaseId, setSubmittingReleaseId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const pathname = useDashboardPath();
@@ -892,17 +979,19 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     if (!quiet) setRefreshing(true);
     setError("");
     try {
-      const [apps, operationHistory, sourceCatalog, deploymentHistory, audit] = await Promise.all([
+      const [apps, operationHistory, sourceCatalog, deploymentHistory, releaseHistory, audit] = await Promise.all([
         api.applications(),
         api.operations(),
         api.sources(),
         api.deployments(),
+        api.releases(),
         api.audit(),
       ]);
       setApplications(apps);
       setOperations(operationHistory.data);
       setSources(sourceCatalog.data);
       setDeployments(deploymentHistory.data);
+      setReleases(releaseHistory.data);
       setAuditEvents(audit.data);
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 401) {
@@ -957,6 +1046,21 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     }
   }
 
+  async function rollbackRelease(release: ReleaseItem) {
+    setSubmittingReleaseId(release.id);
+    setError("");
+    setNotice("");
+    try {
+      await api.rollbackRelease(release.id);
+      setNotice(`Đã rollback ${release.applicationName} về ${release.version}.`);
+      await loadData(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể rollback release.");
+    } finally {
+      setSubmittingReleaseId(null);
+    }
+  }
+
   async function logout() {
     try { await api.logout(); } finally { onLoggedOut(); }
   }
@@ -980,6 +1084,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     const applicationDeployments = deployments.filter((deployment) => deployment.applicationId === application.id);
     const applicationOperations = operations.filter((operation) => operation.applicationId === application.id);
     const applicationSources = sources.filter((source) => source.appId === application.id);
+    const applicationReleases = releases.filter((release) => release.applicationId === application.id);
     const basePath = `/applications/${application.id}`;
 
     return (
@@ -1023,6 +1128,12 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
               deployments={applicationDeployments}
               submitting={submittingDeployment}
               onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+            />
+            <ReleaseHistoryPanel
+              application={application}
+              releases={applicationReleases}
+              submittingReleaseId={submittingReleaseId}
+              onRollback={(release) => void rollbackRelease(release)}
             />
           </section>
         )}

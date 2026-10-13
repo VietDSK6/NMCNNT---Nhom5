@@ -102,7 +102,7 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
-    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats|environment))?$/);
+    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats|environment|rollbacks))?$/);
     if (!match) {
       json(response, 404, { error: "not_found", message: "Không tìm thấy tài nguyên yêu cầu." });
       return;
@@ -148,6 +148,17 @@ export function createRunnerServer({ runtime, token, logger = console }) {
         }
         const result = await runtime.configureEnvironment(appId, body.variables);
         logger.info?.({ appId, variableCount: body.variables.length, result: "succeeded" }, "runner_environment_updated");
+        json(response, 200, { data: result });
+        return;
+      }
+      if (request.method === "POST" && resource === "rollbacks") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+          json(response, 400, { error: "validation_error", message: "Release cần rollback không hợp lệ." });
+          return;
+        }
+        const result = await runtime.rollback(appId, body);
+        logger.info?.({ appId, version: body.version, result: "succeeded" }, "runner_rollback_completed");
         json(response, 200, { data: result });
         return;
       }

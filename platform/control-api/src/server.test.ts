@@ -60,6 +60,7 @@ const runnerClient: RunnerClient = {
       containerId: "0123456789ab",
       containerName: "mini-paas-app-a-1",
       image: `mini-paas/app-a:git-${commit.slice(0, 12)}`,
+      imageId: `sha256:${"1".repeat(64)}`,
       observedVersion: `git-${commit.slice(0, 12)}`,
       health: "healthy",
       startedAt: "2026-10-12T00:00:00.000Z",
@@ -72,6 +73,7 @@ const runnerClient: RunnerClient = {
     containerId: "0123456789ab",
     containerName: `mini-paas-${appId}-1`,
     image: `mini-paas/${appId}:v1.0.0`,
+    imageId: `sha256:${"1".repeat(64)}`,
     observedVersion: "v1.0.0",
     health: "healthy",
     startedAt: "2026-10-11T00:00:00.000Z",
@@ -105,6 +107,7 @@ const runnerClient: RunnerClient = {
       containerId: "0123456789ab",
       containerName: `mini-paas-${appId}-1`,
       image: `mini-paas/${appId}:${version ?? "v1.0.0"}`,
+      imageId: `sha256:${(version === "v2.0.0" ? "2" : "1").repeat(64)}`,
       observedVersion: version ?? "v1.0.0",
       health: "healthy",
       startedAt: "2026-10-11T00:00:00.000Z",
@@ -119,10 +122,26 @@ const runnerClient: RunnerClient = {
       containerId: "0123456789ab",
       containerName: `mini-paas-${appId}-1`,
       image: `mini-paas/${appId}:v1.0.0`,
+      imageId: `sha256:${"1".repeat(64)}`,
       observedVersion: "v1.0.0",
       health: "healthy",
       startedAt: "2026-10-12T00:00:00.000Z",
       environmentVariableCount: variables.length,
+    },
+  }),
+  rollback: async (appId, target) => ({
+    message: `Đã rollback ${appId} về ${target.version}.`,
+    runtime: {
+      appId,
+      status: "running",
+      containerId: "0123456789ab",
+      containerName: `mini-paas-${appId}-1`,
+      image: target.imageReference,
+      imageId: target.imageId,
+      observedVersion: target.version,
+      health: "healthy",
+      startedAt: "2026-10-13T00:00:00.000Z",
+      environmentVariableCount: 0,
     },
   }),
 };
@@ -348,6 +367,51 @@ test("tạo deployment từ source tin cậy và lưu build metadata", async () 
   assert.equal(history.statusCode, 200);
   assert.equal(history.json().data[0].sourceId, "github-app-a");
 });
+
+test("liệt kê release và rollback về đúng image đã ghi nhận", async () => {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const unauthenticated = await server.inject({
+    method: "POST",
+    url: `/api/v1/releases/${randomReleaseId()}/rollback`,
+  });
+  assert.equal(unauthenticated.statusCode, 401);
+
+  const history = await server.inject({
+    method: "GET",
+    url: "/api/v1/releases?applicationId=app-a&limit=20",
+    headers: { cookie },
+  });
+  assert.equal(history.statusCode, 200);
+  const target = history.json().data.find((release: { origin: string; commitSha: string | null }) => (
+    release.origin === "source" && release.commitSha === "a".repeat(40)
+  ));
+  assert.ok(target);
+
+  const rollback = await server.inject({
+    method: "POST",
+    url: `/api/v1/releases/${target.id}/rollback`,
+    headers: { cookie, origin: config.publicOrigin },
+  });
+  assert.equal(rollback.statusCode, 200);
+  assert.equal(rollback.json().data.origin, "rollback");
+  assert.equal(rollback.json().data.rollbackOfReleaseId, target.id);
+  assert.equal(rollback.json().runtime.imageId, target.imageId);
+  assert.equal(database.findApplication("app-a")?.desiredVersion, target.version);
+  assert.equal(database.listAudit(1)[0]?.action, "release.rollback");
+});
+
+function randomReleaseId(): string {
+  return "00000000-0000-4000-8000-000000000000";
+}
 
 test("từ chối source lạ và commit không đúng định dạng", async () => {
   const login = await server.inject({

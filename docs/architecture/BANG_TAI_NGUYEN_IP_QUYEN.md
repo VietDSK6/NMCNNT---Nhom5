@@ -6,7 +6,7 @@
 |---|---|---:|---|---:|---:|---|---|
 | Gateway | `edge`, `control`; DNS `gateway` | 8080 | `127.0.0.1:8080` | 0,25 | 64 MiB | `nginx` | Root filesystem chỉ đọc; tmpfs `/tmp`; drop toàn bộ capability |
 | Dashboard | `control`; DNS `dashboard` | 8080 | Không | 0,20 | 64 MiB | `nginx` | Root filesystem chỉ đọc; không có Docker socket |
-| Control API | `control`; DNS `control-api` | 3000 | Không | 0,35 | 192 MiB | `node` | Volume `control-data:/data`; mã hóa cấu hình app bằng khóa môi trường; không có Docker socket |
+| Control API | `control`; DNS `control-api` | 3000 | Không | 0,35 | 192 MiB | `node` | Volume `control-data:/data`; lưu operation/deployment/release và mã hóa cấu hình app; không có Docker socket |
 | Deployment Runner | `control`, `source-egress`; DNS `runner` | 3001 | Không | 0,25 | 96 MiB | `root` trong container | Gắn `/var/run/docker.sock`; tmpfs `/tmp` 128 MiB; egress tải source allowlist; API nội bộ có shared secret |
 | Prometheus | `control`; DNS `prometheus` | 9090 | Không | 0,30 | 320 MiB | Theo image chính thức | Volume `prometheus-data`; config/rule chỉ đọc; retention 7 ngày/256 MiB; không có Docker socket |
 | Grafana | `control`; DNS `grafana` | 3000 | Không; đi qua `/monitoring/` | 0,35 | 384 MiB | Theo image chính thức | Volume `grafana-data`; provisioning chỉ đọc; xác thực riêng; không có Docker socket |
@@ -30,9 +30,9 @@
 | Chủ thể | Xem app/health | Xem log/stats | Vòng đời/cấu hình app | Truy cập Docker socket |
 |---|---:|---:|---:|---:|
 | Người dùng chưa đăng nhập | Chỉ Web App công khai | Không | Không | Không |
-| Quản trị viên đã đăng nhập | Có | Có | Có, qua Control API; secret không đọc lại | Không |
+| Quản trị viên đã đăng nhập | Có | Có | Có, gồm rollback release qua Control API; secret không đọc lại | Không |
 | Dashboard | Qua Control API | Qua Control API | Gửi yêu cầu qua Control API | Không |
-| Control API | Có | Gọi Runner bằng shared secret | Xếp operation; mã hóa cấu hình; gọi Runner | Không |
+| Control API | Có | Gọi Runner bằng shared secret | Xếp operation; lưu release; mã hóa cấu hình; gọi Runner | Không |
 | Runner | Trạng thái container | Có, theo allowlist | Có, theo allowlist; nhận plaintext tạm thời | Có |
 | Prometheus | Chỉ metric allowlist từ Runner | Không đọc log | Không | Không |
 | Grafana | Truy vấn metric qua Prometheus | Không đọc log | Không | Không |

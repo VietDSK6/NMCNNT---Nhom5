@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến P1 kiểm thử tải vòng phát triển ngày 12/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest và nghiệm thu VPS vẫn là nội dung dự kiến của P1.
+> Bản nháp cập nhật đến P2 release/rollback vòng phát triển ngày 13/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest và nghiệm thu VPS vẫn là nội dung dự kiến.
 
 ## 3.1. Phân tích bài toán
 
@@ -24,6 +24,8 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
 | FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử phạm vi tối thiểu cho một source/App A theo commit SHA; chưa có registry digest hoặc repository tùy ý |
 | FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Đã triển khai và kiểm thử bằng Runner exporter, Prometheus và Grafana; chưa có Alertmanager |
+| FR11 | Quản lý biến môi trường theo ứng dụng | Đã triển khai và kiểm thử; mã hóa SQLite, che secret, giữ cấu hình qua cập nhật image |
+| FR12 | Lưu lịch sử release và rollback | Đã triển khai và kiểm thử trên một host; xác minh image ID cục bộ, chưa có registry digest |
 
 ### 3.2.2. Yêu cầu phi chức năng
 
@@ -115,7 +117,7 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
+Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, rollback, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi một lần thay container thất bại, Runner cố gắng phục hồi container cũ. Ngoài cơ chế phục hồi nội bộ đó, lịch sử release cho phép quản trị viên chủ động rollback về một image ID cũ còn tồn tại trên host.
 
 ### 3.4.5. Prometheus và Grafana
 
@@ -263,4 +265,6 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 
 Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Metric ứng dụng đã có chuỗi thời gian nhưng log chưa được tập trung; Prometheus/Grafana cùng host nên không còn quan sát được nếu host hỏng.
 
-Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest và rollback độc lập có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Lịch sử release và rollback đã đối chiếu image ID trước khi thay container, nhưng vẫn phụ thuộc image cache trên cùng Docker host; nếu image bị xóa hoặc chuyển máy thì metadata SQLite chưa đủ để phục hồi.
+
+Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

@@ -13,7 +13,7 @@
 | T07 | 11/10/2026; macOS ARM64 | Session thiếu/sai, action/version ngoài allowlist | Gọi API quản trị và Runner với đầu vào không hợp lệ | Trả 401/403/400 phù hợp; không thực thi action cấm; socket chỉ ở Runner | Các trường hợp xác thực, origin, `exec`, `latest` và socket boundary đạt | Đạt vòng phát triển | Chưa gán tên | `evidence/T07/2026-10-11-p0.2a.md`, `evidence/T07/2026-10-11-p0.2b.md` |
 | T08 | Chưa chạy | Chưa có VPS/snapshot sạch release candidate | Dựng lại/khôi phục theo README | Hệ thống phục hồi không cần bước ngoài tài liệu | Chưa có dữ liệu | Chưa đạt/chưa chạy | Chưa phân công | `evidence/T08/` dự kiến |
 
-## Kiểm thử bổ sung cho P1
+## Kiểm thử bổ sung cho P1/P2
 
 | Mã | Thời gian/môi trường | Đầu vào hoặc điều kiện trước | Thao tác | Kết quả mong đợi | Kết quả thực tế | Kết quả | Người thực hiện | Bằng chứng |
 |---|---|---|---|---|---|---|---|---|
@@ -21,6 +21,7 @@
 | P1-OBS-01 | 12/10/2026 16:59 +07; macOS ARM64, Docker 29.4.0 | App A/B v1 khỏe; Prometheus 3.14.0 và Grafana 13.2.2 ghim digest | Dựng stack, gọi exporter, truy vấn Prometheus, kiểm tra rule, Grafana datasource/dashboard và regression | Hai app có chuỗi nhiều mẫu; target/rule/provisioning đúng; cổng nội bộ không publish; regression đạt | 15/15 kiểm tra observability đạt; tám service healthy; toàn bộ regression và P1 Git 10/10 đạt | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-OBS/2026-10-12T1659/` |
 | P1-DASH-01 | 12/10/2026 21:34–21:39 +07; macOS ARM64, Docker 29.8.2 | Stack tám service khỏe; Dashboard image `p1-dashboard-navigation` | Typecheck/build Dashboard; gọi trực tiếp 10 route qua Gateway; chạy toàn bộ `make test` | Route hệ thống và ứng dụng trả SPA; chức năng cũ không hồi quy | 10/10 route; Runner 16/16; API 9/9; P0.1 9/9; P0.2 15/15; P0.2B 21/21; P0.2C 12/12; observability 15/15; tám service healthy | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-DASH/2026-10-12T2134/` |
 | P1-ENV-01 | 13/10/2026 08:26–08:28 +07; macOS ARM64/OrbStack, Docker 29.8.2 | App A v1 khỏe; biến thường `APP_MESSAGE`; secret giả `DEMO_SECRET` | Cấu hình biến, đọc API/container/app, cập nhật v1 → v2, xóa biến, đưa về v1 và kiểm tra audit | Biến được áp dụng/bảo toàn; secret không lộ; biến lõi bị khóa; trạng thái cuối sạch | 21 kiểm tra đạt; phát hiện/sửa timeout Gateway; App A trở về v1 và không còn biến tùy chỉnh | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-environment/2026-10-13-macos/` |
+| P2-ROLLBACK-01 | 13/10/2026 19:20 +07; macOS ARM64/OrbStack, Docker 29.8.2 | App A v1; image catalog v1/v2 còn trên Docker host | Cập nhật v2, lưu release, về v1, rollback release v2, đối chiếu container/audit rồi dọn về v1 | Release có image ID; rollback đúng image/version; yêu cầu trái phép bị từ chối; trạng thái cuối sạch | 17 kiểm tra đạt; container dùng đúng image ID v2; audit có `release.rollback`; App A trở về v1 | Đạt vòng phát triển | Chưa gán tên | `evidence/P2-rollback/2026-10-13-macos/` |
 
 ## Khoảng trống phải xử lý
 

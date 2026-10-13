@@ -7,6 +7,7 @@ import {
   RunnerInputError,
   validateAction,
   validateCommitSha,
+  validateRollbackTarget,
 } from "./catalog.mjs";
 import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
 import { renderPrometheusMetrics } from "./metrics.mjs";
@@ -70,6 +71,7 @@ function publicStatus(appId, inspect) {
     containerId: String(inspect.Id).slice(0, 12),
     containerName: String(inspect.Name || "").replace(/^\//, ""),
     image: String(inspect.Config?.Image || ""),
+    imageId: String(inspect.Image || ""),
     observedVersion: envValue(inspect.Config?.Env, "APP_VERSION"),
     health: inspect.State?.Health?.Status ?? null,
     startedAt: inspect.State?.StartedAt || null,
@@ -267,6 +269,57 @@ export class DeploymentRuntime {
         environment,
         labels,
         `Đã áp dụng ${variables.length} biến môi trường và tái tạo container.`,
+      );
+    } finally {
+      this.locks.delete(appId);
+    }
+  }
+
+  async rollback(appId, input) {
+    const target = validateRollbackTarget(appId, input);
+    if (this.locks.has(appId)) {
+      throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
+    }
+    this.locks.add(appId);
+    try {
+      const image = await this.docker.image(target.imageReference).catch((error) => {
+        if (error?.statusCode === 404) {
+          throw new RunnerRuntimeError("release_image_missing", "Image của release không còn trên Docker host.", 409);
+        }
+        throw error;
+      });
+      if (String(image.Id || "") !== target.imageId) {
+        throw new RunnerRuntimeError(
+          "release_image_changed",
+          "Image reference không còn trỏ tới đúng nội dung đã ghi trong release.",
+          409,
+        );
+      }
+
+      const current = await this.findContainer(target.spec);
+      if (
+        String(current.Image || "") === target.imageId
+        && envValue(current.Config?.Env, "APP_VERSION") === target.version
+        && runtimeStatus(current) === "running"
+      ) {
+        return {
+          message: `Ứng dụng đã chạy đúng release ${target.version}.`,
+          runtime: publicStatus(appId, current),
+        };
+      }
+      const labels = {
+        ...current.Config?.Labels,
+        "com.docker.compose.image": target.imageId,
+        "io.mini-paas.managed": "true",
+        "io.mini-paas.app-id": target.spec.id,
+      };
+      return await this.replaceContainer(
+        target.spec,
+        current,
+        target.imageReference,
+        replaceEnv(current.Config?.Env, "APP_VERSION", target.version),
+        labels,
+        `Ứng dụng đã rollback về release ${target.version}.`,
       );
     } finally {
       this.locks.delete(appId);

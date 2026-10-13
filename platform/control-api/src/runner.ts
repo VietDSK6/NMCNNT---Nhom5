@@ -7,6 +7,7 @@ export interface RunnerStatus {
   readonly containerId: string;
   readonly containerName: string;
   readonly image: string;
+  readonly imageId: string;
   readonly observedVersion: string | null;
   readonly health: string | null;
   readonly startedAt: string | null;
@@ -16,6 +17,14 @@ export interface RunnerStatus {
 export interface RunnerActionResult {
   readonly message: string;
   readonly runtime: RunnerStatus;
+}
+
+export interface RunnerRollbackTarget {
+  readonly version: string;
+  readonly imageReference: string;
+  readonly imageId: string;
+  readonly sourceId?: string;
+  readonly commitSha?: string;
 }
 
 export interface RunnerLogLine {
@@ -77,6 +86,7 @@ export interface RunnerClient {
     appId: string,
     variables: readonly { readonly key: string; readonly value: string }[],
   ): Promise<RunnerActionResult>;
+  rollback(appId: string, target: RunnerRollbackTarget): Promise<RunnerActionResult>;
 }
 
 export class RunnerRequestError extends Error {
@@ -160,6 +170,14 @@ export class HttpRunnerClient implements RunnerClient {
     return this.request<RunnerActionResult>(
       `/v1/apps/${encodeURIComponent(appId)}/environment`,
       { method: "PUT", body: JSON.stringify({ variables }) },
+      45_000,
+    );
+  }
+
+  rollback(appId: string, target: RunnerRollbackTarget): Promise<RunnerActionResult> {
+    return this.request<RunnerActionResult>(
+      `/v1/apps/${encodeURIComponent(appId)}/rollbacks`,
+      { method: "POST", body: JSON.stringify(target) },
       45_000,
     );
   }

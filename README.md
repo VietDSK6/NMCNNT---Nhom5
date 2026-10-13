@@ -33,13 +33,14 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Mỗi ứng dụng có đường dẫn riêng cho tổng quan, deployment, log và tài nguyên; các trang toàn hệ thống vẫn giữ riêng để quản trị chéo ứng dụng.
 - Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
 - Mỗi ứng dụng có trang quản lý biến môi trường; giá trị được mã hóa trong SQLite, secret bị che khi đọc và Runner tái tạo container để áp dụng cấu hình.
+- Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
 - Source hiện được quản trị bằng allowlist trong mã; chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; kiểm thử tải đã đạt vòng phát triển trên Mac nhưng chưa nghiệm thu lặp lại trên VPS Linux.
-- Hàng đợi operation bền vững, lịch sử release và rollback độc lập.
+- Hàng đợi operation bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
 Dashboard vẫn phân biệt **health HTTP**, **trạng thái container**, **phiên bản mong muốn** và **phiên bản quan sát được**; các giá trị này không được coi là tương đương.
@@ -110,8 +111,8 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 19/19 đạt.
-- Control API unit test: 12/12 đạt.
+- Deployment Runner unit test: 23/23 đạt.
+- Control API unit test: 13/13 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
 - P0.2: 15/15 kiểm tra đạt.
@@ -122,6 +123,7 @@ Kết quả chuẩn hiện tại:
 - P1 observability: 15/15 kiểm tra tích hợp đạt.
 - P1 Dashboard navigation: 11/11 đường dẫn trả entrypoint SPA qua Gateway.
 - P1 Environment Variables: 21 kiểm tra tích hợp đạt; secret bị che, biến còn sau cập nhật image và trạng thái cuối được dọn sạch.
+- P2 Release History / Rollback: 17 kiểm tra tích hợp đạt; đối chiếu đúng image ID và đưa App A về v1 sau kiểm thử.
 - T06 k6 vòng phát triển: ba mức 10/25/50 req/s trong 60 giây/mức đều đạt; p95 cao nhất 7,32 ms, lỗi 0%, dropped iteration bằng 0.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
@@ -174,6 +176,18 @@ make test-p1-environment
 ```
 
 Script dùng dữ liệu giả, kiểm tra secret không xuất hiện trong API/audit, đưa App A v1 → v2 để xác nhận cấu hình được bảo toàn, sau đó xóa biến và đưa ứng dụng về v1. Việc thay cấu hình gây gián đoạn ngắn vì mô hình hiện chỉ chạy một replica.
+
+## Lịch sử release và rollback
+
+Sau một lần cập nhật phiên bản hoặc deployment Git thành công, Mini PaaS lưu version, image reference và image ID thành một release. Trong **Ứng dụng → chọn ứng dụng → Triển khai**, phần **Release có thể rollback** cho phép chọn một mốc cũ. Dashboard chỉ gửi mã release; Control API và Runner tự đối chiếu metadata, allowlist và image ID trước khi thay container.
+
+Kiểm thử riêng:
+
+```bash
+make test-p2-rollback
+```
+
+Rollback không build hay tải lại image. Nếu image cục bộ đã bị xóa hoặc tag trỏ sang nội dung khác, thao tác bị từ chối. Vì chưa có registry digest, tính năng hiện chỉ bảo đảm trên cùng Docker host và gây gián đoạn ngắn khi thay một replica.
 
 ## Triển khai App A từ commit Git
 
@@ -281,6 +295,7 @@ tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
 tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
 tests/integration/p1_environment.sh  Kiểm thử biến môi trường và tái tạo container
+tests/integration/p2_release_rollback.sh  Kiểm thử lịch sử release và rollback theo image ID
 tests/performance/k6/       Kịch bản tải cố định T06
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
@@ -306,6 +321,7 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
 - Giá trị biến môi trường được mã hóa trong SQLite và secret không trả lại API, nhưng người có quyền Docker/host vẫn có thể đọc `Config.Env`; đây chưa phải secret manager cấp production.
+- Rollback đối chiếu image ID nhưng vẫn phụ thuộc image cache trên một host; chưa thể thay thế registry digest hoặc bản sao lưu image.
 - Gateway chỉ bind vào `127.0.0.1` theo cấu hình phát triển hiện tại.
 - Cookie local chưa có cờ `Secure` vì môi trường hiện dùng HTTP; VPS có HTTPS phải bật cờ này.
 - Module `node:sqlite` của Node.js 24 vẫn phát cảnh báo thử nghiệm; đã ghim Node image và cô lập tầng truy cập dữ liệu để có thể thay thư viện nếu cần.
@@ -314,6 +330,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 - Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md) và [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md) và [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.
