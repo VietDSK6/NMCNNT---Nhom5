@@ -10,6 +10,7 @@ export interface RunnerStatus {
   readonly observedVersion: string | null;
   readonly health: string | null;
   readonly startedAt: string | null;
+  readonly environmentVariableCount: number;
 }
 
 export interface RunnerActionResult {
@@ -72,6 +73,10 @@ export interface RunnerClient {
   logs(appId: string, tail: number): Promise<RunnerLogs>;
   stats(appId: string): Promise<RunnerStats>;
   execute(appId: string, action: RunnerAction, version?: string): Promise<RunnerActionResult>;
+  configureEnvironment(
+    appId: string,
+    variables: readonly { readonly key: string; readonly value: string }[],
+  ): Promise<RunnerActionResult>;
 }
 
 export class RunnerRequestError extends Error {
@@ -144,6 +149,17 @@ export class HttpRunnerClient implements RunnerClient {
     return this.request<RunnerActionResult>(
       `/v1/apps/${encodeURIComponent(appId)}/actions`,
       { method: "POST", body: JSON.stringify({ action, ...(version ? { version } : {}) }) },
+      45_000,
+    );
+  }
+
+  configureEnvironment(
+    appId: string,
+    variables: readonly { readonly key: string; readonly value: string }[],
+  ): Promise<RunnerActionResult> {
+    return this.request<RunnerActionResult>(
+      `/v1/apps/${encodeURIComponent(appId)}/environment`,
+      { method: "PUT", body: JSON.stringify({ variables }) },
       45_000,
     );
   }

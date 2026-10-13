@@ -1,0 +1,5 @@
+make up
+make test-p1-environment
+make test
+docker compose config --quiet
+docker compose ps

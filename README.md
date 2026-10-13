@@ -32,6 +32,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Prometheus nạp ba quy tắc cho ứng dụng không khỏe, RAM cao và lỗi đọc Docker stats; hiện chưa có kênh gửi thông báo.
 - Mỗi ứng dụng có đường dẫn riêng cho tổng quan, deployment, log và tài nguyên; các trang toàn hệ thống vẫn giữ riêng để quản trị chéo ứng dụng.
 - Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
+- Mỗi ứng dụng có trang quản lý biến môi trường; giá trị được mã hóa trong SQLite, secret bị che khi đọc và Runner tái tạo container để áp dụng cấu hình.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
@@ -61,7 +62,7 @@ P0.2 bắt buộc đặt mật khẩu quản trị, không có mật khẩu mặ
 cp .env.example .env
 ```
 
-Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHANGE_ME...` bằng hai mật khẩu phát triển khác nhau, mỗi mật khẩu có ít nhất 12 ký tự; thay `RUNNER_SHARED_SECRET=CHANGE_ME...` bằng chuỗi riêng có ít nhất 24 ký tự. Không commit file `.env`. Nếu bỏ `GRAFANA_ADMIN_PASSWORD`, Compose dùng `ADMIN_PASSWORD` để tương thích môi trường cũ.
+Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHANGE_ME...` bằng hai mật khẩu phát triển khác nhau, mỗi mật khẩu có ít nhất 12 ký tự; thay `RUNNER_SHARED_SECRET=CHANGE_ME...` bằng chuỗi riêng có ít nhất 24 ký tự; đặt `ENVIRONMENT_ENCRYPTION_KEY` bằng chuỗi khác có ít nhất 32 ký tự. Không commit file `.env`. Nếu bỏ `GRAFANA_ADMIN_PASSWORD`, Compose dùng `ADMIN_PASSWORD` để tương thích môi trường cũ. Nếu môi trường cũ chưa có `ENVIRONMENT_ENCRYPTION_KEY`, Control API tạm dùng `RUNNER_SHARED_SECRET`; chỉ nên dùng fallback này khi phát triển.
 
 Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên Dashboard cũ bị hủy. Grafana chỉ dùng mật khẩu môi trường khi khởi tạo volume `grafana-data` lần đầu; thay biến sau đó không tự đổi mật khẩu trong volume đã tồn tại. Hãy đổi mật khẩu trong Grafana trước khi cập nhật `.env`, không xóa volume chỉ để đổi mật khẩu.
 
@@ -109,8 +110,8 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 16/16 đạt.
-- Control API unit test: 9/9 đạt.
+- Deployment Runner unit test: 19/19 đạt.
+- Control API unit test: 12/12 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
 - P0.2: 15/15 kiểm tra đạt.
@@ -119,7 +120,8 @@ Kết quả chuẩn hiện tại:
 - CI nội bộ/image manifest: 8/8 kiểm tra cục bộ đạt; GitHub Actions run đầu tiên đạt và tạo artifact thành công.
 - P1 Git deployment: 10/10 kiểm tra tích hợp đạt.
 - P1 observability: 15/15 kiểm tra tích hợp đạt.
-- P1 Dashboard navigation: 10/10 đường dẫn trả entrypoint SPA qua Gateway.
+- P1 Dashboard navigation: 11/11 đường dẫn trả entrypoint SPA qua Gateway.
+- P1 Environment Variables: 21 kiểm tra tích hợp đạt; secret bị che, biến còn sau cập nhật image và trạng thái cuối được dọn sạch.
 - T06 k6 vòng phát triển: ba mức 10/25/50 req/s trong 60 giây/mức đều đạt; p95 cao nhất 7,32 ms, lỗi 0%, dropped iteration bằng 0.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
@@ -151,7 +153,7 @@ make logs
 Dashboard phân biệt hai phạm vi:
 
 - Phạm vi toàn hệ thống: `/`, `/applications`, `/deployments`, `/operations`, `/audit` và `/observability`.
-- Phạm vi một ứng dụng: `/applications/:appId`, `/applications/:appId/deployments` và `/applications/:appId/observability`.
+- Phạm vi một ứng dụng: `/applications/:appId`, `/applications/:appId/deployments`, `/applications/:appId/environment` và `/applications/:appId/observability`.
 
 Trang tổng quan chỉ tóm tắt tình trạng chung. Từ danh sách **Ứng dụng**, người quản trị mở App A hoặc App B để thao tác vòng đời, triển khai và quan sát đúng ngữ cảnh. Nginx trả entrypoint React cho đường dẫn Dashboard hợp lệ nên có thể tải lại trang chi tiết trực tiếp.
 
@@ -160,6 +162,18 @@ Kiểm tra riêng các đường dẫn:
 ```bash
 make test-p1-dashboard
 ```
+
+## Biến môi trường ứng dụng
+
+Mở **Ứng dụng → chọn ứng dụng → Biến môi trường**. Tên biến phải viết hoa và không được trùng; các biến lõi như `APP_VERSION`, `PORT`, `NODE_OPTIONS` bị khóa. Đánh dấu **Nhạy cảm** cho giá trị không được phép đọc lại trên Dashboard. Chọn **Lưu và tái triển khai** để Runner thay container và chờ health check.
+
+Kiểm thử riêng luồng cấu hình:
+
+```bash
+make test-p1-environment
+```
+
+Script dùng dữ liệu giả, kiểm tra secret không xuất hiện trong API/audit, đưa App A v1 → v2 để xác nhận cấu hình được bảo toàn, sau đó xóa biến và đưa ứng dụng về v1. Việc thay cấu hình gây gián đoạn ngắn vì mô hình hiện chỉ chạy một replica.
 
 ## Triển khai App A từ commit Git
 
@@ -266,6 +280,7 @@ tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
 tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
+tests/integration/p1_environment.sh  Kiểm thử biến môi trường và tái tạo container
 tests/performance/k6/       Kịch bản tải cố định T06
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
@@ -290,6 +305,7 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - API log chỉ đọc App A/App B, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
 - Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
+- Giá trị biến môi trường được mã hóa trong SQLite và secret không trả lại API, nhưng người có quyền Docker/host vẫn có thể đọc `Config.Env`; đây chưa phải secret manager cấp production.
 - Gateway chỉ bind vào `127.0.0.1` theo cấu hình phát triển hiện tại.
 - Cookie local chưa có cờ `Secure` vì môi trường hiện dùng HTTP; VPS có HTTPS phải bật cờ này.
 - Module `node:sqlite` của Node.js 24 vẫn phát cảnh báo thử nghiệm; đã ghim Node image và cô lập tầng truy cập dữ liệu để có thể thay thư viện nếu cần.
@@ -298,6 +314,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 - Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md) và [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md) và [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

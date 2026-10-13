@@ -46,6 +46,7 @@ export interface ApplicationItem {
     readonly observedVersion: string | null;
     readonly health: string | null;
     readonly startedAt: string | null;
+    readonly environmentVariableCount: number;
     readonly source: "deployment_runner";
     readonly message?: string;
   };
@@ -146,4 +147,23 @@ export interface ApplicationStats {
   readonly networkRxBytes: number;
   readonly networkTxBytes: number;
   readonly sampledAt: string;
+}
+
+export interface EnvironmentVariableItem {
+  readonly key: string;
+  readonly value: string | null;
+  readonly sensitive: boolean;
+  readonly updatedAt: string;
+}
+
+export interface ApplicationEnvironment {
+  readonly applicationId: string;
+  readonly count: number;
+  readonly variables: readonly EnvironmentVariableItem[];
+  readonly limits: {
+    readonly maximumVariables: number;
+    readonly maximumKeyLength: number;
+    readonly maximumValueBytes: number;
+    readonly maximumTotalValueBytes: number;
+  };
 }

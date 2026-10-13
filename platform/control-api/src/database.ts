@@ -28,6 +28,14 @@ export interface ApplicationRecord {
   readonly desiredVersion: string;
 }
 
+export interface EnvironmentVariableRecord {
+  readonly applicationId: string;
+  readonly key: string;
+  readonly encryptedValue: string;
+  readonly sensitive: boolean;
+  readonly updatedAt: string;
+}
+
 export interface AuditRecord {
   readonly id: number;
   readonly actorUsername: string | null;
@@ -169,6 +177,20 @@ const migration003 = `
     WHERE status IN ('queued', 'running');
 `;
 
+const migration004 = `
+  CREATE TABLE application_environment_variables (
+    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    encrypted_value TEXT NOT NULL,
+    sensitive INTEGER NOT NULL CHECK(sensitive IN (0, 1)),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (application_id, key)
+  );
+  CREATE INDEX application_environment_variables_application_idx
+    ON application_environment_variables(application_id);
+`;
+
 export class ControlDatabase {
   readonly #db: DatabaseSync;
 
@@ -209,6 +231,17 @@ export class ControlDatabase {
       try {
         this.#db.exec(migration003);
         this.#db.exec("PRAGMA user_version = 3;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
+    }
+    if (version.user_version < 4) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration004);
+        this.#db.exec("PRAGMA user_version = 4;");
         this.#db.exec("COMMIT;");
       } catch (error) {
         this.#db.exec("ROLLBACK;");
@@ -300,6 +333,52 @@ export class ControlDatabase {
     this.#db.prepare(`
       UPDATE applications SET desired_version = ?, updated_at = ? WHERE id = ?
     `).run(version, new Date().toISOString(), id);
+  }
+
+  listEnvironmentVariables(applicationId: string): readonly EnvironmentVariableRecord[] {
+    const rows = this.#db.prepare(`
+      SELECT application_id, key, encrypted_value, sensitive, updated_at
+      FROM application_environment_variables
+      WHERE application_id = ?
+      ORDER BY key ASC
+    `).all(applicationId) as readonly Record<string, unknown>[];
+    return rows.map((row) => ({
+      applicationId: String(row.application_id),
+      key: String(row.key),
+      encryptedValue: String(row.encrypted_value),
+      sensitive: Number(row.sensitive) === 1,
+      updatedAt: String(row.updated_at),
+    }));
+  }
+
+  replaceEnvironmentVariables(
+    applicationId: string,
+    variables: readonly Pick<EnvironmentVariableRecord, "key" | "encryptedValue" | "sensitive">[],
+  ): void {
+    const now = new Date().toISOString();
+    const insert = this.#db.prepare(`
+      INSERT INTO application_environment_variables (
+        application_id, key, encrypted_value, sensitive, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    this.#db.exec("BEGIN IMMEDIATE;");
+    try {
+      this.#db.prepare("DELETE FROM application_environment_variables WHERE application_id = ?").run(applicationId);
+      for (const variable of variables) {
+        insert.run(
+          applicationId,
+          variable.key,
+          variable.encryptedValue,
+          variable.sensitive ? 1 : 0,
+          now,
+          now,
+        );
+      }
+      this.#db.exec("COMMIT;");
+    } catch (error) {
+      this.#db.exec("ROLLBACK;");
+      throw error;
+    }
   }
 
   createOperation(input: {

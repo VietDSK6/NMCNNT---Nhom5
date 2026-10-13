@@ -115,7 +115,7 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
+Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi thất bại, Runner cố gắng phục hồi container cũ. Đây là phục hồi của một operation, chưa phải lịch sử rollback độc lập.
 
 ### 3.4.5. Prometheus và Grafana
 
@@ -150,6 +150,7 @@ SQLite hiện lưu các nhóm dữ liệu:
 - `applications`: danh mục, route và phiên bản mong muốn.
 - `operations`: action, phiên bản đích, người yêu cầu, trạng thái và thông báo.
 - `deployments`: source, commit, trạng thái, version, image, build log, người yêu cầu và các mốc thời gian.
+- `application_environment_variables`: tên biến, ciphertext AES-256-GCM, cờ nhạy cảm và thời điểm cập nhật.
 - `audit_events`: người thực hiện, tài nguyên, kết quả, địa chỉ nguồn và thời gian.
 
 Operation và deployment chuyển qua `queued → running → succeeded|failed`. Partial unique index ngăn hai bản ghi cùng loại đang hoạt động trên một ứng dụng; Control API còn đối chiếu chéo operation/deployment trước khi nhận yêu cầu. Runner có khóa trong bộ nhớ để bảo vệ lớp Docker nếu request đi ngoài luồng thông thường.
@@ -217,6 +218,17 @@ Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù
 
 k6 không được thêm vào stack chạy thường xuyên và không có Docker socket. Cách này giữ công cụ tạo tải tách khỏi control plane, nhưng vòng Mac vẫn có nhiễu do generator và hệ thống dùng chung host.
 
+### 3.7.8. Cấu hình biến môi trường
+
+1. Dashboard đọc danh sách biến theo ứng dụng; Control API chỉ trả giá trị thường, secret chỉ có tên và cờ nhạy cảm.
+2. Khi lưu, API kiểm tra tên, kích thước, biến lặp và danh sách biến lõi bị khóa.
+3. Toàn bộ giá trị được mã hóa AES-256-GCM trước khi ghi SQLite; audit chỉ ghi số lượng biến.
+4. Control API gửi danh sách đầy đủ qua mạng `control` cho Runner bằng shared secret.
+5. Runner thay các biến đã quản lý trong `Config.Env`, ghi danh sách tên vào label rồi tái tạo container theo cơ chế health/rollback.
+6. Nếu Runner thất bại, Control API khôi phục snapshot cấu hình SQLite trước đó. Cập nhật image về sau giữ nguyên môi trường và label này.
+
+Thay cấu hình gây gián đoạn ngắn do một ứng dụng chỉ có một replica. Giá trị trong Docker `Config.Env` vẫn có thể bị người có quyền host/socket đọc; mã hóa SQLite và che API không tương đương secret manager production.
+
 ## 3.8. Thiết kế an toàn
 
 Các biện pháp đã triển khai gồm:
@@ -224,6 +236,7 @@ Các biện pháp đã triển khai gồm:
 - Gateway chỉ bind localhost ở môi trường phát triển.
 - Session dùng cookie `HttpOnly`; POST kiểm tra origin.
 - Mật khẩu và Runner secret chỉ lấy từ biến môi trường, không có giá trị mặc định dùng được.
+- Giá trị cấu hình ứng dụng được mã hóa trong SQLite; secret không trả lại Dashboard, audit hoặc log vận hành.
 - Control API và Runner đều kiểm tra đầu vào; Runner có catalog cố định.
 - Không có endpoint `exec` hoặc khả năng nhận shell command.
 - Docker socket không xuất hiện trong Dashboard, API, Gateway hoặc app mẫu.
@@ -250,4 +263,4 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 
 Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Metric ứng dụng đã có chuỗi thời gian nhưng log chưa được tập trung; Prometheus/Grafana cùng host nên không còn quan sát được nếu host hỏng.
 
-Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest, biến môi trường và rollback có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest và rollback độc lập có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

@@ -102,7 +102,7 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
-    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats))?$/);
+    const match = url.pathname.match(/^\/v1\/apps\/([a-z0-9-]+)(?:\/(actions|logs|stats|environment))?$/);
     if (!match) {
       json(response, 404, { error: "not_found", message: "Không tìm thấy tài nguyên yêu cầu." });
       return;
@@ -137,6 +137,17 @@ export function createRunnerServer({ runtime, token, logger = console }) {
         }
         const result = await runtime.execute(appId, body.action, body.version);
         logger.info?.({ appId, action: body.action, result: "succeeded" }, "runner_action_completed");
+        json(response, 200, { data: result });
+        return;
+      }
+      if (request.method === "PUT" && resource === "environment") {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || !Array.isArray(body.variables)) {
+          json(response, 400, { error: "validation_error", message: "Yêu cầu phải có danh sách biến môi trường." });
+          return;
+        }
+        const result = await runtime.configureEnvironment(appId, body.variables);
+        logger.info?.({ appId, variableCount: body.variables.length, result: "succeeded" }, "runner_environment_updated");
         json(response, 200, { data: result });
         return;
       }

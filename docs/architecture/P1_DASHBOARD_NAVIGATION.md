@@ -71,4 +71,4 @@ Theo quy tắc dự án, thay đổi này không được mở trình duyệt, c
 - Router tự viết chỉ nên giữ khi số route còn nhỏ. Nếu thêm nested layout, quyền theo vai trò hoặc nhiều trạng thái tải dữ liệu theo route, chuyển sang router chuyên dụng.
 - API hiện trả một tập deployment/operation gần nhất; Dashboard lọc theo `applicationId`. Khi số ứng dụng/lịch sử tăng, cần lọc và phân trang phía Control API.
 - App B chưa có source Git nên tab Triển khai hiển thị trạng thái chưa cấu hình, không giả lập form không hoạt động.
-- Chưa có màn biến môi trường, lịch sử release độc lập hoặc rollback; đây là chức năng sản phẩm tiếp theo, không thuộc thay đổi điều hướng này.
+- Tại thời điểm hoàn thành lát cắt điều hướng, chưa có màn biến môi trường, lịch sử release độc lập hoặc rollback. Màn biến môi trường đã được bổ sung ở lát cắt P1 ngày 13/10/2026; hai mục còn lại vẫn là hướng phát triển.

@@ -12,6 +12,7 @@ const runtime = {
   stats: async (appId) => ({ appId, cpuPercent: 1.5 }),
   prometheusMetrics: async () => '# TYPE mini_paas_app_running gauge\nmini_paas_app_running{app_id="app-a"} 1\n',
   execute: async (appId, action, version) => ({ message: "done", runtime: { appId, action, version } }),
+  configureEnvironment: async (appId, variables) => ({ message: "configured", runtime: { appId, variableCount: variables.length } }),
 };
 const logger = { info() {}, error() {} };
 const server = createRunnerServer({ runtime, token, logger });
@@ -92,6 +93,18 @@ test("đọc log và số liệu với giới hạn số dòng", async () => {
   const stats = await invoke({ path: "/v1/apps/app-a/stats", headers });
   assert.equal(stats.statusCode, 200);
   assert.equal(stats.body.data.cpuPercent, 1.5);
+});
+
+test("cấu hình biến môi trường qua API nội bộ mà không ghi giá trị vào phản hồi", async () => {
+  const response = await invoke({
+    method: "PUT",
+    path: "/v1/apps/app-a/environment",
+    headers: { "x-runner-token": token, "content-type": "application/json" },
+    body: { variables: [{ key: "APP_MESSAGE", value: "Xin chào" }] },
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.data.runtime.variableCount, 1);
+  assert.doesNotMatch(JSON.stringify(response.body), /Xin chào/);
 });
 
 test("liệt kê source tin cậy và yêu cầu triển khai theo commit", async () => {

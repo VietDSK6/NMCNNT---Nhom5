@@ -10,6 +10,9 @@ import {
 } from "./catalog.mjs";
 import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
 import { renderPrometheusMetrics } from "./metrics.mjs";
+import { validateEnvironmentVariables } from "./environment.mjs";
+
+const ENVIRONMENT_KEYS_LABEL = "io.mini-paas.environment-keys";
 
 export class RunnerRuntimeError extends Error {
   constructor(code, message, statusCode = 500) {
@@ -32,6 +35,25 @@ function replaceEnv(environment = [], key, value) {
   return [...environment.filter((item) => !item.startsWith(prefix)), `${key}=${value}`];
 }
 
+function environmentKey(item) {
+  const index = item.indexOf("=");
+  return index === -1 ? item : item.slice(0, index);
+}
+
+function managedEnvironmentKeys(labels = {}) {
+  const value = labels?.[ENVIRONMENT_KEYS_LABEL];
+  if (typeof value !== "string" || value === "") return [];
+  return value.split(",").filter((key) => /^[A-Z][A-Z0-9_]{0,63}$/.test(key));
+}
+
+function replaceManagedEnvironment(environment = [], previousKeys, variables) {
+  const managed = new Set([...previousKeys, ...variables.map((variable) => variable.key)]);
+  return [
+    ...environment.filter((item) => !managed.has(environmentKey(item))),
+    ...variables.map((variable) => `${variable.key}=${variable.value}`),
+  ];
+}
+
 function runtimeStatus(inspect) {
   if (inspect.State?.Restarting) return "starting";
   if (!inspect.State?.Running) return "stopped";
@@ -51,6 +73,7 @@ function publicStatus(appId, inspect) {
     observedVersion: envValue(inspect.Config?.Env, "APP_VERSION"),
     health: inspect.State?.Health?.Status ?? null,
     startedAt: inspect.State?.StartedAt || null,
+    environmentVariableCount: managedEnvironmentKeys(inspect.Config?.Labels).length,
   };
 }
 
@@ -220,38 +243,46 @@ export class DeploymentRuntime {
     }
   }
 
-  async update(spec, version, preparedImage) {
-    const targetImage = preparedImage ?? spec.versions[version];
-    if (!targetImage) {
-      throw new RunnerInputError("version_not_allowed", "Phiên bản cập nhật không nằm trong danh sách cho phép.");
+  async configureEnvironment(appId, input) {
+    const spec = getAppSpec(appId);
+    const variables = validateEnvironmentVariables(input);
+    if (this.locks.has(appId)) {
+      throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
     }
-    const image = await this.docker.image(targetImage).catch((error) => {
-      if (error?.statusCode === 404) {
-        throw new RunnerRuntimeError("image_not_prepared", `Ảnh ${targetImage} chưa được chuẩn bị trên máy chủ.`, 409);
-      }
-      throw error;
-    });
-    const current = await this.findContainer(spec);
-    const currentVersion = envValue(current.Config?.Env, "APP_VERSION");
-    if (currentVersion === version && runtimeStatus(current) === "running") {
-      return { message: `Ứng dụng đã ở phiên bản ${version}.`, runtime: publicStatus(spec.id, current) };
+    this.locks.add(appId);
+    try {
+      const current = await this.findContainer(spec);
+      const previousKeys = managedEnvironmentKeys(current.Config?.Labels);
+      const labels = {
+        ...current.Config?.Labels,
+        [ENVIRONMENT_KEYS_LABEL]: variables.map((variable) => variable.key).join(","),
+        "io.mini-paas.managed": "true",
+        "io.mini-paas.app-id": spec.id,
+      };
+      const environment = replaceManagedEnvironment(current.Config?.Env, previousKeys, variables);
+      return await this.replaceContainer(
+        spec,
+        current,
+        current.Config?.Image,
+        environment,
+        labels,
+        `Đã áp dụng ${variables.length} biến môi trường và tái tạo container.`,
+      );
+    } finally {
+      this.locks.delete(appId);
     }
+  }
 
+  async replaceContainer(spec, current, targetImage, environment, labels, message) {
     const originalName = String(current.Name).replace(/^\//, "");
     const backupName = `${originalName}-backup-${randomUUID().slice(0, 8)}`;
     const wasRunning = Boolean(current.State?.Running);
     let replacementId = null;
     let originalRenamed = false;
 
-    const labels = {
-      ...current.Config.Labels,
-      "com.docker.compose.image": String(image.Id || ""),
-      "io.mini-paas.managed": "true",
-      "io.mini-paas.app-id": spec.id,
-    };
     const createBody = {
       Image: targetImage,
-      Env: replaceEnv(current.Config?.Env, "APP_VERSION", version),
+      Env: environment,
       Labels: labels,
       ExposedPorts: current.Config?.ExposedPorts || { "3000/tcp": {} },
       Healthcheck: current.Config?.Healthcheck,
@@ -282,9 +313,9 @@ export class DeploymentRuntime {
       const created = await this.docker.create(originalName, createBody);
       replacementId = created.Id;
       await this.docker.start(replacementId);
-      const status = await this.waitFor(spec.id, replacementId, (item) => runtimeStatus(item) === "running", "Phiên bản mới không đạt trạng thái khỏe trong thời gian cho phép.");
+      const status = await this.waitFor(spec.id, replacementId, (item) => runtimeStatus(item) === "running", "Container thay thế không đạt trạng thái khỏe trong thời gian cho phép.");
       await this.docker.remove(current.Id);
-      return { message: `Ứng dụng đã được cập nhật lên ${version}.`, runtime: status };
+      return { message, runtime: status };
     } catch (error) {
       if (replacementId) {
         await this.docker.remove(replacementId).catch(() => undefined);
@@ -295,5 +326,38 @@ export class DeploymentRuntime {
       }
       throw error;
     }
+  }
+
+  async update(spec, version, preparedImage) {
+    const targetImage = preparedImage ?? spec.versions[version];
+    if (!targetImage) {
+      throw new RunnerInputError("version_not_allowed", "Phiên bản cập nhật không nằm trong danh sách cho phép.");
+    }
+    const image = await this.docker.image(targetImage).catch((error) => {
+      if (error?.statusCode === 404) {
+        throw new RunnerRuntimeError("image_not_prepared", `Ảnh ${targetImage} chưa được chuẩn bị trên máy chủ.`, 409);
+      }
+      throw error;
+    });
+    const current = await this.findContainer(spec);
+    const currentVersion = envValue(current.Config?.Env, "APP_VERSION");
+    if (currentVersion === version && runtimeStatus(current) === "running") {
+      return { message: `Ứng dụng đã ở phiên bản ${version}.`, runtime: publicStatus(spec.id, current) };
+    }
+
+    const labels = {
+      ...current.Config.Labels,
+      "com.docker.compose.image": String(image.Id || ""),
+      "io.mini-paas.managed": "true",
+      "io.mini-paas.app-id": spec.id,
+    };
+    return this.replaceContainer(
+      spec,
+      current,
+      targetImage,
+      replaceEnv(current.Config?.Env, "APP_VERSION", version),
+      labels,
+      `Ứng dụng đã được cập nhật lên ${version}.`,
+    );
   }
 }

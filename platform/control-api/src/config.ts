@@ -11,6 +11,7 @@ export interface AppConfig {
   readonly gatewayBaseUrl: string;
   readonly runnerBaseUrl: string;
   readonly runnerSharedSecret: string;
+  readonly environmentEncryptionKey: string;
   readonly appAVersion: string;
   readonly appBVersion: string;
 }
@@ -47,6 +48,15 @@ function requiredRunnerSecret(env: NodeJS.ProcessEnv): string {
   return value;
 }
 
+function environmentEncryptionKey(env: NodeJS.ProcessEnv, runnerSharedSecret: string): string {
+  const value = env.ENVIRONMENT_ENCRYPTION_KEY;
+  if (value === undefined || value === "") return runnerSharedSecret;
+  if (value.length < 32 || value.length > 256 || value.startsWith("CHANGE_ME")) {
+    throw new Error("ENVIRONMENT_ENCRYPTION_KEY phải có từ 32 đến 256 ký tự.");
+  }
+  return value;
+}
+
 export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const port = integerFromEnv(env.PORT, 3000, "PORT");
   const sessionTtlSeconds = integerFromEnv(
@@ -54,6 +64,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     28_800,
     "SESSION_TTL_SECONDS",
   );
+  const runnerSharedSecret = requiredRunnerSecret(env);
 
   return {
     host: env.HOST || "0.0.0.0",
@@ -67,7 +78,8 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     publicOrigin: env.PUBLIC_ORIGIN || "http://127.0.0.1:8080",
     gatewayBaseUrl: (env.GATEWAY_BASE_URL || "http://gateway:8080").replace(/\/$/, ""),
     runnerBaseUrl: (env.RUNNER_BASE_URL || "http://runner:3001").replace(/\/$/, ""),
-    runnerSharedSecret: requiredRunnerSecret(env),
+    runnerSharedSecret,
+    environmentEncryptionKey: environmentEncryptionKey(env, runnerSharedSecret),
     appAVersion: env.APP_A_VERSION || "v1.0.0",
     appBVersion: env.APP_B_VERSION || "v1.0.0",
   };

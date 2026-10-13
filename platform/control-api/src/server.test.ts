@@ -19,6 +19,7 @@ const config: AppConfig = {
   gatewayBaseUrl: "http://gateway:8080",
   runnerBaseUrl: "http://runner:3001",
   runnerSharedSecret: "runner-test-secret-at-least-24",
+  environmentEncryptionKey: "environment-test-key-at-least-32-characters",
   appAVersion: "v1.0.0",
   appBVersion: "v1.0.0",
 };
@@ -62,6 +63,7 @@ const runnerClient: RunnerClient = {
       observedVersion: `git-${commit.slice(0, 12)}`,
       health: "healthy",
       startedAt: "2026-10-12T00:00:00.000Z",
+      environmentVariableCount: 0,
     },
   }),
   status: async (appId) => ({
@@ -73,6 +75,7 @@ const runnerClient: RunnerClient = {
     observedVersion: "v1.0.0",
     health: "healthy",
     startedAt: "2026-10-11T00:00:00.000Z",
+    environmentVariableCount: 0,
   }),
   logs: async (appId, tail) => ({
     appId,
@@ -105,6 +108,21 @@ const runnerClient: RunnerClient = {
       observedVersion: version ?? "v1.0.0",
       health: "healthy",
       startedAt: "2026-10-11T00:00:00.000Z",
+      environmentVariableCount: 0,
+    },
+  }),
+  configureEnvironment: async (appId, variables) => ({
+    message: `Đã áp dụng ${variables.length} biến môi trường.`,
+    runtime: {
+      appId,
+      status: "running",
+      containerId: "0123456789ab",
+      containerName: `mini-paas-${appId}-1`,
+      image: `mini-paas/${appId}:v1.0.0`,
+      observedVersion: "v1.0.0",
+      health: "healthy",
+      startedAt: "2026-10-12T00:00:00.000Z",
+      environmentVariableCount: variables.length,
     },
   }),
 };
@@ -358,4 +376,74 @@ test("từ chối source lạ và commit không đúng định dạng", async ()
   });
   assert.equal(unknownSource.statusCode, 404);
   assert.equal(unknownSource.json().error, "source_not_allowed");
+});
+
+test("lưu biến môi trường có mã hóa, che giá trị nhạy cảm và chặn biến hệ thống", async () => {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const unauthenticated = await server.inject({
+    method: "GET",
+    url: "/api/v1/applications/app-a/environment",
+  });
+  assert.equal(unauthenticated.statusCode, 401);
+
+  const updated = await server.inject({
+    method: "PUT",
+    url: "/api/v1/applications/app-a/environment",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: {
+      variables: [
+        { key: "APP_MESSAGE", value: "Môi trường kiểm thử", sensitive: false },
+        { key: "DEMO_SECRET", value: "not-returned-by-api", sensitive: true },
+      ],
+    },
+  });
+  assert.equal(updated.statusCode, 200);
+  assert.equal(updated.json().data.count, 2);
+  assert.equal(updated.json().data.variables[0].value, "Môi trường kiểm thử");
+  assert.equal(updated.json().data.variables[1].value, null);
+
+  const stored = database.listEnvironmentVariables("app-a");
+  assert.equal(stored.length, 2);
+  assert.doesNotMatch(stored[1]!.encryptedValue, /not-returned-by-api/);
+
+  const retained = await server.inject({
+    method: "PUT",
+    url: "/api/v1/applications/app-a/environment",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: {
+      variables: [
+        { key: "APP_MESSAGE", value: "Đã cập nhật", sensitive: false },
+        { key: "DEMO_SECRET", value: null, sensitive: true },
+      ],
+    },
+  });
+  assert.equal(retained.statusCode, 200);
+  assert.equal(retained.json().data.variables[1].value, null);
+
+  const reserved = await server.inject({
+    method: "PUT",
+    url: "/api/v1/applications/app-a/environment",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { variables: [{ key: "APP_VERSION", value: "override", sensitive: false }] },
+  });
+  assert.equal(reserved.statusCode, 400);
+  assert.equal(reserved.json().error, "reserved_environment_key");
+
+  const cleared = await server.inject({
+    method: "PUT",
+    url: "/api/v1/applications/app-a/environment",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { variables: [] },
+  });
+  assert.equal(cleared.statusCode, 200);
+  assert.equal(database.listEnvironmentVariables("app-a").length, 0);
 });

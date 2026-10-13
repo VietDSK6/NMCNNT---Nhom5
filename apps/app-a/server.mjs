@@ -4,6 +4,8 @@ const port = Number.parseInt(process.env.PORT ?? '3000', 10);
 const appId = process.env.APP_ID ?? 'app-a';
 const appName = process.env.APP_NAME ?? 'Ứng dụng A';
 const appVersion = process.env.APP_VERSION ?? 'dev';
+const appMessage = process.env.APP_MESSAGE ?? null;
+const hasDemoSecret = Boolean(process.env.DEMO_SECRET);
 const startedAt = new Date();
 
 function send(response, statusCode, contentType, body, method = 'GET') {
@@ -89,6 +91,8 @@ const server = http.createServer((request, response) => {
     }, method);
   } else if (pathname === '/version') {
     sendJson(response, 200, { appId, name: appName, version: appVersion }, method);
+  } else if (pathname === '/config') {
+    sendJson(response, 200, { appId, appMessage, hasDemoSecret }, method);
   } else {
     statusCode = 404;
     sendJson(response, statusCode, { error: 'not_found', path: pathname }, method);

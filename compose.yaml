@@ -93,6 +93,7 @@ services:
       GATEWAY_BASE_URL: http://gateway:8080
       RUNNER_BASE_URL: http://runner:3001
       RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?Hãy tạo file .env và đặt RUNNER_SHARED_SECRET}
+      ENVIRONMENT_ENCRYPTION_KEY: ${ENVIRONMENT_ENCRYPTION_KEY:-}
       APP_A_VERSION: ${APP_A_VERSION:-v1.0.0}
       APP_B_VERSION: ${APP_B_VERSION:-v1.0.0}
     depends_on:
@@ -276,6 +277,7 @@ services:
     labels:
       io.mini-paas.managed: "true"
       io.mini-paas.app-id: app-a
+      io.mini-paas.environment-keys: ""
     expose:
       - "3000"
     networks:
@@ -317,6 +319,7 @@ services:
     labels:
       io.mini-paas.managed: "true"
       io.mini-paas.app-id: app-b
+      io.mini-paas.environment-keys: ""
     expose:
       - "3000"
     networks:

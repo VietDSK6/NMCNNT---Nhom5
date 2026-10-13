@@ -387,3 +387,43 @@ Vòng VPS phải chạy ít nhất ba lần/mức, giữ nguyên ngưỡng/tài 
 - `evidence/T06/2026-10-12T2202-macos/`.
 - `docs/architecture/P1_LOAD_TESTING.md`.
 - `docs/test-plan/T06_KE_HOACH_KIEM_THU_TAI.md`.
+
+## 13/10/2026 — P1: quản lý biến môi trường ứng dụng
+
+### Phạm vi thực hiện
+
+- Thêm bảng SQLite cho biến môi trường theo ứng dụng; mã hóa mọi giá trị bằng AES-256-GCM.
+- Thêm API đọc/thay thế toàn bộ danh sách; giá trị nhạy cảm luôn bị che và có thể giữ nguyên bằng `null`.
+- Khóa các biến nền tảng như `APP_VERSION`, `PORT`, `NODE_OPTIONS`; giới hạn tên, số lượng và dung lượng.
+- Thêm Runner endpoint nội bộ, nhãn theo dõi tên biến và cơ chế tái tạo/rollback container.
+- Bảo toàn biến môi trường khi App A cập nhật image v1 → v2.
+- Thêm tab **Biến môi trường** trong màn chi tiết từng ứng dụng, không thêm thư viện frontend.
+- Bổ sung endpoint `/config` cho app mẫu để kiểm chứng biến thường và sự tồn tại của secret giả mà không trả giá trị secret.
+
+### Kết quả thực tế
+
+- Runner unit test: 19/19 đạt.
+- Control API unit test: 12/12 đạt.
+- Dashboard production build: đạt; không chạy trình duyệt/responsive theo quy tắc dự án.
+- P1 Environment Variables integration: 21 kiểm tra đạt.
+- App A nhận biến, giữ biến khi đổi v1 → v2, xóa cấu hình và trở về v1.0.0.
+- Audit, API và bằng chứng không chứa giá trị secret giả.
+- Tám service ở trạng thái `healthy` sau kiểm thử.
+
+### Sự cố và cách xử lý
+
+Lần chạy tích hợp đầu tiên nhận HTTP 504 ở Gateway. Nguyên nhân là cấu hình toàn cục `proxy_read_timeout 5s`, trong khi tái tạo container phải chờ health check lâu hơn. Gateway được sửa để các request `/api/` có timeout đọc 50 giây; Runner/Control API vẫn giữ timeout hữu hạn. Sau khi rebuild riêng Gateway, toàn bộ 21 kiểm tra đạt.
+
+### Giới hạn cần ghi đúng
+
+- Mỗi thay đổi tái tạo container một replica nên có gián đoạn ngắn.
+- Người có quyền Docker/host vẫn đọc được `Config.Env`; đây chưa phải Vault/KMS/Docker Secrets.
+- Thay hoặc mất khóa mã hóa khiến cấu hình cũ không giải mã được; khóa phải được sao lưu ngoài Git.
+- Chưa nghiệm thu trên VPS Linux.
+
+### Bằng chứng
+
+- `evidence/P1-environment/2026-10-13-macos/`.
+- `docs/architecture/P1_ENVIRONMENT_VARIABLES.md`.
+- `docs/decisions/0008-encrypted-application-environment.md`.
+- `tests/integration/p1_environment.sh`.

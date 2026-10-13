@@ -1,5 +1,6 @@
 import type {
   ApplicationLogs,
+  ApplicationEnvironment,
   ApplicationStats,
   ApplicationsResponse,
   AuditResponse,
@@ -71,6 +72,16 @@ export const api = {
   ),
   stats: (appId: string) => request<{ data: ApplicationStats }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/stats`,
+  ),
+  environment: (appId: string) => request<{ data: ApplicationEnvironment }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}/environment`,
+  ),
+  updateEnvironment: (
+    appId: string,
+    variables: readonly { readonly key: string; readonly value: string | null; readonly sensitive: boolean }[],
+  ) => request<{ data: ApplicationEnvironment }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}/environment`,
+    { method: "PUT", body: JSON.stringify({ variables }) },
   ),
   audit: () => request<AuditResponse>("/api/v1/audit-events?limit=12"),
 };

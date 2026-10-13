@@ -42,6 +42,7 @@ const actionLabels: Record<string, string> = {
   "application.stop": "Dừng ứng dụng",
   "application.restart": "Khởi động lại ứng dụng",
   "application.update": "Cập nhật phiên bản",
+  "application.environment.update": "Cập nhật biến môi trường",
   "deployment.create": "Triển khai từ Git",
 };
 
@@ -77,7 +78,7 @@ function formatDateTime(value: string): string {
   }).format(new Date(value));
 }
 
-type ApplicationTab = "overview" | "deployments" | "observability";
+type ApplicationTab = "overview" | "deployments" | "environment" | "observability";
 type DashboardRoute =
   | { readonly kind: "overview" }
   | { readonly kind: "applications" }
@@ -102,7 +103,7 @@ function resolveRoute(pathname: string): DashboardRoute {
   if (normalized === "/audit") return { kind: "audit" };
   if (normalized === "/observability") return { kind: "observability" };
 
-  const applicationMatch = normalized.match(/^\/applications\/([^/]+)(?:\/(deployments|observability))?$/);
+  const applicationMatch = normalized.match(/^\/applications\/([^/]+)(?:\/(deployments|environment|observability))?$/);
   if (applicationMatch) {
     let appId: string;
     try {
@@ -433,6 +434,191 @@ function GitDeploymentPanel({
   );
 }
 
+interface EnvironmentEditorRow {
+  readonly id: string;
+  readonly key: string;
+  readonly value: string;
+  readonly sensitive: boolean;
+  readonly retainsStoredValue: boolean;
+}
+
+function EnvironmentVariablesPanel({
+  application,
+  onSaved,
+}: {
+  readonly application: ApplicationItem;
+  readonly onSaved: (count: number) => void;
+}) {
+  const [rows, setRows] = useState<readonly EnvironmentEditorRow[]>([]);
+  const [maximumVariables, setMaximumVariables] = useState(20);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const rowSequence = useRef(0);
+
+  const loadEnvironment = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await api.environment(application.id);
+      setMaximumVariables(response.data.limits.maximumVariables);
+      setRows(response.data.variables.map((variable, index) => ({
+        id: `stored-${variable.key}-${index}`,
+        key: variable.key,
+        value: variable.value ?? "",
+        sensitive: variable.sensitive,
+        retainsStoredValue: variable.sensitive && variable.value === null,
+      })));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể đọc biến môi trường.");
+    } finally {
+      setLoading(false);
+    }
+  }, [application.id]);
+
+  useEffect(() => {
+    void loadEnvironment();
+  }, [loadEnvironment]);
+
+  function updateRow(id: string, patch: Partial<EnvironmentEditorRow>) {
+    setRows((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row));
+  }
+
+  function addRow() {
+    rowSequence.current += 1;
+    setRows((current) => [...current, {
+      id: `new-${rowSequence.current}`,
+      key: "",
+      value: "",
+      sensitive: false,
+      retainsStoredValue: false,
+    }]);
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const keys = rows.map((row) => row.key.trim());
+    const invalidKey = keys.find((key) => !/^[A-Z][A-Z0-9_]{0,63}$/.test(key));
+    if (invalidKey !== undefined) {
+      setError("Tên biến phải viết hoa, bắt đầu bằng chữ cái và chỉ chứa chữ cái, số hoặc dấu gạch dưới.");
+      return;
+    }
+    if (new Set(keys).size !== keys.length) {
+      setError("Mỗi tên biến chỉ được xuất hiện một lần.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    try {
+      const response = await api.updateEnvironment(application.id, rows.map((row) => ({
+        key: row.key.trim(),
+        value: row.sensitive && row.retainsStoredValue && row.value === "" ? null : row.value,
+        sensitive: row.sensitive,
+      })));
+      setMaximumVariables(response.data.limits.maximumVariables);
+      setRows(response.data.variables.map((variable, index) => ({
+        id: `stored-${variable.key}-${index}`,
+        key: variable.key,
+        value: variable.value ?? "",
+        sensitive: variable.sensitive,
+        retainsStoredValue: variable.sensitive && variable.value === null,
+      })));
+      onSaved(response.data.count);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể áp dụng biến môi trường.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="environment-panel" aria-labelledby="environment-title">
+      <div className="environment-panel__heading">
+        <div>
+          <span className="eyebrow">CẤU HÌNH KHI CHẠY</span>
+          <h2 id="environment-title">Biến môi trường</h2>
+          <p>Giá trị được mã hóa trong SQLite. Khi lưu, Runner tái tạo container để cấu hình có hiệu lực ngay.</p>
+        </div>
+        <span className="environment-count">{rows.length}/{maximumVariables} biến</span>
+      </div>
+
+      <div className="environment-security-note">
+        <ShieldIcon />
+        <div><strong>Giá trị nhạy cảm không được đọc lại</strong><span>Sau khi lưu, Dashboard chỉ cho biết biến đã tồn tại. Để thay đổi, nhập một giá trị mới.</span></div>
+      </div>
+
+      {loading ? (
+        <div className="environment-loading"><i /><i /></div>
+      ) : (
+        <form onSubmit={submit}>
+          <div className="environment-list">
+            {rows.length === 0 ? (
+              <div className="environment-empty"><strong>Chưa có biến môi trường tùy chỉnh</strong><span>Thêm biến để cấu hình hành vi của {application.name} mà không sửa image.</span></div>
+            ) : rows.map((row) => (
+              <div className="environment-row" key={row.id}>
+                <label>
+                  <span>Tên biến</span>
+                  <input
+                    className="mono"
+                    value={row.key}
+                    onChange={(event) => updateRow(row.id, { key: event.target.value.toUpperCase() })}
+                    placeholder="APP_MESSAGE"
+                    maxLength={64}
+                    autoComplete="off"
+                    spellCheck={false}
+                    disabled={saving}
+                    required
+                  />
+                </label>
+                <label>
+                  <span>Giá trị</span>
+                  <input
+                    type={row.sensitive ? "password" : "text"}
+                    value={row.value}
+                    onChange={(event) => updateRow(row.id, { value: event.target.value, retainsStoredValue: false })}
+                    placeholder={row.retainsStoredValue ? "Đã lưu · để trống để giữ nguyên" : "Nhập giá trị"}
+                    maxLength={2_048}
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    disabled={saving}
+                  />
+                </label>
+                <label className="environment-sensitive">
+                  <input
+                    type="checkbox"
+                    checked={row.sensitive}
+                    onChange={(event) => updateRow(row.id, {
+                      sensitive: event.target.checked,
+                      retainsStoredValue: event.target.checked ? row.retainsStoredValue : false,
+                    })}
+                    disabled={saving}
+                  />
+                  <span>Nhạy cảm</span>
+                </label>
+                <button
+                  className="environment-remove"
+                  type="button"
+                  onClick={() => setRows((current) => current.filter((item) => item.id !== row.id))}
+                  disabled={saving}
+                  aria-label={`Xóa biến ${row.key || "chưa đặt tên"}`}
+                >Xóa</button>
+              </div>
+            ))}
+          </div>
+
+          {error && <div className="form-error" role="alert"><AlertIcon />{error}</div>}
+          <div className="environment-actions">
+            <button className="button button--secondary" type="button" onClick={addRow} disabled={saving || rows.length >= maximumVariables}>Thêm biến</button>
+            <button className="button button--secondary" type="button" onClick={() => void loadEnvironment()} disabled={saving}>Hoàn tác thay đổi</button>
+            <button className="button button--primary" disabled={saving}>{saving ? "Đang áp dụng…" : "Lưu và tái triển khai"}</button>
+          </div>
+        </form>
+      )}
+    </section>
+  );
+}
+
 function AuditTable({ events }: { readonly events: readonly AuditEvent[] }) {
   return (
     <div className="table-wrap">
@@ -661,6 +847,7 @@ function ApplicationFacts({ application, latestDeployment }: { readonly applicat
         <div><dt>Phiên bản mong muốn</dt><dd className="mono">{application.desiredVersion}</dd></div>
         <div><dt>Container</dt><dd className="mono">{application.runtime.containerName || "Chưa đọc được"}</dd></div>
         <div><dt>Image</dt><dd className="mono">{application.runtime.image || "Chưa đọc được"}</dd></div>
+        <div><dt>Biến môi trường</dt><dd>{application.runtime.environmentVariableCount} biến đang áp dụng</dd></div>
         <div><dt>Commit gần nhất</dt><dd className="mono">{latestDeployment?.commitSha.slice(0, 12) || "Chưa có deployment Git"}</dd></div>
       </dl>
     </section>
@@ -801,6 +988,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
         <nav className="detail-tabs" aria-label={`Khu vực ${application.name}`}>
           <AppLink to={basePath} active={tab === "overview"}>Tổng quan</AppLink>
           <AppLink to={`${basePath}/deployments`} active={tab === "deployments"}>Triển khai</AppLink>
+          <AppLink to={`${basePath}/environment`} active={tab === "environment"}>Biến môi trường</AppLink>
           <AppLink to={`${basePath}/observability`} active={tab === "observability"}>Nhật ký &amp; tài nguyên</AppLink>
         </nav>
 
@@ -835,6 +1023,18 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
               deployments={applicationDeployments}
               submitting={submittingDeployment}
               onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+            />
+          </section>
+        )}
+
+        {tab === "environment" && (
+          <section className="detail-content">
+            <EnvironmentVariablesPanel
+              application={application}
+              onSaved={(count) => {
+                setNotice(`Đã áp dụng ${count} biến môi trường cho ${application.name}.`);
+                void loadData(true);
+              }}
             />
           </section>
         )}
