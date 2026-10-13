@@ -2,7 +2,7 @@ COMMIT_SHA ?= $(shell git rev-parse HEAD)
 CI_OUTPUT_DIR ?= output/ci
 K6_IMAGE ?= grafana/k6:2.3.0@sha256:9c2dee7f8ed74d317e4027c06a10f169b625638189de8d4555d0b3486a5aeb34
 
-.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-p1-git test-p1-observability test-p1-dashboard test-p1-environment test-p2-rollback test-p1-load-pilot test-p1-load test-unit test-integration test config
+.PHONY: build prepare-images build-commit-images verify-commit-images up down status logs smoke test-p0-2 test-p0-2b test-p0-2c test-p1-1a test-p1-git test-p1-git-latest test-p1-observability test-p1-dashboard test-p1-environment test-p2-rollback test-p1-load-pilot test-p1-load test-unit test-integration test config
 
 build:
 	docker compose build
@@ -45,6 +45,9 @@ test-p1-1a:
 
 test-p1-git:
 	./tests/integration/p1_git_deploy.sh "$(COMMIT_SHA)"
+
+test-p1-git-latest:
+	./tests/integration/p1_git_latest.sh
 
 test-p1-observability:
 	./tests/integration/p1_observability.sh

@@ -63,6 +63,10 @@ export const api = {
     "/api/v1/deployments",
     { method: "POST", body: JSON.stringify({ sourceId, commit }) },
   ),
+  deployLatestSource: (sourceId: string) => request<{ data: DeploymentItem }>(
+    "/api/v1/deployments/latest",
+    { method: "POST", body: JSON.stringify({ sourceId }) },
+  ),
   rollbackRelease: (releaseId: string) => request<{ data: ReleaseItem; message: string }>(
     `/api/v1/releases/${encodeURIComponent(releaseId)}/rollback`,
     { method: "POST" },

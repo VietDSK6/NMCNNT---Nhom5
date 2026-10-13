@@ -22,7 +22,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR06 | Lưu lịch sử operation và audit | Đã triển khai, kiểm thử |
 | FR07 | Xem log gần nhất theo giới hạn | Đã triển khai, kiểm thử |
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
-| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử phạm vi tối thiểu cho một source/App A theo commit SHA; chưa có registry digest hoặc repository tùy ý |
+| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử cho một source/App A theo commit cụ thể hoặc commit mới nhất của nhánh mặc định; chưa có webhook, registry digest hoặc repository tùy ý |
 | FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Đã triển khai và kiểm thử bằng Runner exporter, Prometheus và Grafana; chưa có Alertmanager |
 | FR11 | Quản lý biến môi trường theo ứng dụng | Đã triển khai và kiểm thử; mã hóa SQLite, che secret, giữ cấu hình qua cập nhật image |
 | FR12 | Lưu lịch sử release và rollback | Đã triển khai và kiểm thử trên một host; xác minh image ID cục bộ, chưa có registry digest |
@@ -117,7 +117,7 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, rollback, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, App đích và build context; API chỉ nhận `sourceId` cùng SHA 40 ký tự. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi một lần thay container thất bại, Runner cố gắng phục hồi container cũ. Ngoài cơ chế phục hồi nội bộ đó, lịch sử release cho phép quản trị viên chủ động rollback về một image ID cũ còn tồn tại trên host.
+Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, rollback, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, nhánh mặc định, App đích và build context. Quản trị viên có thể gửi SHA 40 ký tự hoặc yêu cầu Runner phân giải HEAD của nhánh mặc định thành SHA bất biến; Dashboard không gửi tên nhánh tùy ý. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi một lần thay container thất bại, Runner cố gắng phục hồi container cũ. Ngoài cơ chế phục hồi nội bộ đó, lịch sử release cho phép quản trị viên chủ động rollback về một image ID cũ còn tồn tại trên host.
 
 ### 3.4.5. Prometheus và Grafana
 

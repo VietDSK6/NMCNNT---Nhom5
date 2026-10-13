@@ -461,3 +461,34 @@ Lần chạy tích hợp đầu tiên nhận HTTP 504 ở Gateway. Nguyên nhân
 - `docs/architecture/P2_RELEASE_ROLLBACK.md`.
 - `docs/decisions/0009-local-release-rollback.md`.
 - `tests/integration/p2_release_rollback.sh`.
+
+## 13/10/2026 — P1 bổ sung triển khai commit mới nhất
+
+### Phạm vi thực hiện
+
+- Thêm `defaultBranch=main` và GitHub ref URL cố định vào source catalog.
+- Runner phân giải ref thành SHA 40 ký tự, giới hạn metadata 64 KiB và từ chối phản hồi không hợp lệ.
+- Control API thêm `POST /api/v1/deployments/latest`; sau khi phân giải dùng lại luồng deployment theo SHA hiện có.
+- Dashboard ưu tiên nút **Triển khai commit mới nhất** và vẫn giữ form **Triển khai commit đã nhập**.
+- Không triển khai webhook hoặc tự deploy khi push.
+
+### Kết quả thực tế
+
+- Runner unit test: 27/27 đạt.
+- Control API unit/API test: 13/13 đạt.
+- Dashboard production build: đạt; không chạy trình duyệt/responsive theo quy tắc dự án.
+- Kịch bản tích hợp commit mới nhất: 15 kiểm tra đạt.
+- Toàn bộ `make test` đạt, gồm unit/API/build và các regression P0.1–P2.
+- SHA phân giải khớp `origin/main` tại `d6297422c3363b1aa728c1df3b88200b8bc0fdf8`.
+- Image và release lưu đúng commit; App A được dọn về `v1.0.0`; tám service khỏe.
+
+### Giới hạn
+
+- Chỉ hỗ trợ source GitHub công khai và nhánh `main` đã allowlist.
+- GitHub API không xác thực có giới hạn tần suất; chưa dùng GitHub App/token.
+- Chưa có webhook/auto-deploy, chọn nhánh tùy ý hoặc hủy build.
+
+### Bằng chứng
+
+- `evidence/P1-git-latest/2026-10-13-macos/`.
+- `tests/integration/p1_git_latest.sh`.

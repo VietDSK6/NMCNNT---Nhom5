@@ -27,6 +27,8 @@ export const SOURCE_CATALOG = Object.freeze({
     provider: "github",
     repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
     archiveBaseUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5/archive",
+    latestRevisionUrl: "https://api.github.com/repos/VietDSK6/NMCNNT---Nhom5/git/ref/heads/main",
+    defaultBranch: "main",
     contextPath: "apps/app-a",
     appId: "app-a",
     imageRepository: "mini-paas/app-a",
@@ -70,7 +72,13 @@ export function validateCommitSha(commit) {
 }
 
 export function listPublicSources() {
-  return Object.values(SOURCE_CATALOG).map(({ archiveBaseUrl: _archiveBaseUrl, contextPath: _contextPath, imageRepository: _imageRepository, ...source }) => source);
+  return Object.values(SOURCE_CATALOG).map(({
+    archiveBaseUrl: _archiveBaseUrl,
+    latestRevisionUrl: _latestRevisionUrl,
+    contextPath: _contextPath,
+    imageRepository: _imageRepository,
+    ...source
+  }) => source);
 }
 
 export function validateAction(appId, action, version) {

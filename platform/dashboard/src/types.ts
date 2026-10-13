@@ -90,6 +90,7 @@ export interface TrustedSource {
   readonly name: string;
   readonly provider: "github";
   readonly repositoryUrl: string;
+  readonly defaultBranch: string;
   readonly appId: string;
 }
 

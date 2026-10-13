@@ -5,7 +5,8 @@ import { createRunnerServer } from "./server.mjs";
 
 const token = "runner-test-secret-at-least-24";
 const runtime = {
-  listSources: () => [{ id: "github-app-a", appId: "app-a" }],
+  listSources: () => [{ id: "github-app-a", appId: "app-a", defaultBranch: "main" }],
+  latestRevision: async (sourceId) => ({ sourceId, appId: "app-a", branch: "main", commit: "b".repeat(40) }),
   deploySource: async (sourceId, commit) => ({ sourceId, commit, version: `git-${commit.slice(0, 12)}` }),
   status: async (appId) => ({ appId, status: "running" }),
   logs: async (appId, tail) => ({ appId, requestedTail: tail, lines: [] }),
@@ -129,6 +130,12 @@ test("liệt kê source tin cậy và yêu cầu triển khai theo commit", asyn
   const sources = await invoke({ path: "/v1/sources", headers });
   assert.equal(sources.statusCode, 200);
   assert.equal(sources.body.data[0].id, "github-app-a");
+  assert.equal(sources.body.data[0].defaultBranch, "main");
+
+  const latest = await invoke({ path: "/v1/sources/github-app-a/latest-revision", headers });
+  assert.equal(latest.statusCode, 200);
+  assert.equal(latest.body.data.branch, "main");
+  assert.equal(latest.body.data.commit, "b".repeat(40));
 
   const commit = "a".repeat(40);
   const deployment = await invoke({

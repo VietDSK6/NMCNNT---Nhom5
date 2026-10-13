@@ -337,11 +337,13 @@ function GitDeploymentPanel({
   deployments,
   submitting,
   onDeploy,
+  onDeployLatest,
 }: {
   readonly sources: readonly TrustedSource[];
   readonly deployments: readonly DeploymentItem[];
   readonly submitting: boolean;
   readonly onDeploy: (sourceId: string, commit: string) => void;
+  readonly onDeployLatest: (sourceId: string) => void;
 }) {
   const [sourceId, setSourceId] = useState("");
   const [commit, setCommit] = useState("");
@@ -372,8 +374,8 @@ function GitDeploymentPanel({
       <form className="deployment-form" onSubmit={submit}>
         <div className="deployment-form__heading">
           <span className="eyebrow">SOURCE ĐƯỢC KIỂM SOÁT</span>
-          <h3>Build và triển khai một commit</h3>
-          <p>Runner chỉ tải repository đã khai báo sẵn, build đúng thư mục cho phép và không nhận Dockerfile hoặc URL tùy ý.</p>
+          <h3>Chọn phiên bản mã nguồn</h3>
+          <p>Triển khai commit mới nhất của nhánh mặc định hoặc chỉ định chính xác một commit đã tồn tại.</p>
         </div>
         {sources.length === 0 ? (
           <div className="source-unavailable"><AlertIcon /><div><strong>Chưa cấu hình source Git</strong><span>Ứng dụng này hiện được dựng từ Docker Compose và chưa nhận deployment từ repository.</span></div></div>
@@ -385,6 +387,22 @@ function GitDeploymentPanel({
                 {sources.map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}
               </select>
             </label>
+            {selectedSource && (
+              <div className="source-summary">
+                <div><small>Repository</small><a href={selectedSource.repositoryUrl} target="_blank" rel="noreferrer">{selectedSource.repositoryUrl}<ExternalIcon /></a></div>
+                <div><small>Ứng dụng đích</small><strong>{selectedSource.appId}</strong></div>
+                <div><small>Nhánh mặc định</small><strong className="mono">{selectedSource.defaultBranch}</strong></div>
+              </div>
+            )}
+            <button
+              className="button button--primary deployment-submit deployment-submit--latest"
+              type="button"
+              disabled={submitting || !selectedSource}
+              onClick={() => selectedSource && onDeployLatest(selectedSource.id)}
+            >
+              <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Triển khai commit mới nhất"}
+            </button>
+            <div className="deployment-choice-separator"><span>Hoặc triển khai commit cụ thể</span></div>
             <label>
               <span>Commit SHA đầy đủ</span>
               <input
@@ -400,15 +418,9 @@ function GitDeploymentPanel({
                 disabled={submitting || !selectedSource}
               />
             </label>
-            {selectedSource && (
-              <div className="source-summary">
-                <div><small>Repository</small><a href={selectedSource.repositoryUrl} target="_blank" rel="noreferrer">{selectedSource.repositoryUrl}<ExternalIcon /></a></div>
-                <div><small>Ứng dụng đích</small><strong>{selectedSource.appId}</strong></div>
-              </div>
-            )}
             {validationError && <div className="form-error" role="alert"><AlertIcon />{validationError}</div>}
-            <button className="button button--primary deployment-submit" disabled={submitting || !selectedSource}>
-              <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Build và triển khai"}
+            <button className="button button--secondary deployment-submit deployment-submit--specific" disabled={submitting || !selectedSource}>
+              <DeployIcon />{submitting ? "Đang tiếp nhận…" : "Triển khai commit đã nhập"}
             </button>
           </>
         )}
@@ -1046,6 +1058,21 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     }
   }
 
+  async function deployLatestSource(sourceId: string) {
+    setSubmittingDeployment(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await api.deployLatestSource(sourceId);
+      setNotice(`Đã tiếp nhận commit mới nhất ${response.data.commitSha.slice(0, 12)} để build và triển khai.`);
+      await loadData(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể triển khai commit mới nhất.");
+    } finally {
+      setSubmittingDeployment(false);
+    }
+  }
+
   async function rollbackRelease(release: ReleaseItem) {
     setSubmittingReleaseId(release.id);
     setError("");
@@ -1128,6 +1155,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
               deployments={applicationDeployments}
               submitting={submittingDeployment}
               onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+              onDeployLatest={(sourceId) => void deployLatestSource(sourceId)}
             />
             <ReleaseHistoryPanel
               application={application}
@@ -1212,8 +1240,14 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     if (route.kind === "deployments") {
       return (
         <>
-          <section className="page-intro"><div><span className="eyebrow">TRIỂN KHAI TỪ GIT</span><h2>Build theo commit đã chọn</h2><p>Góc nhìn toàn hệ thống cho source được phép và lịch sử deployment gần đây.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
-          <GitDeploymentPanel sources={sources} deployments={deployments} submitting={submittingDeployment} onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)} />
+          <section className="page-intro"><div><span className="eyebrow">TRIỂN KHAI TỪ GIT</span><h2>Build commit mới nhất hoặc đã chọn</h2><p>Góc nhìn toàn hệ thống cho source được phép và lịch sử deployment gần đây.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
+          <GitDeploymentPanel
+            sources={sources}
+            deployments={deployments}
+            submitting={submittingDeployment}
+            onDeploy={(sourceId, commit) => void deploySource(sourceId, commit)}
+            onDeployLatest={(sourceId) => void deployLatestSource(sourceId)}
+          />
         </>
       );
     }

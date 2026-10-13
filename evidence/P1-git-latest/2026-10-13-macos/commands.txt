@@ -1,0 +1,5 @@
+docker compose build runner control-api dashboard
+docker compose up -d --wait runner control-api dashboard gateway
+make test-p1-git-latest
+make test
+docker compose ps

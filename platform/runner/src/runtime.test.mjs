@@ -38,6 +38,27 @@ test("metric phân biệt container đang chạy nhưng unhealthy với containe
   assert.doesNotMatch(output, /mini_paas_app_cpu_percent\{app_id="app-b"\}/);
 });
 
+test("phân giải commit mới nhất chỉ qua source và nhánh đã khai báo", async () => {
+  const commit = "a".repeat(40);
+  let receivedSource = null;
+  const runtime = new DeploymentRuntime({}, {
+    sourceBuilder: {
+      resolveLatestCommit: async (source) => {
+        receivedSource = source;
+        return commit;
+      },
+    },
+  });
+
+  assert.deepEqual(await runtime.latestRevision("github-app-a"), {
+    sourceId: "github-app-a",
+    appId: "app-a",
+    branch: "main",
+    commit,
+  });
+  assert.equal(receivedSource.defaultBranch, "main");
+});
+
 test("rollback xác minh image ID và giữ biến môi trường đang quản lý", async () => {
   const targetImageId = `sha256:${"2".repeat(64)}`;
   let createBody = null;

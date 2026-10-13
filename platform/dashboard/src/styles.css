@@ -274,6 +274,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .source-unavailable strong { color: #3f4b60; font-size: 10px; }
 .source-unavailable span { margin-top: 4px; font-size: 9px; line-height: 1.6; }
 .deployment-submit { width: 100%; min-height: 44px; margin-top: 16px; }
+.deployment-submit--latest { margin-top: 18px; }
+.deployment-submit--specific { margin-top: 12px; }
+.deployment-choice-separator { display: flex; align-items: center; gap: 10px; margin: 18px 0 2px; color: #8a94a5; font-size: 8px; font-weight: 650; text-transform: uppercase; }
+.deployment-choice-separator::before, .deployment-choice-separator::after { content: ""; flex: 1; height: 1px; background: #e3e7ee; }
+.deployment-choice-separator span { flex: 0 0 auto; }
 .deployment-history { min-width: 0; }
 .deployment-history__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .deployment-history__heading strong { font-size: 12px; }

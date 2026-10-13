@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện có luồng tối thiểu cho phép quản trị viên chọn repository tin cậy, nhập commit SHA, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện cho phép quản trị viên chọn repository tin cậy, triển khai commit mới nhất của nhánh mặc định hoặc nhập một commit SHA cụ thể, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
 
 ## Trạng thái hiện tại
 
@@ -23,7 +23,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Unit/integration test kiểm tra xác thực, định tuyến, allowlist, ranh giới Docker socket và vòng đời thật.
 - Script dựng App A/App B với tag `sha-<12 ký tự>`, nhãn OCI chứa commit đầy đủ và manifest chứa image ID.
 - Workflow CI dùng quyền chỉ đọc, phiên bản Node cố định, action ghim bằng commit SHA; thực hiện build, regression P0 và lưu manifest làm artifact.
-- Dashboard liệt kê source Git tin cậy, nhận commit SHA đầy đủ và hiển thị lịch sử deployment cùng build log.
+- Dashboard liệt kê source Git tin cậy, cho phép triển khai commit mới nhất của `main` hoặc commit SHA đầy đủ và hiển thị lịch sử deployment cùng build log.
 - Runner tải archive của commit từ URL cố định, giới hạn 16 MiB, build context cố định qua Docker API và triển khai image `git-<12 ký tự>`.
 - SQLite lưu source, commit, phiên bản, image reference/ID, log, người yêu cầu và các mốc thời gian của deployment.
 - Kiểm thử thật đã build commit `093f1b2…`, triển khai App A qua Gateway, kiểm tra nhãn OCI và đưa ứng dụng về v1.0.0.
@@ -37,7 +37,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
-- Source hiện được quản trị bằng allowlist trong mã; chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
+- Source hiện được quản trị bằng allowlist trong mã; nhánh mặc định cố định là `main`, chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; kiểm thử tải đã đạt vòng phát triển trên Mac nhưng chưa nghiệm thu lặp lại trên VPS Linux.
 - Hàng đợi operation bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
@@ -111,7 +111,7 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 23/23 đạt.
+- Deployment Runner unit test: 27/27 đạt.
 - Control API unit test: 13/13 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
@@ -123,6 +123,7 @@ Kết quả chuẩn hiện tại:
 - P1 observability: 15/15 kiểm tra tích hợp đạt.
 - P1 Dashboard navigation: 11/11 đường dẫn trả entrypoint SPA qua Gateway.
 - P1 Environment Variables: 21 kiểm tra tích hợp đạt; secret bị che, biến còn sau cập nhật image và trạng thái cuối được dọn sạch.
+- P1 Deploy latest commit: 15 kiểm tra tích hợp đạt; SHA phân giải khớp `origin/main`, image/release lưu đúng commit và App A được đưa về v1 sau thử nghiệm.
 - P2 Release History / Rollback: 17 kiểm tra tích hợp đạt; đối chiếu đúng image ID và đưa App A về v1 sau kiểm thử.
 - T06 k6 vòng phát triển: ba mức 10/25/50 req/s trong 60 giây/mức đều đạt; p95 cao nhất 7,32 ms, lỗi 0%, dropped iteration bằng 0.
 
@@ -189,9 +190,20 @@ make test-p2-rollback
 
 Rollback không build hay tải lại image. Nếu image cục bộ đã bị xóa hoặc tag trỏ sang nội dung khác, thao tác bị từ chối. Vì chưa có registry digest, tính năng hiện chỉ bảo đảm trên cùng Docker host và gây gián đoạn ngắn khi thay một replica.
 
-## Triển khai App A từ commit Git
+## Triển khai App A từ Git
 
-Trong Dashboard, mở **Ứng dụng → Ứng dụng A → Triển khai**, chọn source `Ứng dụng A từ GitHub`, nhập SHA đầy đủ 40 ký tự rồi chọn **Build và triển khai**. Trang **Triển khai từ Git** ở menu chính vẫn cung cấp góc nhìn toàn hệ thống. Source URL và thư mục build do Runner cố định; giao diện không nhận repository hoặc Dockerfile tùy ý.
+Trong Dashboard, mở **Ứng dụng → Ứng dụng A → Triển khai**, chọn source `Ứng dụng A từ GitHub` rồi dùng một trong hai cách:
+
+- **Triển khai commit mới nhất:** Runner đọc HEAD của nhánh `main` đã khai báo, kiểm tra SHA 40 ký tự rồi dùng pipeline build/deploy hiện có.
+- **Triển khai commit đã nhập:** nhập SHA đầy đủ 40 ký tự để triển khai đúng mốc mong muốn.
+
+Trang **Triển khai từ Git** ở menu chính vẫn cung cấp góc nhìn toàn hệ thống. Source URL, nhánh mặc định và thư mục build do Runner cố định; giao diện không nhận repository, tên nhánh hoặc Dockerfile tùy ý. Hệ thống không tự deploy khi push.
+
+Kiểm thử commit mới nhất:
+
+```bash
+make test-p1-git-latest
+```
 
 Chạy lại toàn bộ kịch bản tự động bằng một commit đã tồn tại trên GitHub:
 
@@ -292,6 +304,7 @@ tests/integration/p0_2.sh   Kiểm thử tích hợp P0.2
 tests/integration/p0_2b.sh  Kiểm thử vòng đời P0.2B
 tests/integration/p0_2c.sh  Kiểm thử log và tài nguyên P0.2C
 tests/integration/p1_git_deploy.sh  Kiểm thử Git → build → deploy
+tests/integration/p1_git_latest.sh  Kiểm thử phân giải và deploy commit mới nhất
 tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
 tests/integration/p1_environment.sh  Kiểm thử biến môi trường và tái tạo container

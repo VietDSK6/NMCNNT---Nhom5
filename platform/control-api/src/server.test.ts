@@ -43,8 +43,15 @@ const runnerClient: RunnerClient = {
     name: "Ứng dụng A từ GitHub",
     provider: "github",
     repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
+    defaultBranch: "main",
     appId: "app-a",
   }],
+  latestRevision: async (sourceId) => ({
+    sourceId,
+    appId: "app-a",
+    branch: "main",
+    commit: "b".repeat(40),
+  }),
   deploySource: async (sourceId, commit) => ({
     sourceId,
     appId: "app-a",
@@ -328,7 +335,7 @@ test("log và số liệu tài nguyên yêu cầu phiên đăng nhập, có gi�
   assert.equal(unknown.statusCode, 404);
 });
 
-test("tạo deployment từ source tin cậy và lưu build metadata", async () => {
+test("tạo deployment theo commit cụ thể hoặc commit mới nhất và lưu build metadata", async () => {
   const login = await server.inject({
     method: "POST",
     url: "/api/v1/auth/login",
@@ -366,6 +373,22 @@ test("tạo deployment từ source tin cậy và lưu build metadata", async () 
   const history = await server.inject({ method: "GET", url: "/api/v1/deployments", headers: { cookie } });
   assert.equal(history.statusCode, 200);
   assert.equal(history.json().data[0].sourceId, "github-app-a");
+
+  const latest = await server.inject({
+    method: "POST",
+    url: "/api/v1/deployments/latest",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { sourceId: "github-app-a" },
+  });
+  assert.equal(latest.statusCode, 202);
+  assert.equal(latest.json().data.commitSha, "b".repeat(40));
+  const latestId = latest.json().data.id;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (database.findDeployment(latestId)?.status === "succeeded") break;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  assert.equal(database.findDeployment(latestId)?.status, "succeeded");
+  assert.equal(database.findDeployment(latestId)?.version, `git-${"b".repeat(12)}`);
 });
 
 test("liệt kê release và rollback về đúng image đã ghi nhận", async () => {
@@ -440,6 +463,15 @@ test("từ chối source lạ và commit không đúng định dạng", async ()
   });
   assert.equal(unknownSource.statusCode, 404);
   assert.equal(unknownSource.json().error, "source_not_allowed");
+
+  const unknownLatestSource = await server.inject({
+    method: "POST",
+    url: "/api/v1/deployments/latest",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { sourceId: "unknown-source" },
+  });
+  assert.equal(unknownLatestSource.statusCode, 404);
+  assert.equal(unknownLatestSource.json().error, "source_not_allowed");
 });
 
 test("lưu biến môi trường có mã hóa, che giá trị nhạy cảm và chặn biến hệ thống", async () => {

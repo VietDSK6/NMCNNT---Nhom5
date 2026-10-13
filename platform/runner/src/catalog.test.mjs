@@ -26,6 +26,7 @@ test("chỉ chấp nhận source được khai báo và commit SHA đầy đủ"
     name: "Ứng dụng A từ GitHub",
     provider: "github",
     repositoryUrl: "https://github.com/VietDSK6/NMCNNT---Nhom5",
+    defaultBranch: "main",
     appId: "app-a",
   }]);
 });

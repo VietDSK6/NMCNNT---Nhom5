@@ -60,7 +60,15 @@ export interface TrustedSource {
   readonly name: string;
   readonly provider: "github";
   readonly repositoryUrl: string;
+  readonly defaultBranch: string;
   readonly appId: string;
+}
+
+export interface SourceRevision {
+  readonly sourceId: string;
+  readonly appId: string;
+  readonly branch: string;
+  readonly commit: string;
 }
 
 export interface SourceDeploymentResult {
@@ -77,6 +85,7 @@ export interface SourceDeploymentResult {
 
 export interface RunnerClient {
   sources(): Promise<readonly TrustedSource[]>;
+  latestRevision(sourceId: string): Promise<SourceRevision>;
   deploySource(sourceId: string, commit: string): Promise<SourceDeploymentResult>;
   status(appId: string): Promise<RunnerStatus>;
   logs(appId: string, tail: number): Promise<RunnerLogs>;
@@ -137,6 +146,14 @@ export class HttpRunnerClient implements RunnerClient {
 
   sources(): Promise<readonly TrustedSource[]> {
     return this.request<readonly TrustedSource[]>("/v1/sources");
+  }
+
+  latestRevision(sourceId: string): Promise<SourceRevision> {
+    return this.request<SourceRevision>(
+      `/v1/sources/${encodeURIComponent(sourceId)}/latest-revision`,
+      undefined,
+      15_000,
+    );
   }
 
   deploySource(sourceId: string, commit: string): Promise<SourceDeploymentResult> {

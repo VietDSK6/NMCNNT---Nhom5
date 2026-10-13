@@ -79,6 +79,24 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
+    const latestRevisionMatch = url.pathname.match(/^\/v1\/sources\/([a-z0-9-]+)\/latest-revision$/);
+    if (request.method === "GET" && latestRevisionMatch) {
+      try {
+        const data = await runtime.latestRevision(latestRevisionMatch[1]);
+        logger.info?.({ sourceId: data.sourceId, branch: data.branch, commit: data.commit }, "source_latest_revision_resolved");
+        json(response, 200, { data });
+      } catch (error) {
+        const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+        const code = typeof error?.code === "string" ? error.code : "runner_internal_error";
+        const message = statusCode < 500 && error instanceof Error
+          ? error.message
+          : "Runner không thể phân giải commit mới nhất. Hãy kiểm tra nhật ký dịch vụ.";
+        logger.error?.({ sourceId: latestRevisionMatch[1], code, statusCode }, "source_latest_revision_failed");
+        json(response, statusCode, { error: code, message });
+      }
+      return;
+    }
+
     const sourceDeploymentMatch = url.pathname.match(/^\/v1\/sources\/([a-z0-9-]+)\/deployments$/);
     if (request.method === "POST" && sourceDeploymentMatch) {
       try {

@@ -31,6 +31,7 @@ Minh chứng hiện có:
 - `T06/2026-10-12T2200-pilot-macos`: pilot 5/15/30 req/s để xác minh kịch bản, summary và đường thu thập Prometheus.
 - `T06/2026-10-12T2202-macos`: vòng chuẩn 10/25/50 req/s trên macOS/OrbStack; dữ liệu k6 gốc nén, summary JSON/CSV, log và metric CPU/RAM/health cùng khoảng thời gian.
 - `P1-environment/2026-10-13-macos`: biến thường/secret giả, tái tạo container, bảo toàn qua v1 → v2, audit và trạng thái dọn sạch; 21 kiểm tra tích hợp đạt.
+- `P1-git-latest/2026-10-13-macos`: phân giải `main` thành SHA, build/deploy commit mới nhất, đối chiếu image/release và dọn App A về v1; 15 kiểm tra tích hợp đạt.
 - `P2-rollback/2026-10-13-macos`: release bất biến, rollback đúng image ID, audit và trạng thái dọn sạch; 17 kiểm tra tích hợp đạt.
 
 Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

@@ -109,6 +109,19 @@ export class DeploymentRuntime {
     return listPublicSources();
   }
 
+  async latestRevision(sourceId) {
+    const source = getSourceSpec(sourceId);
+    if (!this.sourceBuilder) {
+      throw new RunnerRuntimeError("source_builder_unavailable", "Runner chưa được cấu hình bộ đọc mã nguồn.", 503);
+    }
+    return {
+      sourceId: source.id,
+      appId: source.appId,
+      branch: source.defaultBranch,
+      commit: await this.sourceBuilder.resolveLatestCommit(source),
+    };
+  }
+
   async deploySource(sourceId, commit) {
     const source = getSourceSpec(sourceId);
     const revision = validateCommitSha(commit);

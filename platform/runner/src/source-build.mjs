@@ -6,6 +6,7 @@ import { RunnerInputError } from "./catalog.mjs";
 
 const DEFAULT_MAX_ARCHIVE_BYTES = 16 * 1024 * 1024;
 const DEFAULT_MAX_LOG_CHARS = 64 * 1024;
+const DEFAULT_MAX_METADATA_BYTES = 64 * 1024;
 
 function boundedAppend(current, addition, maximum = DEFAULT_MAX_LOG_CHARS) {
   const next = `${current}${addition}`;
@@ -42,6 +43,51 @@ export class TrustedSourceBuilder {
     this.workspaceRoot = options.workspaceRoot ?? join(tmpdir(), "mini-paas-builds");
     this.maximumArchiveBytes = options.maximumArchiveBytes ?? DEFAULT_MAX_ARCHIVE_BYTES;
     this.downloadTimeoutMs = options.downloadTimeoutMs ?? 30_000;
+  }
+
+  async resolveLatestCommit(source) {
+    const response = await this.fetch(source.latestRevisionUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(this.downloadTimeoutMs),
+      headers: {
+        accept: "application/vnd.github+json",
+        "user-agent": "mini-paas-deployment-runner",
+        "x-github-api-version": "2022-11-28",
+      },
+    });
+    if (response.status === 403 || response.status === 429) {
+      throw new RunnerInputError(
+        "source_provider_rate_limited",
+        "GitHub đang giới hạn yêu cầu phân giải commit. Hãy thử lại sau.",
+        503,
+      );
+    }
+    if (!response.ok) {
+      throw new RunnerInputError(
+        "source_default_branch_unavailable",
+        `Không đọc được nhánh ${source.defaultBranch} từ kho mã (HTTP ${response.status}).`,
+        422,
+      );
+    }
+    const contentLength = Number(response.headers.get("content-length") ?? "0");
+    if (contentLength > DEFAULT_MAX_METADATA_BYTES) {
+      throw new RunnerInputError("source_metadata_too_large", "Phản hồi metadata từ GitHub vượt giới hạn cho phép.", 502);
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > DEFAULT_MAX_METADATA_BYTES) {
+      throw new RunnerInputError("source_metadata_invalid", "Phản hồi metadata từ GitHub rỗng hoặc quá lớn.", 502);
+    }
+    let body;
+    try {
+      body = JSON.parse(bytes.toString("utf8"));
+    } catch {
+      throw new RunnerInputError("source_metadata_invalid", "GitHub trả về metadata không hợp lệ.", 502);
+    }
+    const commit = body?.object?.sha;
+    if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) {
+      throw new RunnerInputError("source_metadata_invalid", "GitHub không trả về commit SHA hợp lệ.", 502);
+    }
+    return commit;
   }
 
   async downloadArchive(source, commit, archivePath) {

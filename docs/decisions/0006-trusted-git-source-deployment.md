@@ -10,7 +10,8 @@ Mini PaaS cần chứng minh chức năng sản phẩm Git → build → image �
 ## Quyết định
 
 - Source được khai báo cố định trong Runner và ánh xạ tới một ứng dụng cùng build context xác định.
-- Người quản trị chỉ chọn `sourceId` và nhập commit SHA đầy đủ.
+- Người quản trị chọn `sourceId`, sau đó triển khai commit SHA đầy đủ hoặc yêu cầu commit mới nhất của nhánh mặc định đã khai báo.
+- Khi chọn commit mới nhất, Runner đọc GitHub ref cố định, xác minh SHA 40 ký tự rồi chuyển về cùng luồng deployment bất biến; Dashboard không gửi tên nhánh.
 - Runner tải archive theo commit từ URL đã khai báo, giới hạn kích thước, build qua Docker API rồi dùng cơ chế thay container có phục hồi hiện có.
 - Control API lưu deployment riêng với operation vòng đời để phân biệt build/deploy với start/stop/restart/update image có sẵn.
 - Runner có mạng egress riêng để tải source; mạng control vẫn internal.
@@ -20,6 +21,7 @@ Mini PaaS cần chứng minh chức năng sản phẩm Git → build → image �
 Ưu điểm:
 
 - Có luồng sản phẩm thật, truy vết được từ commit đến image và container.
+- Có thao tác gần với PaaS thực tế để triển khai bản mới nhất nhưng vẫn lưu đúng SHA đã phân giải.
 - Không công khai Docker socket hoặc nhận shell command.
 - Có lịch sử, build log, audit và kiểm thử tự động.
 

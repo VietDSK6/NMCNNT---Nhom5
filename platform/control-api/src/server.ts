@@ -48,6 +48,10 @@ interface SourceDeploymentBody {
   readonly commit: string;
 }
 
+interface LatestSourceDeploymentBody {
+  readonly sourceId: string;
+}
+
 interface EnvironmentBody {
   readonly variables: readonly EnvironmentVariableInput[];
 }
@@ -72,7 +76,7 @@ function operationFailureMessage(error: unknown): string {
 
 function observationFailure(error: unknown): { statusCode: number; code: string; message: string } {
   if (error instanceof RunnerRequestError) {
-    if ([400, 404, 409, 413].includes(error.statusCode)) {
+    if ([400, 404, 409, 413, 422, 503].includes(error.statusCode)) {
       return { statusCode: error.statusCode, code: error.code, message: error.message };
     }
     return { statusCode: 502, code: "runner_unavailable", message: "Không thể đọc dữ liệu quan sát từ Deployment Runner." };
@@ -85,7 +89,7 @@ function observationFailure(error: unknown): { statusCode: number; code: string;
 
 function runnerMutationFailure(error: unknown): { statusCode: number; code: string; message: string } {
   if (error instanceof RunnerRequestError) {
-    if ([400, 404, 409, 413].includes(error.statusCode)) {
+    if ([400, 404, 409, 413, 422, 503].includes(error.statusCode)) {
       return { statusCode: error.statusCode, code: error.code, message: error.message };
     }
     return { statusCode: 502, code: "runner_unavailable", message: "Deployment Runner không thể hoàn tất thao tác." };
@@ -661,6 +665,80 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
       sourceId: source.id,
       repositoryUrl: source.repositoryUrl,
       commitSha: request.body.commit,
+      requestedBy: user.username,
+    });
+    trackOperation(executeSourceDeployment(deployment, user, requestIp(request)));
+    return reply.code(202).send({ data: deployment });
+  });
+
+  server.post<{ Body: LatestSourceDeploymentBody }>("/api/v1/deployments/latest", {
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["sourceId"],
+        properties: {
+          sourceId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    if (!enforceSameOrigin(request, reply)) return;
+    const user = requireUser(request, reply);
+    if (!user) return;
+
+    let sources: readonly TrustedSource[];
+    try {
+      sources = await runnerClient.sources();
+    } catch (error) {
+      const failure = observationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: "Không thể xác minh kho mã với Deployment Runner." });
+    }
+    const source = sources.find((item) => item.id === request.body.sourceId);
+    if (!source) {
+      return reply.code(404).send({ error: "source_not_allowed", message: "Kho mã không nằm trong danh sách được phép triển khai." });
+    }
+    const application = db.findApplication(source.appId);
+    if (!application) {
+      return reply.code(409).send({ error: "source_application_missing", message: "Kho mã chưa được gắn với ứng dụng trong hệ thống." });
+    }
+    const applicationIsBusy = () => (
+      db.findActiveOperation(application.id)
+      || db.findActiveDeployment(application.id)
+      || activeEnvironmentUpdates.has(application.id)
+      || activeRollbacks.has(application.id)
+    );
+    if (applicationIsBusy()) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+
+    let revision;
+    try {
+      revision = await runnerClient.latestRevision(source.id);
+    } catch (error) {
+      const failure = runnerMutationFailure(error);
+      return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
+    }
+    if (
+      revision.sourceId !== source.id
+      || revision.appId !== source.appId
+      || revision.branch !== source.defaultBranch
+      || !/^[0-9a-f]{40}$/.test(revision.commit)
+    ) {
+      return reply.code(502).send({
+        error: "runner_invalid_response",
+        message: "Deployment Runner trả về commit mới nhất không hợp lệ.",
+      });
+    }
+    if (applicationIsBusy()) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+
+    const deployment = db.createDeployment({
+      applicationId: application.id,
+      sourceId: source.id,
+      repositoryUrl: source.repositoryUrl,
+      commitSha: revision.commit,
       requestedBy: user.username,
     });
     trackOperation(executeSourceDeployment(deployment, user, requestIp(request)));
