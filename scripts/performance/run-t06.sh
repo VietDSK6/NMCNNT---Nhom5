@@ -8,6 +8,7 @@ base_url="${K6_BASE_URL:-http://gateway:8080}"
 pause_seconds="${K6_PAUSE_SECONDS:-5}"
 timestamp="$(date '+%Y-%m-%dT%H%M%S')"
 output_directory="${T06_OUTPUT_DIR:-output/performance/${timestamp}-${profile}}"
+k6_user="${K6_USER:-$(id -u):$(id -g)}"
 
 case "$profile" in
   pilot|standard) ;;
@@ -36,6 +37,7 @@ docker compose ps --status running >/dev/null
   printf 'base_url=%s\n' "$base_url"
   printf 'network=%s\n' "$network_name"
   printf 'k6_image=%s\n' "$k6_image"
+  printf 'k6_user=%s\n' "$k6_user"
   printf 'host_arch=%s\n' "$(uname -m)"
   printf 'node=%s\n' "$(node --version)"
   printf 'docker=%s\n' "$(docker version --format '{{.Server.Version}}')"
@@ -71,6 +73,7 @@ run_warmup() {
   printf '\nWarm-up: 5 req/s trong %s (không tính vào bảng kết quả)...\n' "$warmup_duration"
 
   if docker run --rm \
+    --user "$k6_user" \
     --network "$network_name" \
     --env BASE_URL="$base_url" \
     --env LEVEL="warmup" \
@@ -103,6 +106,7 @@ run_level() {
 
   printf '\nChạy mức %s: %s req/s trong %s...\n' "$level" "$target_rps" "$duration"
   if docker run --rm \
+    --user "$k6_user" \
     --network "$network_name" \
     --env BASE_URL="$base_url" \
     --env LEVEL="$level" \
