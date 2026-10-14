@@ -1,13 +1,13 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành trên môi trường phát triển. Sản phẩm hiện cho phép quản trị viên chọn repository tin cậy, triển khai commit mới nhất của nhánh mặc định hoặc nhập một commit SHA cụ thể, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành và stack đã được dựng lại trên VPS Debian 12. Sản phẩm hiện cho phép quản trị viên chọn repository tin cậy, triển khai commit mới nhất của nhánh mặc định hoặc nhập một commit SHA cụ thể, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
 
 ## Trạng thái hiện tại
 
 Đã triển khai và kiểm thử:
 
 - Hai ứng dụng Web mẫu có endpoint `/health` và `/version`.
-- Nginx Gateway là cổng duy nhất được công khai trên máy phát triển.
+- Nginx Gateway là cổng duy nhất được publish ra host, chỉ tại `127.0.0.1:8080`; VPS đưa Gateway ra Internet qua Tailscale Funnel thay vì công khai Docker/API trực tiếp.
 - Dashboard dùng React, Vite và TypeScript; thông tin được tách thành tổng quan hệ thống, danh sách ứng dụng và khu vực chi tiết của từng ứng dụng.
 - Control API dùng Fastify và TypeScript; Dashboard/API không mở cổng trực tiếp ra host.
 - SQLite lưu tài khoản quản trị, phiên đăng nhập, danh mục ứng dụng và audit event.
@@ -34,12 +34,14 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
 - Mỗi ứng dụng có trang quản lý biến môi trường; giá trị được mã hóa trong SQLite, secret bị che khi đọc và Runner tái tạo container để áp dụng cấu hình.
 - Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
+- Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
+- T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
 - Source hiện được quản trị bằng allowlist trong mã; nhánh mặc định cố định là `main`, chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
-- Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; kiểm thử tải đã đạt vòng phát triển trên Mac nhưng chưa nghiệm thu lặp lại trên VPS Linux.
+- Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; T06 đã nghiệm thu lặp lại trên VPS nhưng nguồn phát tải vẫn chạy cùng máy với hệ thống.
 - Hàng đợi operation bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
 - Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
 
@@ -70,6 +72,8 @@ Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong
 `PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này.
 
 Chỉ đặt `SESSION_COOKIE_SECURE=true` sau khi Gateway được cấu hình HTTPS. Môi trường localhost hiện dùng HTTP nên giữ `false`.
+
+Khi triển khai qua Tailscale Funnel và tên miền TenTen, làm theo [hướng dẫn cấu hình tên miền](docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md). Cấu hình hiện tại dùng bản ghi chuyển hướng để giữ chứng chỉ HTTPS hợp lệ của Funnel; không dùng `CNAME` trực tiếp tới tên miền `*.ts.net`.
 
 ## Khởi động
 
@@ -126,6 +130,7 @@ Kết quả chuẩn hiện tại:
 - P1 Deploy latest commit: 15 kiểm tra tích hợp đạt; SHA phân giải khớp `origin/main`, image/release lưu đúng commit và App A được đưa về v1 sau thử nghiệm.
 - P2 Release History / Rollback: 17 kiểm tra tích hợp đạt; đối chiếu đúng image ID và đưa App A về v1 sau kiểm thử.
 - T06 k6 vòng phát triển: ba mức 10/25/50 req/s trong 60 giây/mức đều đạt; p95 cao nhất 7,32 ms, lỗi 0%, dropped iteration bằng 0.
+- T06 k6 trên VPS Debian 12: ba vòng chuẩn đều đạt; median p95 là 58,00/22,78/35,00 ms tại 10/25/50 req/s, lỗi 0% và dropped iteration bằng 0.
 
 Bộ P0.2B thực hiện thật các luồng stop/start/restart App B và update App A v1 → v2 → v1; đồng thời kiểm tra action/version ngoài allowlist, xác thực Runner và vị trí Docker socket.
 
@@ -135,7 +140,7 @@ Theo quy tắc dự án từ ngày 12/10/2026, các thay đổi tiếp theo khô
 
 Bộ P1 observability kiểm tra endpoint metric nội bộ, port binding, Prometheus readiness/target/query/rules và Grafana health/xác thực/provisioning. Bộ P1 Dashboard kiểm tra trực tiếp qua HTTP rằng 10 đường dẫn có thể được mở hoặc tải lại qua Gateway. Không dùng kiểm tra trình duyệt, ảnh giao diện hoặc responsive cho các thay đổi này.
 
-Số liệu T06 nêu trên chỉ là bằng chứng vòng phát triển trên macOS/OrbStack. Công cụ phát tải và Mini PaaS cùng chạy trên một máy, endpoint thử là JSON nhỏ và mỗi mức mới đo một lần trong vòng chuẩn. Không dùng số liệu này để tuyên bố năng lực production; release cuối phải chạy lại nhiều lần trên VPS Linux.
+Số liệu macOS/OrbStack chỉ là bằng chứng vòng phát triển. Bộ [minh chứng T06 trên VPS](evidence/T06/2026-10-14-vps-linux/README.md) chứa ba vòng độc lập, dữ liệu gốc và bảng tổng hợp median/dao động. Công cụ phát tải và Mini PaaS vẫn chạy cùng một VPS, endpoint thử là JSON nhỏ; không dùng kết quả để tuyên bố năng lực production hoặc SLA.
 
 Chạy unit test và build riêng khi phát triển:
 
@@ -260,6 +265,8 @@ T06_OUTPUT_DIR=evidence/T06/<thoi-gian>-linux make test-p1-load
 ```
 
 Mỗi vòng giữ summary JSON/CSV, log k6, dữ liệu sự kiện k6 nén và chuỗi CPU/RAM/health lấy từ Prometheus trong đúng khoảng thời gian. Ngưỡng vòng phát triển là p95 dưới 500 ms, lỗi dưới 1%, check trên 99% và không rơi iteration. Việc đạt ngưỡng không thay thế phân tích giới hạn môi trường.
+
+Nghiệm thu VPS ngày 14/10/2026 đã chạy ba vòng cùng cấu hình. Xem dữ liệu, bảng kiểm thử và phân tích tại [`evidence/T06/2026-10-14-vps-linux/`](evidence/T06/2026-10-14-vps-linux/README.md). Cấu hình IP/cổng/quyền thực tế nằm trong [bảng tài nguyên VPS](docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md).
 
 ## Dừng hệ thống
 

@@ -143,7 +143,7 @@ const markdown = [
   "",
   `Kết luận tự động: **${allPassed ? "Đạt" : "Không đạt"}** theo ngưỡng của vòng chạy này.`,
   "",
-  "> Đây là số liệu môi trường phát triển. Chỉ vòng chạy lặp lại trên VPS Linux với cấu hình tài nguyên được ghi rõ mới được dùng làm kết quả hiệu năng chính thức.",
+  "> Kết quả chỉ có giá trị trong môi trường và điều kiện được ghi tại `environment.txt`; không dùng để suy rộng thành năng lực production.",
   "",
 ].join("\n");
 fs.writeFileSync(path.join(outputDirectory, "summary.md"), markdown);

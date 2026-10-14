@@ -1,0 +1,4 @@
+level	target_rps	duration	started_at	ended_at	status
+low	10	60s	2026-10-14T06:44:32Z	2026-10-14T06:45:33Z	passed
+medium	25	60s	2026-10-14T06:45:47Z	2026-10-14T06:46:48Z	passed
+high	50	60s	2026-10-14T06:47:02Z	2026-10-14T06:48:03Z	passed

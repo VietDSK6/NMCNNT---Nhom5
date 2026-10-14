@@ -30,6 +30,7 @@ Minh chứng hiện có:
 - `P1-DASH/2026-10-12T2134`: cấu trúc Dashboard nhiều trang, 10 route qua Gateway và hồi quy vòng đời/quan sát; không có ảnh hoặc kiểm tra responsive theo quy tắc dự án.
 - `T06/2026-10-12T2200-pilot-macos`: pilot 5/15/30 req/s để xác minh kịch bản, summary và đường thu thập Prometheus.
 - `T06/2026-10-12T2202-macos`: vòng chuẩn 10/25/50 req/s trên macOS/OrbStack; dữ liệu k6 gốc nén, summary JSON/CSV, log và metric CPU/RAM/health cùng khoảng thời gian.
+- `T06/2026-10-14-vps-linux`: hồ sơ tổng hợp ba vòng chuẩn trên VPS Debian 12, liên kết tới dữ liệu gốc của từng vòng; cả 9 tổ hợp lần đo/mức tải đều đạt.
 - `P1-environment/2026-10-13-macos`: biến thường/secret giả, tái tạo container, bảo toàn qua v1 → v2, audit và trạng thái dọn sạch; 21 kiểm tra tích hợp đạt.
 - `P1-git-latest/2026-10-13-macos`: phân giải `main` thành SHA, build/deploy commit mới nhất, đối chiếu image/release và dọn App A về v1; 15 kiểm tra tích hợp đạt.
 - `P2-rollback/2026-10-13-macos`: release bất biến, rollback đúng image ID, audit và trạng thái dọn sạch; 17 kiểm tra tích hợp đạt.

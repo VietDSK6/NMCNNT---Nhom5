@@ -1,0 +1,12 @@
+profile=standard
+started_at=2026-10-14T06:44:15Z
+base_url=http://gateway:8080
+network=mini-paas-edge
+k6_image=grafana/k6:2.3.0@sha256:9c2dee7f8ed74d317e4027c06a10f169b625638189de8d4555d0b3486a5aeb34
+k6_user=1000:1000
+host_arch=x86_64
+node=v24.21.0
+docker=29.9.0
+compose=5.6.0
+base_commit=5cc99b12bd5f1218da063ce1a08b59a82c005d20
+source_state=Kết quả được tạo từ working tree và phải commit cùng script, cấu hình, tài liệu tương ứng.

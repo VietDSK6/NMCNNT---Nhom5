@@ -492,3 +492,48 @@ Lần chạy tích hợp đầu tiên nhận HTTP 504 ở Gateway. Nguyên nhân
 
 - `evidence/P1-git-latest/2026-10-13-macos/`.
 - `tests/integration/p1_git_latest.sh`.
+
+## 14/10/2026 — Dựng lại và nghiệm thu bước đầu trên VPS Debian 12
+
+### Môi trường và an toàn vận hành
+
+- VPS 2 vCPU, khoảng 3,8 GiB RAM, 40 GB SSD; Debian 12 x86_64.
+- Cài Docker Engine 29.9.0, Compose 5.6.0, Node.js 24.21.0, `make`, UFW và công cụ cần thiết.
+- Tạo swap 2 GiB tại `/swapfile`, quyền `0600`, bật thành công và thêm vào `/etc/fstab`.
+- Chuyển SSH sang xác thực khóa; tắt đăng nhập mật khẩu, keyboard-interactive và root login.
+- UFW mặc định chặn chiều vào; SSH chỉ cho phép trên `tailscale0`. Gateway Compose vẫn chỉ bind `127.0.0.1:8080`.
+- Secret được sinh trực tiếp trong `.env` trên VPS với quyền `0600`, không ghi vào Git hoặc evidence.
+
+### Kết quả dựng lại
+
+- Clone repository vào `/home/user/mini-paas`, cấu hình `.env` và chạy `make up`.
+- Tám service đạt trạng thái healthy.
+- `make smoke`: 9/9 đạt.
+- `make test`: Runner 27/27, Control API 13/13, Dashboard production build và toàn bộ regression P0.1–P2 đều đạt.
+- `make test-p1-git-latest`: 15/15 đạt; App A được dọn về v1.0.0 sau thử nghiệm.
+
+### Sự cố Linux và cách xử lý
+
+Vòng T06 đầu tiên thất bại trước khi phát tải vì container k6 dùng UID mặc định không ghi được bind mount kết quả trên Linux. Script được sửa để chạy k6 bằng UID/GID của người gọi (`K6_USER`, mặc định `id -u:id -g`). Commit `5cc99b1` được đẩy lên GitHub, VPS fast-forward tới commit này và pilot sau sửa đạt cả ba mức.
+
+### Kết quả T06 chính thức
+
+- Chạy ba vòng chuẩn cùng cấu hình, mỗi vòng gồm 10/25/50 req/s trong 60 giây/mức.
+- Cả chín tổ hợp lần đo/mức tải đều đạt; lỗi 0%, check 100%, dropped iteration bằng 0.
+- Median p95: 58,00 ms tại 10 req/s; 22,78 ms tại 25 req/s; 35,00 ms tại 50 req/s.
+- Khoảng p95 qua ba lần: 45,87–58,92 ms; 19,83–40,19 ms; 18,12–48,81 ms.
+- Hai app khỏe trong toàn bộ mẫu Prometheus; chưa quan sát bão hòa CPU/RAM trong phạm vi thử.
+
+Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả chỉ chứng minh ba mức tải đã định trong môi trường này; không dùng để tuyên bố SLA hoặc năng lực production.
+
+### Công khai dịch vụ và tên miền
+
+- `PUBLIC_ORIGIN` được đặt thành `https://vps2.tail5cce4c.ts.net`; cookie phiên bật cờ `Secure`.
+- Tailscale Funnel yêu cầu chủ tailnet đăng nhập và bật quyền một lần. Chỉ ghi Funnel là “đã hoạt động” sau khi `tailscale funnel status` và request HTTPS từ ngoài đều đạt.
+- Tên miền `paas.ai2p.id.vn` được thiết kế là bản ghi `REDIRECT` sang URL Funnel; không dùng `CNAME` do chứng chỉ Funnel chỉ khớp tên `*.ts.net`.
+
+### Bằng chứng và tài liệu
+
+- `evidence/T06/2026-10-14-vps-linux/`.
+- `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
+- `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.

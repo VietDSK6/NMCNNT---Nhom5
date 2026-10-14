@@ -1,0 +1,5 @@
+git pull --ff-only origin main
+T06_OUTPUT_DIR=evidence/T06/2026-10-14T1335-vps-pilot make test-p1-load-pilot
+T06_OUTPUT_DIR=evidence/T06/2026-10-14T1340-vps-debian12 make test-p1-load
+T06_OUTPUT_DIR=evidence/T06/2026-10-14T1345-vps-debian12-run02 make test-p1-load
+T06_OUTPUT_DIR=evidence/T06/2026-10-14T1350-vps-debian12-run03 make test-p1-load

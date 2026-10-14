@@ -1,0 +1,4 @@
+level,target_rps,duration,requests,achieved_rps,p95_ms,app_a_p95_ms,app_b_p95_ms,error_percent,check_percent,dropped,thresholds_passed,observability_passed,app_a_cpu_max_percent,app_b_cpu_max_percent,app_a_ram_max_mib,app_b_ram_max_mib,app_a_ram_max_percent,app_b_ram_max_percent
+low,10,60s,600,10,58.92,59.09,58.54,0,100,0,true,true,0.04,0.15,35.11,37,27.43,28.9
+medium,25,60s,1501,25.01,19.83,27.53,7.88,0,100,0,true,true,0.05,0.16,38.02,38.75,29.7,30.27
+high,50,60s,3000,50,18.12,6.85,22.13,0,100,0,true,true,0.06,0.17,41.42,40.64,32.36,31.75
