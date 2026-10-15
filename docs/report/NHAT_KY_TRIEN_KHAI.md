@@ -558,11 +558,21 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 
 ### Giới hạn và bước tiếp theo
 
-- Chưa nghiệm thu phiên bản này trên VPS Linux; chưa cấu hình route Tunnel wildcard `*.ai2p.id.vn`.
+- Đã nghiệm thu luồng nội bộ trên VPS Linux trong cùng ngày; chưa cấu hình route Tunnel wildcard `*.ai2p.id.vn`.
 - Chỉ owner allowlist, repository công khai, nhánh main, cổng 3000 và Dockerfile tại build context.
 - Chưa có xóa service, webhook, registry digest hoặc sandbox đa thuê.
 - Chi tiết kiến trúc và tiêu chí nghiệm thu nằm tại `docs/architecture/P2_DYNAMIC_WEB_SERVICES.md`.
 - `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.
+
+### Kết quả nghiệm thu nội bộ trên VPS
+
+- Cập nhật VPS từ `5cc99b1` lên `2c8a4af`; bảo toàn các bộ dữ liệu T06 cũ trong thư mục sao lưu ngoài repository trước khi fast-forward.
+- Đặt `SERVICE_BASE_DOMAIN=ai2p.id.vn`, `TRUSTED_GITHUB_OWNERS=VietDSK6`; file `.env` tiếp tục có quyền `0600`.
+- Dựng lại Gateway, Control API, Runner và Dashboard; tám service Compose khỏe; `make smoke` đạt 9/9.
+- Tạo `vps-demo` qua API, build commit `2c8a4af1ea2292ebdb61071de740fd875d611624` thành `mini-paas/service-vps-demo:git-2c8a4af1ea22`; deployment đạt `succeeded`.
+- Host route nội bộ trả đúng health/version; Control API báo 3/3 ứng dụng khỏe và thao tác restart đạt.
+- Kiểm tra public trả lỗi chưa phân giải tên miền, đúng với trạng thái chưa có wildcard `*.ai2p.id.vn` trên Cloudflare; không ghi nhận đây là lỗi container hay Gateway.
+- Bằng chứng: `evidence/VPS/2026-10-15-dynamic-web-service/`.
 
 ## 15/10/2026 — Công khai Mini PaaS bằng Cloudflare Tunnel
 

@@ -1,6 +1,6 @@
 # Web Service động và hostname riêng
 
-**Trạng thái:** Đã triển khai và kiểm thử tích hợp trên macOS ngày 15/10/2026; chưa nghiệm thu lại trên VPS Linux.
+**Trạng thái:** Đã kiểm thử tích hợp trên macOS và nghiệm thu luồng nội bộ trên VPS Linux ngày 15/10/2026. Route/DNS wildcard Cloudflare vẫn phải được bật trước khi URL của từng service truy cập được từ Internet.
 
 ## Mục tiêu
 
@@ -53,13 +53,20 @@ URL phát triển là `http://<slug>.localhost:8080`; URL VPS là `https://<slug
 - `GET /health`, `GET /version` qua hostname `render-demo.localhost` đạt; Control API báo 3/3 ứng dụng khỏe.
 - Runner unit test 30/30, Control API 14/14, Dashboard typecheck/build đạt.
 
-## Việc còn lại trước khi ghi “đã triển khai trên VPS”
+## Kết quả trên VPS Linux
 
-1. Đẩy phiên bản mã nguồn này và cập nhật stack VPS.
-2. Đặt `SERVICE_BASE_DOMAIN=ai2p.id.vn` và xác nhận owner allowlist.
-3. Thêm published hostname `*.ai2p.id.vn` vào Tunnel, đứng sau route chính xác `paas.ai2p.id.vn`.
-4. Tạo một repository demo tách biệt, triển khai qua Dashboard và kiểm tra HTTPS từ máy ngoài.
-5. Lưu log/API/evidence có dấu thời gian; không dùng kết quả macOS thay cho nghiệm thu VPS.
+- VPS được cập nhật tới commit `2c8a4af1ea2292ebdb61071de740fd875d611624`; `docker compose config` hợp lệ và `make smoke` đạt 9/9.
+- Tạo `vps-demo` qua Control API từ repository `VietDSK6/NMCNNT---Nhom5`, build context `apps/app-a`.
+- Deployment `74bdda8f-1ddb-415a-8379-36585fa575ae` đạt `succeeded`; image `mini-paas/service-vps-demo:git-2c8a4af1ea22` được chạy thành container riêng.
+- Container chạy với 0,35 CPU, RAM 128 MiB, 100 PID, root filesystem chỉ đọc và không publish cổng host.
+- Gateway trả đúng `/health` và `/version` khi nhận `Host: vps-demo.ai2p.id.vn`; Control API báo 3/3 ứng dụng khỏe.
+- Thao tác restart `018eb2d7-5f05-4203-a7d6-e7b9be121a14` đạt; health và runtime trở lại `healthy/running`.
+
+## Việc còn lại để công khai hostname động
+
+1. Thêm published hostname `*.ai2p.id.vn` vào Tunnel, trỏ tới `http://127.0.0.1:8080` và giữ route chính xác `paas.ai2p.id.vn`.
+2. Kiểm tra `https://vps-demo.ai2p.id.vn/health` từ máy ngoài sau khi DNS có hiệu lực.
+3. Đẩy repository demo tách biệt đã chuẩn bị và tạo thêm một service từ repository đó để làm kịch bản demo cuối kỳ.
 
 ## Giới hạn
 

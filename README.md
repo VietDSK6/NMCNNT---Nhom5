@@ -36,7 +36,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
 - Dashboard có biểu mẫu **Tạo Web Service**. Mỗi service động có image `mini-paas/service-<slug>`, container, log, biến môi trường, release và hostname riêng; không dùng đường dẫn con của App A/B.
 - Gateway định tuyến `slug.localhost` khi phát triển và `slug.ai2p.id.vn` trên VPS tới alias Docker `service-<slug>:3000`; Control API kiểm tra health trực tiếp trong mạng edge mà không công khai tuyến kiểm tra nội bộ.
-- Vòng tích hợp macOS đã tạo `render-demo`, build commit `680e789…`, xác nhận deployment thành công, giới hạn RAM 128 MiB và truy cập bằng `http://render-demo.localhost:8080`. Tính năng này chưa được tính là nghiệm thu VPS cho tới khi code và wildcard Tunnel được cập nhật trên VPS.
+- Vòng tích hợp macOS đã tạo `render-demo`, build commit `680e789…`, xác nhận deployment thành công, giới hạn RAM 128 MiB và truy cập bằng `http://render-demo.localhost:8080`. Ngày 15/10/2026, VPS tiếp tục tạo `vps-demo`, build commit `2c8a4af…`, kiểm tra health và restart thành công; truy cập Internet còn chờ route/DNS wildcard `*.ai2p.id.vn` trên Cloudflare.
 - Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
 - T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
 - Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session và ranh giới chưa đăng nhập đã được kiểm tra từ máy ngoài.

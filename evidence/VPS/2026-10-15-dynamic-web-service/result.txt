@@ -1,0 +1,34 @@
+Mini PaaS dynamic Web Service — VPS verification
+Time window: 2026-10-15T09:41:22Z..2026-10-15T09:43:08Z
+
+SOURCE_COMMIT=2c8a4af1ea2292ebdb61071de740fd875d611624
+COMPOSE_SERVICES_HEALTHY=8/8
+SMOKE_TEST=9/9
+
+SERVICE_ID=vps-demo
+CREATE_HTTP_STATUS=202
+DEPLOYMENT_ID=74bdda8f-1ddb-415a-8379-36585fa575ae
+DEPLOYMENT_STATUS=succeeded
+DEPLOYED_COMMIT=2c8a4af1ea2292ebdb61071de740fd875d611624
+IMAGE_REF=mini-paas/service-vps-demo:git-2c8a4af1ea22
+IMAGE_ID=sha256:7faaff22066fbd239741ae67242194c7c45df727ff61e23b8733993ffe98042c
+CONTAINER_NAME=mini-paas-service-vps-demo
+CONTAINER_STATUS=running
+MEMORY_BYTES=134217728
+NANO_CPUS=350000000
+PIDS_LIMIT=100
+READ_ONLY_ROOTFS=true
+EDGE_ALIAS=service-vps-demo
+
+INTERNAL_HEALTH={"status":"ok","appId":"app-a","version":"git-2c8a4af1ea22"}
+INTERNAL_VERSION={"appId":"app-a","name":"Ứng dụng A","version":"git-2c8a4af1ea22"}
+CONTROL_API_SUMMARY=total:3,healthy:3,running:3,attention:0
+
+RESTART_OPERATION_ID=018eb2d7-5f05-4203-a7d6-e7b9be121a14
+RESTART_STATUS=succeeded
+AFTER_RESTART=health:healthy,runtime:running,version:git-2c8a4af1ea22
+
+PUBLIC_URL=https://vps-demo.ai2p.id.vn/health
+PUBLIC_RESULT=DNS_NOT_RESOLVED
+PUBLIC_CURL_ERROR=Could not resolve host
+REQUIRED_EXTERNAL_STEP=Publish *.ai2p.id.vn to http://127.0.0.1:8080 in the existing Cloudflare Tunnel
