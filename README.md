@@ -206,7 +206,7 @@ Rollback không build hay tải lại image. Nếu image cục bộ đã bị x�
 
 1. Tạo repository GitHub công khai dưới một owner có trong `TRUSTED_GITHUB_OWNERS`.
 2. Đặt `Dockerfile` tại thư mục gốc hoặc một build context con; container phải lắng nghe `PORT=3000` và nên có `GET /health`, `GET /version`.
-3. Mở **Ứng dụng → Tạo Web Service**, nhập tên, slug, repository và build context.
+3. Mở **Ứng dụng**, nhấn **Tạo Web Service** để sang trang tạo riêng, sau đó nhập tên, slug, repository và build context.
 4. Control API yêu cầu Runner xác minh HEAD nhánh `main`, sau đó mới đăng ký service và xếp hàng deployment đầu tiên.
 5. Theo dõi build log ở tab **Triển khai**; khi thành công mở URL hiển thị trên trang chi tiết.
 

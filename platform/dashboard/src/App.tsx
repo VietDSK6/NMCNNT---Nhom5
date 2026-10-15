@@ -91,6 +91,7 @@ type ApplicationTab = "overview" | "deployments" | "environment" | "observabilit
 type DashboardRoute =
   | { readonly kind: "overview" }
   | { readonly kind: "applications" }
+  | { readonly kind: "create-service" }
   | { readonly kind: "application"; readonly appId: string; readonly tab: ApplicationTab }
   | { readonly kind: "deployments" }
   | { readonly kind: "operations" }
@@ -107,6 +108,7 @@ function resolveRoute(pathname: string): DashboardRoute {
   const normalized = normalizePathname(pathname);
   if (normalized === "/") return { kind: "overview" };
   if (normalized === "/applications") return { kind: "applications" };
+  if (normalized === "/applications/new") return { kind: "create-service" };
   if (normalized === "/deployments") return { kind: "deployments" };
   if (normalized === "/operations") return { kind: "operations" };
   if (normalized === "/audit") return { kind: "audit" };
@@ -871,7 +873,7 @@ function ObservabilityPanel({ applications }: { readonly applications: readonly 
   );
 }
 
-function CreateServicePanel({
+function CreateServiceForm({
   submitting,
   onCreate,
 }: {
@@ -912,22 +914,52 @@ function CreateServicePanel({
   }
 
   return (
-    <section className="create-service" aria-labelledby="create-service-title">
-      <div className="create-service__heading">
-        <div><span className="eyebrow">WEB SERVICE MỚI</span><h2 id="create-service-title">Triển khai một sản phẩm độc lập</h2><p>Mini PaaS đọc nhánh main, build Dockerfile và cấp URL theo slug. Repository phải thuộc owner đã được quản trị viên cho phép.</p></div>
-        <span className="create-service__policy"><ShieldIcon />Giới hạn tài nguyên mặc định</span>
-      </div>
-      <form className="create-service__form" onSubmit={submit}>
-        <label><span>Tên dịch vụ</span><input required minLength={2} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Website giới thiệu" /></label>
-        <label><span>Slug</span><input required maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} placeholder="website-gioi-thieu" /><small>URL dự kiến: {slug || "slug"}.ai2p.id.vn</small></label>
-        <label className="create-service__repository"><span>Repository GitHub công khai</span><input required value={repositoryUrl} onChange={(event) => setRepositoryUrl(event.target.value)} placeholder="https://github.com/VietDSK6/ten-repository" /></label>
-        <label><span>Build context</span><input required value={buildContext} onChange={(event) => setBuildContext(event.target.value)} placeholder="." /><small>Dùng . nếu Dockerfile ở thư mục gốc.</small></label>
-        <div className="create-service__submit">
-          {validationError && <span className="field-error" role="alert">{validationError}</span>}
-          <button className="button button--primary" type="submit" disabled={submitting}><DeployIcon />{submitting ? "Đang kiểm tra và triển khai…" : "Tạo Web Service"}</button>
+    <form className="new-service-form" onSubmit={submit} aria-labelledby="new-service-form-title">
+      <section className="new-service-form__section">
+        <div className="new-service-form__heading">
+          <div><span className="eyebrow">THÔNG TIN DỊCH VỤ</span><h2 id="new-service-form-title">Đặt tên và địa chỉ truy cập</h2><p>Slug được dùng làm tên container và tên miền con của dịch vụ.</p></div>
+          <span className="new-service-form__step">01</span>
         </div>
-      </form>
-    </section>
+        <div className="new-service-form__grid">
+          <label><span>Tên dịch vụ</span><input required minLength={2} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Website giới thiệu" /></label>
+          <label><span>Slug</span><input required maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} placeholder="website-gioi-thieu" aria-invalid={Boolean(validationError) || undefined} /><small>URL dự kiến: https://{slug || "slug"}.ai2p.id.vn</small></label>
+        </div>
+      </section>
+
+      <section className="new-service-form__section">
+        <div className="new-service-form__heading">
+          <div><span className="eyebrow">MÃ NGUỒN</span><h2>Kết nối repository GitHub</h2><p>Mini PaaS lấy nhánh main và build Dockerfile trong thư mục đã chọn.</p></div>
+          <span className="new-service-form__step">02</span>
+        </div>
+        <div className="new-service-form__grid new-service-form__grid--source">
+          <label className="new-service-form__repository"><span>Repository GitHub công khai</span><input required value={repositoryUrl} onChange={(event) => setRepositoryUrl(event.target.value)} placeholder="https://github.com/VietDSK6/ten-repository" aria-invalid={Boolean(validationError) || undefined} /></label>
+          <label><span>Nhánh</span><input value="main" readOnly aria-readonly="true" /></label>
+          <label><span>Build context</span><input required value={buildContext} onChange={(event) => setBuildContext(event.target.value)} placeholder="." /><small>Dùng <strong>.</strong> nếu Dockerfile ở thư mục gốc.</small></label>
+        </div>
+      </section>
+
+      <div className="new-service-form__actions">
+        <div>{validationError && <span className="field-error" role="alert">{validationError}</span>}</div>
+        <AppLink className="button button--secondary" to="/applications">Quay lại danh sách</AppLink>
+        <button className="button button--primary" type="submit" disabled={submitting}><DeployIcon />{submitting ? "Đang kiểm tra và triển khai…" : "Tạo và triển khai"}</button>
+      </div>
+    </form>
+  );
+}
+
+function CreateServiceGuide() {
+  return (
+    <aside className="new-service-guide" aria-label="Điều kiện triển khai Web Service">
+      <span className="new-service-guide__label"><ShieldIcon />PHẠM VI MVP</span>
+      <h2>Repository cần chuẩn bị</h2>
+      <ol>
+        <li><span>01</span><div><strong>GitHub công khai</strong><p>Repository thuộc owner đã được Mini PaaS cho phép.</p></div></li>
+        <li><span>02</span><div><strong>Nhánh main</strong><p>Commit mới nhất của nhánh này sẽ được build đầu tiên.</p></div></li>
+        <li><span>03</span><div><strong>Dockerfile hợp lệ</strong><p>Đặt tại gốc build context đã nhập trong biểu mẫu.</p></div></li>
+        <li><span>04</span><div><strong>Cổng 3000 và /health</strong><p>Ứng dụng phải lắng nghe cổng 3000 và trả health HTTP.</p></div></li>
+      </ol>
+      <div className="new-service-guide__result"><BoxIcon /><div><strong>Sau khi tạo</strong><p>Hệ thống cấp image, container, lịch sử deployment và URL <code>slug.ai2p.id.vn</code>.</p></div></div>
+    </aside>
   );
 }
 
@@ -1178,6 +1210,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
 
   const pageTitle = (() => {
     if (route.kind === "applications") return "Ứng dụng";
+    if (route.kind === "create-service") return "Tạo Web Service";
     if (route.kind === "deployments") return "Triển khai từ Git";
     if (route.kind === "operations") return "Lịch sử thao tác";
     if (route.kind === "audit") return "Nhật ký quản trị";
@@ -1303,9 +1336,20 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
     if (route.kind === "applications") {
       return (
         <>
-          <section className="page-intro"><div><span className="eyebrow">DANH MỤC DỊCH VỤ</span><h2>Ứng dụng</h2><p>Mỗi ứng dụng có không gian vận hành riêng cho vòng đời, deployment và quan sát.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
-          <CreateServicePanel submitting={submittingService} onCreate={(input) => void createService(input)} />
+          <section className="page-intro"><div><span className="eyebrow">DANH MỤC DỊCH VỤ</span><h2>Ứng dụng</h2><p>Mỗi ứng dụng có không gian vận hành riêng cho vòng đời, deployment và quan sát.</p></div><div className="page-intro__actions"><span className="last-updated">Tự động làm mới mỗi 5 giây</span><AppLink className="button button--primary" to="/applications/new"><DeployIcon />Tạo Web Service</AppLink></div></section>
           {applications ? <ApplicationDirectory applications={applications.data} /> : <div className="skeleton-list"><i /><i /></div>}
+        </>
+      );
+    }
+
+    if (route.kind === "create-service") {
+      return (
+        <>
+          <section className="page-intro page-intro--create"><div><span className="eyebrow">WEB SERVICE MỚI</span><h2>Kết nối mã nguồn và triển khai</h2><p>Tạo một dịch vụ độc lập từ repository GitHub tin cậy. Deployment đầu tiên được bắt đầu ngay sau khi đăng ký.</p></div><AppLink className="text-link" to="/applications">Quay lại ứng dụng<ChevronIcon /></AppLink></section>
+          <div className="new-service-layout">
+            <CreateServiceForm submitting={submittingService} onCreate={(input) => void createService(input)} />
+            <CreateServiceGuide />
+          </div>
         </>
       );
     }
@@ -1381,7 +1425,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
       <main className="workspace" id="main-content">
         <header className="topbar">
           <div>
-            <span className="breadcrumb"><AppLink to="/">Mini PaaS</AppLink><ChevronIcon />{route.kind === "application" && <><AppLink to="/applications">Ứng dụng</AppLink><ChevronIcon /></>}{pageTitle}</span>
+            <span className="breadcrumb"><AppLink to="/">Mini PaaS</AppLink><ChevronIcon />{(route.kind === "application" || route.kind === "create-service") && <><AppLink to="/applications">Ứng dụng</AppLink><ChevronIcon /></>}{pageTitle}</span>
             <h1>{pageTitle}</h1>
           </div>
           <div className="topbar-actions">
