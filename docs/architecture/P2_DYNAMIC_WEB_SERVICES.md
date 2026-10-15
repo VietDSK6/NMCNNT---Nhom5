@@ -29,7 +29,7 @@ Control API nối cả mạng `control` và `edge` để gọi trực tiếp end
 ## Ràng buộc an toàn của MVP
 
 - Chỉ GitHub công khai dạng `https://github.com/owner/repo`.
-- Owner phải nằm trong `TRUSTED_GITHUB_OWNERS`; mặc định chỉ có `VietDSK6`.
+- Owner phải nằm trong `TRUSTED_GITHUB_OWNERS`; cấu hình VPS hiện cho phép bốn tài khoản nhóm: `VietDSK6`, `mait21606-coder`, `thaole-udud24` và `THM-B24DCCC206`.
 - Chỉ nhánh `main`; commit triển khai luôn là SHA đủ 40 ký tự.
 - Build context phải là đường dẫn tương đối nằm trong checkout; Dockerfile nằm ở gốc context.
 - Cổng trong container cố định 3000; không publish host port.

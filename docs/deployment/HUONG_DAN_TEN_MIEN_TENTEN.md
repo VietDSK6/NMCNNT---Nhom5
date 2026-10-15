@@ -115,10 +115,12 @@ Nếu token từng xuất hiện trong chat, ảnh chụp, terminal hoặc nơi 
 PUBLIC_ORIGIN=https://paas.ai2p.id.vn
 SESSION_COOKIE_SECURE=true
 SERVICE_BASE_DOMAIN=ai2p.id.vn
-TRUSTED_GITHUB_OWNERS=VietDSK6
+TRUSTED_GITHUB_OWNERS=VietDSK6,mait21606-coder,thaole-udud24,THM-B24DCCC206
 ```
 
 Sau khi đổi giá trị, tái tạo `control-api`, `grafana` và `gateway` để origin, cookie và URL Grafana đồng bộ. File `.env` tiếp tục giữ quyền `0600`.
+
+Khi chỉ thay `TRUSTED_GITHUB_OWNERS`, tái tạo `control-api` và `runner` vì cả hai thành phần đều kiểm tra lại owner trước khi nhận và build repository.
 
 ### Route wildcard cho Web Service
 

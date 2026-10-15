@@ -73,7 +73,7 @@ Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHAN
 
 Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên Dashboard cũ bị hủy. Grafana chỉ dùng mật khẩu môi trường khi khởi tạo volume `grafana-data` lần đầu; thay biến sau đó không tự đổi mật khẩu trong volume đã tồn tại. Hãy đổi mật khẩu trong Grafana trước khi cập nhật `.env`, không xóa volume chỉ để đổi mật khẩu.
 
-`PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này. `SERVICE_BASE_DOMAIN` quyết định hậu tố URL của Web Service (`localhost` khi phát triển, `ai2p.id.vn` trên VPS). `TRUSTED_GITHUB_OWNERS` là danh sách owner GitHub được phép, phân tách bằng dấu phẩy.
+`PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này. `SERVICE_BASE_DOMAIN` quyết định hậu tố URL của Web Service (`localhost` khi phát triển, `ai2p.id.vn` trên VPS). `TRUSTED_GITHUB_OWNERS` là danh sách owner GitHub được phép, phân tách bằng dấu phẩy; cấu hình mẫu chứa bốn tài khoản của nhóm và không cho phép wildcard owner.
 
 Chỉ đặt `SESSION_COOKIE_SECURE=true` sau khi Gateway được cấu hình HTTPS. Môi trường localhost hiện dùng HTTP nên giữ `false`.
 
