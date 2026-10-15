@@ -28,6 +28,7 @@ IP `42.113.103.176` là địa chỉ quan sát ở chiều ra, không được c
 | Tailscale | `41641/udp` | Mạng | Kết nối trực tiếp khi có thể |
 | Gateway trên host | `127.0.0.1:8080` | Chỉ loopback VPS | Điểm vào duy nhất của Compose |
 | Cloudflare Edge | `https://paas.ai2p.id.vn` | Internet | Kết thúc HTTPS và chuyển request vào Tunnel |
+| Hostname Web Service | `https://<slug>.ai2p.id.vn` | Internet | Wildcard route chuyển tới Gateway; Gateway định tuyến theo slug |
 | Connector `cloudflared` | Outbound tới Cloudflare; origin `127.0.0.1:8080` | VPS | Nhận request từ Tunnel rồi chuyển tới Gateway loopback |
 | HTTP/HTTPS host | `80/tcp`, `443/tcp` được UFW cho phép | Internet | Dự phòng tên miền trực tiếp; hiện không có dịch vụ host lắng nghe |
 | Dashboard/API/Grafana/Apps | Không publish cổng riêng | Docker network | Chỉ đi qua Gateway |
@@ -63,4 +64,4 @@ Nginx cài trên host hiện dừng và bị vô hiệu hóa khi khởi động.
 - Chỉ repository/app tin cậy trong allowlist được build; chưa nhận mã tùy ý từ Internet.
 - Các volume SQLite, Prometheus và Grafana còn là điểm trạng thái cục bộ; chưa có bản sao ngoài máy.
 
-Tên miền dùng nameserver Cloudflare `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`. Published route của Tunnel tự quản lý CNAME `paas`; hai bản ghi `@`/`www` phục vụ Vercel vẫn ở chế độ DNS only. Xem [hướng dẫn TenTen/Cloudflare](../deployment/HUONG_DAN_TEN_MIEN_TENTEN.md).
+Tên miền dùng nameserver Cloudflare `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`. Published route của Tunnel quản lý `paas` và wildcard `*`; hai bản ghi `@`/`www` phục vụ Vercel vẫn ở chế độ DNS only. Xem [hướng dẫn TenTen/Cloudflare](../deployment/HUONG_DAN_TEN_MIEN_TENTEN.md).

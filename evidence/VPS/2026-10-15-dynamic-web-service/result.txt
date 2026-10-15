@@ -29,6 +29,17 @@ RESTART_STATUS=succeeded
 AFTER_RESTART=health:healthy,runtime:running,version:git-2c8a4af1ea22
 
 PUBLIC_URL=https://vps-demo.ai2p.id.vn/health
-PUBLIC_RESULT=DNS_NOT_RESOLVED
-PUBLIC_CURL_ERROR=Could not resolve host
-REQUIRED_EXTERNAL_STEP=Publish *.ai2p.id.vn to http://127.0.0.1:8080 in the existing Cloudflare Tunnel
+INITIAL_PUBLIC_RESULT=DNS_NOT_RESOLVED_BEFORE_WILDCARD
+PUBLIC_RECHECK_TIME=2026-10-15T14:15:30Z
+PUBLIC_HEALTH={"status":"ok","appId":"app-a","version":"git-2c8a4af1ea22","uptimeSeconds":16343,"startedAt":"2026-10-15T09:42:28.745Z"}
+PUBLIC_VERSION={"appId":"app-a","name":"Ứng dụng A","version":"git-2c8a4af1ea22"}
+WILDCARD_ROUTE=VERIFIED
+
+INDEPENDENT_SERVICE_URL=https://demo.ai2p.id.vn
+INDEPENDENT_HEALTH={"status":"ok","service":"mini-paas-demo-app","version":"git-6ffa63d8b922"}
+INDEPENDENT_VERSION={"name":"Mini PaaS Demo App","version":"git-6ffa63d8b922","startedAt":"2026-10-15T10:00:19.058Z"}
+
+DASHBOARD_CREATE_URL=https://paas.ai2p.id.vn/applications/new
+DASHBOARD_ASSET=assets/index-BVEJQQy3.js
+DASHBOARD_NEW_FLOW_TEXT=Kết nối mã nguồn và triển khai
+DASHBOARD_COMMIT=2104d64

@@ -558,7 +558,7 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 
 ### Giới hạn và bước tiếp theo
 
-- Đã nghiệm thu luồng nội bộ trên VPS Linux trong cùng ngày; chưa cấu hình route Tunnel wildcard `*.ai2p.id.vn`.
+- Đã nghiệm thu luồng nội bộ trên VPS Linux; route Tunnel wildcard `*.ai2p.id.vn` được bổ sung và xác minh từ máy ngoài trong cùng ngày.
 - Chỉ owner allowlist, repository công khai, nhánh main, cổng 3000 và Dockerfile tại build context.
 - Chưa có xóa service, webhook, registry digest hoặc sandbox đa thuê.
 - Chi tiết kiến trúc và tiêu chí nghiệm thu nằm tại `docs/architecture/P2_DYNAMIC_WEB_SERVICES.md`.
@@ -571,7 +571,8 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 - Dựng lại Gateway, Control API, Runner và Dashboard; tám service Compose khỏe; `make smoke` đạt 9/9.
 - Tạo `vps-demo` qua API, build commit `2c8a4af1ea2292ebdb61071de740fd875d611624` thành `mini-paas/service-vps-demo:git-2c8a4af1ea22`; deployment đạt `succeeded`.
 - Host route nội bộ trả đúng health/version; Control API báo 3/3 ứng dụng khỏe và thao tác restart đạt.
-- Kiểm tra public trả lỗi chưa phân giải tên miền, đúng với trạng thái chưa có wildcard `*.ai2p.id.vn` trên Cloudflare; không ghi nhận đây là lỗi container hay Gateway.
+- Lần kiểm tra public đầu tiên trả lỗi chưa phân giải tên miền khi wildcard chưa có. Sau khi cấu hình route, `vps-demo.ai2p.id.vn` trả health/version đúng qua HTTPS; đây là bằng chứng lỗi ban đầu thuộc DNS/Tunnel, không phải container hay Gateway.
+- Tạo thêm Web Service độc lập `demo` từ repository riêng; URL `https://demo.ai2p.id.vn` trả health/version với phiên bản `git-6ffa63d8b922`.
 - Bằng chứng: `evidence/VPS/2026-10-15-dynamic-web-service/`.
 
 ## 15/10/2026 — Công khai Mini PaaS bằng Cloudflare Tunnel
@@ -580,7 +581,7 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 
 - Thêm `ai2p.id.vn` vào Cloudflare, giữ nguyên bản ghi Vercel `@` và `www` ở chế độ DNS only.
 - Đổi nameserver tại TenTen sang `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`; cả resolver Cloudflare và Google đều trả về cặp NS mới.
-- Tạo Tunnel `mini-paas-vps` và published route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`.
+- Tạo Tunnel `mini-paas-vps` và published route `paas.ai2p.id.vn` cùng wildcard `*.ai2p.id.vn` tới `http://127.0.0.1:8080`.
 - Không mở Docker API hoặc các service nội bộ ra Internet; Gateway tiếp tục chỉ bind loopback.
 
 ### Connector và bảo mật
@@ -605,6 +606,8 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 - `make smoke`: 9/9 đạt; P0.2 qua URL public: 15/15 đạt.
 - Sau khi tái tạo connector để siết metrics, bốn edge kết nối lại và 5/5 request health đạt.
 - Sau khi xoay token, connector tiếp tục đăng ký bốn edge mới, tám service vẫn khỏe và 5/5 request health công khai đạt.
+- `https://vps-demo.ai2p.id.vn/health` và `/version` trả đúng Web Service `vps-demo`; `https://demo.ai2p.id.vn/health` và `/version` trả đúng sản phẩm độc lập `demo`.
+- Dashboard ở commit `2104d64` phục vụ luồng tạo Web Service riêng tại `/applications/new`; bundle công khai chứa đúng nội dung mới.
 
 ### Giới hạn quan sát được
 

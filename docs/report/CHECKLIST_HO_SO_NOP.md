@@ -29,11 +29,13 @@ Phụ lục dự kiến:
 - [x] Mã nguồn P0, Compose, Nginx, Dashboard, API và Runner.
 - [x] README có yêu cầu môi trường, cách chạy và cách kiểm thử P0.
 - [ ] README release cuối ghi toàn bộ phiên bản công cụ đã dùng trên VPS.
-- [x] Luồng sản phẩm Git → build → image → deploy cho một repository/App A tin cậy trên môi trường phát triển; còn phải nghiệm thu lại trên VPS Linux.
+- [x] Luồng sản phẩm Git → build → image → deploy đã nghiệm thu trên VPS cho App A và Web Service động từ repository công khai thuộc owner allowlist.
 - [ ] Sơ đồ kiến trúc bản cuối.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
-- [ ] Bảng tài nguyên/IP/quyền bản VPS đã đối soát.
-- [x] Script/cấu hình monitoring Prometheus/Grafana, kiểm thử tích hợp và kịch bản k6 có dữ liệu vòng phát triển; còn phải chạy lại trên VPS Linux.
+- [x] Bảng tài nguyên/IP/quyền bản VPS đã đối soát tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
+- [x] Script/cấu hình monitoring Prometheus/Grafana và T06 có ba vòng dữ liệu gốc trên VPS Linux.
+- [x] Cloudflare Tunnel công khai Control Center và wildcard Web Service qua HTTPS mà không mở Docker socket/API ra Internet.
+- [x] Web Service độc lập có repository, image, container và hostname riêng; `demo.ai2p.id.vn` đã trả đúng health/version.
 - [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và kiểm thử tích hợp vòng phát triển; còn phải nghiệm thu trên VPS Linux.
 - [x] Lịch sử release và rollback theo image ID cục bộ có kiểm thử tích hợp; còn phải nghiệm thu VPS và chưa có registry digest.
 - [ ] Gói release cuối không chứa secret.
@@ -50,7 +52,7 @@ Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/swit
 - [ ] Mỗi test đánh dấu đạt/chưa đạt.
 - [ ] Mỗi test có thời gian, commit, môi trường và người thực hiện.
 - [ ] Mỗi test liên kết tới log/JSON/CSV tương ứng.
-- [x] T06 có dữ liệu k6 gốc và dữ liệu metric cùng khoảng thời gian ở vòng phát triển; cần tạo bộ release/VPS riêng trước khi nộp.
+- [x] T06 có ba vòng dữ liệu k6 gốc và metric cùng khoảng thời gian trên VPS Linux.
 - [ ] Không có token, mật khẩu, cookie hoặc khóa trong evidence.
 
 ## 4. Video và bảo vệ

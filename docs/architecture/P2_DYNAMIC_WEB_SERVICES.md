@@ -1,6 +1,6 @@
 # Web Service động và hostname riêng
 
-**Trạng thái:** Đã kiểm thử tích hợp trên macOS và nghiệm thu luồng nội bộ trên VPS Linux ngày 15/10/2026. Route/DNS wildcard Cloudflare vẫn phải được bật trước khi URL của từng service truy cập được từ Internet.
+**Trạng thái:** Đã kiểm thử tích hợp trên macOS, nghiệm thu trên VPS Linux và xác minh URL HTTPS công khai qua route wildcard Cloudflare ngày 15/10/2026.
 
 ## Mục tiêu
 
@@ -61,12 +61,14 @@ URL phát triển là `http://<slug>.localhost:8080`; URL VPS là `https://<slug
 - Container chạy với 0,35 CPU, RAM 128 MiB, 100 PID, root filesystem chỉ đọc và không publish cổng host.
 - Gateway trả đúng `/health` và `/version` khi nhận `Host: vps-demo.ai2p.id.vn`; Control API báo 3/3 ứng dụng khỏe.
 - Thao tác restart `018eb2d7-5f05-4203-a7d6-e7b9be121a14` đạt; health và runtime trở lại `healthy/running`.
+- Route wildcard `*.ai2p.id.vn` của Tunnel trỏ về Gateway loopback đã hoạt động; `https://vps-demo.ai2p.id.vn/health` và `/version` trả đúng phiên bản `git-2c8a4af1ea22`.
+- Sản phẩm độc lập `demo` từ repository riêng đã được build và công khai tại `https://demo.ai2p.id.vn`; health/version trả phiên bản `git-6ffa63d8b922`.
 
-## Việc còn lại để công khai hostname động
+## Việc còn lại cho bản nộp cuối
 
-1. Thêm published hostname `*.ai2p.id.vn` vào Tunnel, trỏ tới `http://127.0.0.1:8080` và giữ route chính xác `paas.ai2p.id.vn`.
-2. Kiểm tra `https://vps-demo.ai2p.id.vn/health` từ máy ngoài sau khi DNS có hiệu lực.
-3. Đẩy repository demo tách biệt đã chuẩn bị và tạo thêm một service từ repository đó để làm kịch bản demo cuối kỳ.
+1. Chọn một Web Service độc lập làm đối tượng demo chính và giữ ổn định repository/commit trước khi quay video.
+2. Ghi lại một vòng triển khai commit mới nhất hoặc commit cụ thể, kèm build log và mã phiên bản quan sát được.
+3. Đưa kết quả hostname công khai vào ma trận T01–T08 và báo cáo; không cần bổ sung webhook vì đã được loại khỏi phạm vi hiện tại.
 
 ## Giới hạn
 

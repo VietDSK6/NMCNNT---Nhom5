@@ -14,7 +14,7 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 
 | Mã | Yêu cầu | Trạng thái hiện tại |
 |---|---|---|
-| FR01 | Phục vụ hai ứng dụng Web qua một Gateway | Đã triển khai, kiểm thử |
+| FR01 | Phục vụ nhiều ứng dụng Web qua một Gateway | Đã triển khai, kiểm thử với App A/B và Web Service động |
 | FR02 | Hiển thị health, phiên bản mong muốn và phiên bản thực tế | Đã triển khai, kiểm thử |
 | FR03 | Đăng nhập quản trị và duy trì phiên | Đã triển khai, kiểm thử |
 | FR04 | Dừng, khởi động, khởi động lại ứng dụng | Đã triển khai, kiểm thử |
@@ -22,10 +22,11 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 | FR06 | Lưu lịch sử operation và audit | Đã triển khai, kiểm thử |
 | FR07 | Xem log gần nhất theo giới hạn | Đã triển khai, kiểm thử |
 | FR08 | Xem ảnh chụp CPU/RAM/PID/mạng | Đã triển khai, kiểm thử |
-| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử cho một source/App A theo commit cụ thể hoặc commit mới nhất của nhánh mặc định; chưa có webhook, registry digest hoặc repository tùy ý |
+| FR09 | Triển khai ứng dụng từ repository Git tin cậy | Đã triển khai và kiểm thử commit cụ thể hoặc commit mới nhất của nhánh mặc định; hỗ trợ Web Service độc lập từ repository công khai thuộc owner allowlist; chưa có webhook, registry digest hoặc repository tùy ý |
 | FR10 | Lưu chuỗi thời gian và hiển thị đồ thị | Đã triển khai và kiểm thử bằng Runner exporter, Prometheus và Grafana; chưa có Alertmanager |
 | FR11 | Quản lý biến môi trường theo ứng dụng | Đã triển khai và kiểm thử; mã hóa SQLite, che secret, giữ cấu hình qua cập nhật image |
 | FR12 | Lưu lịch sử release và rollback | Đã triển khai và kiểm thử trên một host; xác minh image ID cục bộ, chưa có registry digest |
+| FR13 | Cấp hostname HTTPS riêng cho Web Service | Đã kiểm thử trên VPS qua Cloudflare Tunnel và wildcard `*.ai2p.id.vn` |
 
 ### 3.2.2. Yêu cầu phi chức năng
 
@@ -97,7 +98,7 @@ Dashboard dùng React, Vite và TypeScript. Giao diện trình bày riêng healt
 
 Các thao tác vòng đời và deployment trả về `202 Accepted`; Dashboard theo dõi trạng thái qua polling. Vùng triển khai Git chỉ hiển thị source allowlist, nhận commit SHA đầy đủ và đọc lịch sử/build log. Log và stats snapshot chỉ được tải khi người quản trị mở vùng quan sát hoặc bấm làm mới. Liên kết đồ thị lịch sử mở dashboard Grafana đã được cấp sẵn.
 
-Kiến trúc thông tin của Dashboard có hai tầng. Tầng toàn hệ thống gồm tổng quan, danh sách ứng dụng, deployment, thao tác, kiểm toán và quan sát chung. Tầng ứng dụng dùng `appId` trên URL và có ba tab: tổng quan, triển khai, log và tài nguyên. Nhờ đó người quản trị không nhầm dữ liệu App A với App B, trong khi vẫn có góc nhìn tổng hợp khi cần vận hành toàn nền tảng.
+Kiến trúc thông tin của Dashboard có hai tầng. Tầng toàn hệ thống gồm tổng quan, danh sách ứng dụng, deployment, thao tác, kiểm toán và quan sát chung. Tầng ứng dụng dùng `appId` trên URL để tách tổng quan, triển khai, log, tài nguyên, biến môi trường và release. Luồng tạo Web Service nằm tại `/applications/new`, không chiếm diện tích thường trực trong danh sách ứng dụng. Nhờ đó người quản trị không nhầm dữ liệu giữa các ứng dụng, trong khi vẫn có góc nhìn tổng hợp khi cần vận hành toàn nền tảng.
 
 Ứng dụng dùng History API của trình duyệt cho tập route nhỏ, không thêm thư viện định tuyến. Nginx có cơ chế trả `index.html` cho đường dẫn Dashboard nên người dùng có thể tải lại trực tiếp `/applications/app-a/deployments`. Cách này phù hợp quy mô hiện tại; nếu số route, phân quyền hoặc bố cục lồng nhau tăng mạnh thì cần chuyển sang thư viện router chuyên dụng.
 
@@ -109,6 +110,7 @@ Control API dùng Fastify và TypeScript, thực hiện:
 - Kiểm tra schema body, params và query.
 - Đọc/ghi metadata, operation, deployment và audit trong SQLite.
 - Kiểm tra health/phiên bản qua đường truy cập Gateway.
+- Đăng ký Web Service động, tạo slug/hostname và kiểm tra health trực tiếp qua Docker DNS trên mạng `edge`.
 - Chuyển yêu cầu vòng đời, build/deploy source và quan sát tới Runner bằng secret nội bộ.
 
 Control API không được gắn Docker socket và không thực hiện lệnh shell.
@@ -117,7 +119,7 @@ Control API không được gắn Docker socket và không thực hiện lệnh 
 
 Runner là service đặc quyền duy nhất được gắn `/var/run/docker.sock`. Catalog trong mã nguồn ánh xạ `appId` sang service, network và image cho phép. Runner chỉ quản lý container có đủ nhãn dự án, service và nhãn quản lý.
 
-Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, rollback, logs, stats, metric Prometheus và deployment từ source tin cậy. Source catalog cố định repository, nhánh mặc định, App đích và build context. Quản trị viên có thể gửi SHA 40 ký tự hoặc yêu cầu Runner phân giải HEAD của nhánh mặc định thành SHA bất biến; Dashboard không gửi tên nhánh tùy ý. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi một lần thay container thất bại, Runner cố gắng phục hồi container cũ. Ngoài cơ chế phục hồi nội bộ đó, lịch sử release cho phép quản trị viên chủ động rollback về một image ID cũ còn tồn tại trên host.
+Runner cung cấp status, start, stop, restart, update, cấu hình biến môi trường, rollback, logs, stats, metric Prometheus và deployment từ source tin cậy. App A/B dùng catalog cố định; Web Service động chỉ nhận repository công khai thuộc owner allowlist, nhánh `main`, build context tương đối và cổng 3000. Quản trị viên có thể gửi SHA 40 ký tự hoặc yêu cầu Runner phân giải HEAD của nhánh mặc định thành SHA bất biến; Dashboard không gửi tên nhánh tùy ý. Runner tải archive tối đa 16 MiB, build image qua Docker API rồi tạo container thay thế, chờ health trước khi xóa container cũ. Khi một lần thay container thất bại, Runner cố gắng phục hồi container cũ. Ngoài cơ chế phục hồi nội bộ đó, lịch sử release cho phép quản trị viên chủ động rollback về một image ID cũ còn tồn tại trên host.
 
 ### 3.4.5. Prometheus và Grafana
 
@@ -129,17 +131,20 @@ Không dùng cAdvisor trong lát cắt này vì Runner đã có quyền Docker v
 
 App A và App B là hai Web server Node.js nhỏ, không có thư viện ngoài. Mỗi app có `/health`, `/version`, log JSON trên stdout và trang minh họa. App A có hai image v1.0.0/v2.0.0; App B dùng để đối chiếu định tuyến và vòng đời độc lập.
 
+Web Service động không nằm sẵn trong Compose. Mỗi service có image, container, alias `service-<slug>` và hostname `<slug>.ai2p.id.vn` riêng. Sản phẩm độc lập `demo` được dùng để chứng minh luồng này không chỉ tạo bản sao của App A/B dưới một đường dẫn con.
+
 ## 3.5. Thiết kế mạng và cổng
 
 | Thành phần | `edge` | `control` | `source-egress` | Cổng host | Docker socket |
 |---|---:|---:|---:|---:|---:|
 | Gateway | Có | Có | Không | `127.0.0.1:8080` | Không |
 | Dashboard | Không | Có | Không | Không | Không |
-| Control API | Không | Có | Không | Không | Không |
+| Control API | Có | Có | Không | Không | Không |
 | Runner | Không | Có | Có | Không | Có |
 | Prometheus | Không | Có | Không | Không | Không |
 | Grafana | Không | Có | Không | Không | Không |
 | App A/App B | Có | Không | Không | Không | Không |
+| Web Service động | Có | Không | Không | Không | Không |
 
 Mạng `control` được đặt nội bộ. `source-egress` chỉ phục vụ Runner tải archive của repository allowlist và không publish cổng. Việc tách mạng làm giảm kết nối trực tiếp không cần thiết, nhưng không biến Docker socket thành quyền hạn chế. Nếu Runner bị chiếm quyền, host Docker vẫn có nguy cơ cao.
 
@@ -149,7 +154,7 @@ SQLite hiện lưu các nhóm dữ liệu:
 
 - `users`: tên đăng nhập, salt và password hash `scrypt`.
 - `sessions`: hash của session token và thời gian hết hạn.
-- `applications`: danh mục, route và phiên bản mong muốn.
+- `applications`: danh mục, loại ứng dụng, repository, nhánh, build context, hostname, cổng và phiên bản mong muốn.
 - `operations`: action, phiên bản đích, người yêu cầu, trạng thái và thông báo.
 - `deployments`: source, commit, trạng thái, version, image, build log, người yêu cầu và các mốc thời gian.
 - `application_environment_variables`: tên biến, ciphertext AES-256-GCM, cờ nhạy cảm và thời điểm cập nhật.
@@ -186,7 +191,7 @@ Stats snapshot không được lưu vào SQLite vì dữ liệu này không phù
 
 ### 3.7.4. Triển khai từ commit Git
 
-1. Dashboard đọc danh sách source allowlist và gửi `sourceId` cùng SHA đầy đủ.
+1. Dashboard đọc danh sách source allowlist hoặc dữ liệu Web Service đã đăng ký, rồi gửi yêu cầu triển khai commit mới nhất hoặc SHA đầy đủ.
 2. Control API kiểm tra session, origin, schema, ứng dụng và tác vụ đang hoạt động; sau đó tạo deployment `queued`.
 3. Runner kiểm tra source lần nữa, tải archive cố định, giới hạn dung lượng và giải nén vào tmpfs.
 4. Docker Engine build image `git-<12 ký tự>` với label revision/source.
@@ -265,6 +270,6 @@ Biện pháp che log chỉ là phòng vệ bổ sung. Quy tắc chính vẫn là
 
 Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Runner và một SQLite; do đó không có high availability. Operation/deployment bất đồng bộ chưa có message broker bền vững. Sản phẩm đã nhận một source tin cậy, build commit và triển khai image cục bộ, nhưng chưa đẩy registry hoặc triển khai theo registry digest. Metric ứng dụng đã có chuỗi thời gian nhưng log chưa được tập trung; Prometheus/Grafana cùng host nên không còn quan sát được nếu host hỏng.
 
-Kịch bản k6 đã chạy vòng phát triển gồm pilot và một vòng chuẩn 10/25/50 req/s; dữ liệu macOS chỉ chứng minh phương pháp đo và chưa đại diện hạ tầng triển khai. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Lịch sử release và rollback đã đối chiếu image ID trước khi thay container, nhưng vẫn phụ thuộc image cache trên cùng Docker host; nếu image bị xóa hoặc chuyển máy thì metadata SQLite chưa đủ để phục hồi.
+Kịch bản k6 đã chạy ba vòng chuẩn 10/25/50 req/s trên VPS; cả chín tổ hợp đều đạt ngưỡng đã đặt, nhưng nguồn tạo tải vẫn dùng chung máy nên không đại diện năng lực production. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Lịch sử release và rollback đã đối chiếu image ID trước khi thay container, nhưng vẫn phụ thuộc image cache trên cùng Docker host; nếu image bị xóa hoặc chuyển máy thì metadata SQLite chưa đủ để phục hồi.
 
-Bước tiếp theo là dựng release candidate trên Linux/VPS, chạy mỗi mức ít nhất ba lần từ nguồn phát tải được ghi rõ rồi phân tích độ ổn định, thay vì chỉ lấy một kết quả đẹp. Registry digest có thể bổ sung nếu còn thời gian nhưng không được trì hoãn nghiệm thu, hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Bước tiếp theo là chốt release candidate, thực hiện T08 dựng lại/khôi phục, chuẩn hóa ma trận bằng chứng và hoàn thiện báo cáo/video/phiếu đóng góp. Registry digest có thể bổ sung nếu còn thời gian nhưng không được trì hoãn hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.

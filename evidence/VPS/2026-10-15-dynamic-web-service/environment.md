@@ -8,5 +8,7 @@
 - Repository nguồn thử: `https://github.com/VietDSK6/NMCNNT---Nhom5`.
 - Nhánh/build context: `main`, `apps/app-a`.
 - Service: `vps-demo`; hostname dự kiến `vps-demo.ai2p.id.vn`.
+- Service độc lập bổ sung: `demo`; hostname `demo.ai2p.id.vn`.
+- Thời gian xác minh public bổ sung: `2026-10-15T14:15:30Z` (`21:15:30`, UTC+7).
 
-Kiểm thử public wildcard chưa thể hoàn tất vì DNS chưa có `*.ai2p.id.vn` tại thời điểm đo.
+Lần đo đầu chưa có wildcard. Sau khi bổ sung route `*.ai2p.id.vn` trong Cloudflare Tunnel, hai hostname được kiểm tra lại từ máy ngoài qua HTTPS và đều đạt.

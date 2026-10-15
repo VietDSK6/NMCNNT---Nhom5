@@ -1,6 +1,6 @@
 # Bảng trạng thái kiểm thử T01–T08
 
-> Bảng này chuyển các bằng chứng hiện có sang định dạng mới. Các dòng “Đạt vòng phát triển” chưa thay thế lần nghiệm thu release trên VPS Linux. Cột người thực hiện chưa có tên chính thức nên phải bổ sung trước khi nộp.
+> Bảng này chuyển các bằng chứng hiện có sang định dạng mới. T06, truy cập public và Web Service động đã có bằng chứng VPS; các dòng còn ghi “Đạt vòng phát triển” vẫn phải được đối soát trong release candidate. Cột người thực hiện chưa có tên chính thức nên phải bổ sung trước khi nộp.
 
 | Mã | Thời gian/môi trường | Đầu vào hoặc điều kiện trước | Thao tác | Kết quả mong đợi | Kết quả thực tế | Kết quả | Người thực hiện | Bằng chứng |
 |---|---|---|---|---|---|---|---|---|
@@ -9,7 +9,7 @@
 | T03 | 11/10/2026; macOS ARM64, Docker 29.4.0 | App A v1; ảnh v2 trong catalog | Gửi update v2, kiểm tra endpoint version, đưa về v1 | Operation thành công và version đổi đúng | v1 → v2 → v1 đạt; operation và endpoint phản ánh đúng | Đạt vòng phát triển | Chưa gán tên | `evidence/T03/2026-10-11T2122/` |
 | T04 | 11/10/2026; macOS ARM64, Docker 29.4.0 | App B đang chạy | Stop, quan sát lỗi Gateway, start, restart và kiểm tra health | Trạng thái phản ánh đúng và truy cập phục hồi | P0.2B 21 kiểm tra đạt; App B phục hồi khỏe | Đạt vòng phát triển | Chưa gán tên | `evidence/T04/2026-10-11T2122/` |
 | T05 | 12/10/2026 +07; macOS ARM64, Docker 29.4.0 | Stack P0.2C khỏe; tạo request App A | Gọi API log/stats có và không có session; kiểm tra giới hạn | Có log/CPU/RAM/PID/mạng thật; request sai bị từ chối | P0.2C 12/12 đạt; có `stats-sample.json` | Đạt vòng phát triển | Chưa gán tên | `evidence/T05/2026-10-12-p0.2c/` |
-| T06 | 12/10/2026 22:00–22:06 +07; macOS ARM64/OrbStack, Docker 29.8.2, k6 2.3.0 | App A/B v1 khỏe; k6 qua Gateway; warm-up 5 req/s | Chạy pilot 5/15/30 req/s trong 20 giây; sau đó vòng chuẩn 10/25/50 req/s trong 60 giây/mức; thu Prometheus cùng thời gian | p95 < 500 ms; lỗi < 1%; check > 99%; dropped = 0; có CPU/RAM/health và dữ liệu gốc | Vòng chuẩn đạt cả ba mức; 5.103 request; p95 cao nhất 7,32 ms; lỗi 0%; dropped 0; hai app khỏe ở mọi mẫu | Đạt vòng phát triển; chưa phải nghiệm thu VPS | Chưa gán tên | `evidence/T06/2026-10-12T2200-pilot-macos/`, `evidence/T06/2026-10-12T2202-macos/` |
+| T06 | 14/10/2026; VPS Debian 12 x86_64, 2 vCPU/3,8 GiB RAM | App A/B khỏe; k6 và hệ thống cùng VPS; warm-up trước mỗi vòng | Chạy ba vòng, mỗi vòng 10/25/50 req/s trong 60 giây/mức; thu Prometheus cùng thời gian | p95 < 500 ms; lỗi < 1%; check > 99%; dropped = 0; có CPU/RAM/health và dữ liệu gốc | 9/9 tổ hợp đạt; median p95 lần lượt 58,00/22,78/35,00 ms; lỗi 0%; dropped 0; hai app khỏe | Đạt nghiệm thu VPS | Chưa gán tên | `evidence/T06/2026-10-14-vps-linux/` và ba thư mục dữ liệu `1340`, `1345`, `1350` |
 | T07 | 11/10/2026; macOS ARM64 | Session thiếu/sai, action/version ngoài allowlist | Gọi API quản trị và Runner với đầu vào không hợp lệ | Trả 401/403/400 phù hợp; không thực thi action cấm; socket chỉ ở Runner | Các trường hợp xác thực, origin, `exec`, `latest` và socket boundary đạt | Đạt vòng phát triển | Chưa gán tên | `evidence/T07/2026-10-11-p0.2a.md`, `evidence/T07/2026-10-11-p0.2b.md` |
 | T08 | Chưa chạy | Chưa có VPS/snapshot sạch release candidate | Dựng lại/khôi phục theo README | Hệ thống phục hồi không cần bước ngoài tài liệu | Chưa có dữ liệu | Chưa đạt/chưa chạy | Chưa phân công | `evidence/T08/` dự kiến |
 
@@ -23,11 +23,13 @@
 | P1-ENV-01 | 13/10/2026 08:26–08:28 +07; macOS ARM64/OrbStack, Docker 29.8.2 | App A v1 khỏe; biến thường `APP_MESSAGE`; secret giả `DEMO_SECRET` | Cấu hình biến, đọc API/container/app, cập nhật v1 → v2, xóa biến, đưa về v1 và kiểm tra audit | Biến được áp dụng/bảo toàn; secret không lộ; biến lõi bị khóa; trạng thái cuối sạch | 21 kiểm tra đạt; phát hiện/sửa timeout Gateway; App A trở về v1 và không còn biến tùy chỉnh | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-environment/2026-10-13-macos/` |
 | P1-GIT-LATEST-01 | 13/10/2026 19:48 +07; macOS ARM64/OrbStack, Docker 29.8.2 | Source `github-app-a`; nhánh mặc định `main`; origin/main tại `d629742…` | Yêu cầu deploy latest, đối chiếu SHA, chờ build/deploy, kiểm tra app/image/release rồi đưa App A về v1 | Chỉ source/nhánh allowlist; SHA 40 ký tự khớp origin/main; image/release truy vết được; trạng thái cuối sạch | 15 kiểm tra đạt; App A chạy `git-d6297422c336`, image/release lưu đúng commit và trở về v1 | Đạt vòng phát triển | Chưa gán tên | `evidence/P1-git-latest/2026-10-13-macos/` |
 | P2-ROLLBACK-01 | 13/10/2026 19:20 +07; macOS ARM64/OrbStack, Docker 29.8.2 | App A v1; image catalog v1/v2 còn trên Docker host | Cập nhật v2, lưu release, về v1, rollback release v2, đối chiếu container/audit rồi dọn về v1 | Release có image ID; rollback đúng image/version; yêu cầu trái phép bị từ chối; trạng thái cuối sạch | 17 kiểm tra đạt; container dùng đúng image ID v2; audit có `release.rollback`; App A trở về v1 | Đạt vòng phát triển | Chưa gán tên | `evidence/P2-rollback/2026-10-13-macos/` |
+| VPS-CF-01 | 15/10/2026; VPS Debian 12 và máy khách ngoài | Tunnel, domain `paas.ai2p.id.vn`, cookie Secure | Kiểm tra TLS/health, auth/session/logout, smoke và P0.2 qua URL public | HTTPS hợp lệ; API chưa đăng nhập bị từ chối; toàn bộ luồng đạt | 10/10 health; chuỗi `401/200/200/200/204/401`; smoke 9/9; P0.2 15/15 | Đạt VPS/public | Chưa gán tên | `evidence/VPS/2026-10-15-cloudflare-tunnel/` |
+| VPS-WS-01 | 15/10/2026; wildcard `*.ai2p.id.vn` | `vps-demo` và sản phẩm độc lập `demo` | Build/run/restart, sau đó gọi health/version qua HTTPS | Mỗi service có container và hostname riêng, trả đúng commit | `vps-demo` trả `git-2c8a4af1ea22`; `demo` trả `git-6ffa63d8b922`; wildcard đạt | Đạt VPS/public | Chưa gán tên | `evidence/VPS/2026-10-15-dynamic-web-service/` |
 
 ## Khoảng trống phải xử lý
 
 1. Gán tên thật của người chạy từng test.
-2. Chạy lại T01–T08 trên release candidate/VPS Linux với commit và thời gian đầy đủ.
+2. Chạy T08 trên release candidate; đối soát T01–T05/T07 với bằng chứng VPS hiện có hoặc chạy lại phần còn thiếu.
 3. Tách từng trường hợp con thành dòng riêng nếu báo cáo cần đối chiếu chi tiết.
-4. Lặp lại T06 ít nhất ba lần/mức trên VPS Linux và lưu bộ dữ liệu gốc riêng; số liệu Mac chỉ dùng để chứng minh phương pháp.
+4. T06 VPS đã hoàn tất; trước khi nộp chỉ cần kiểm tra checksum, gán người thực hiện và dùng đúng số liệu VPS trong báo cáo.
 5. Không dùng các ảnh responsive lịch sử làm điều kiện nghiệm thu mới; quy tắc dự án hiện ưu tiên API/log/dữ liệu tự động.

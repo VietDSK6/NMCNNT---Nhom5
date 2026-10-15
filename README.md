@@ -34,19 +34,19 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
 - Mỗi ứng dụng có trang quản lý biến môi trường; giá trị được mã hóa trong SQLite, secret bị che khi đọc và Runner tái tạo container để áp dụng cấu hình.
 - Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
-- Dashboard có biểu mẫu **Tạo Web Service**. Mỗi service động có image `mini-paas/service-<slug>`, container, log, biến môi trường, release và hostname riêng; không dùng đường dẫn con của App A/B.
+- Dashboard có luồng **Tạo Web Service** riêng tại `/applications/new`, tách khỏi danh sách ứng dụng. Mỗi service động có image `mini-paas/service-<slug>`, container, log, biến môi trường, release và hostname riêng; không dùng đường dẫn con của App A/B.
 - Gateway định tuyến `slug.localhost` khi phát triển và `slug.ai2p.id.vn` trên VPS tới alias Docker `service-<slug>:3000`; Control API kiểm tra health trực tiếp trong mạng edge mà không công khai tuyến kiểm tra nội bộ.
-- Vòng tích hợp macOS đã tạo `render-demo`, build commit `680e789…`, xác nhận deployment thành công, giới hạn RAM 128 MiB và truy cập bằng `http://render-demo.localhost:8080`. Ngày 15/10/2026, VPS tiếp tục tạo `vps-demo`, build commit `2c8a4af…`, kiểm tra health và restart thành công; truy cập Internet còn chờ route/DNS wildcard `*.ai2p.id.vn` trên Cloudflare.
+- Vòng tích hợp macOS đã tạo `render-demo`, build commit `680e789…`, xác nhận deployment thành công, giới hạn RAM 128 MiB và truy cập bằng `http://render-demo.localhost:8080`. Ngày 15/10/2026, VPS tiếp tục tạo `vps-demo`, build commit `2c8a4af…`, kiểm tra health và restart thành công. Route wildcard Cloudflare đã được xác minh qua `https://vps-demo.ai2p.id.vn`; sản phẩm độc lập `demo` từ repository riêng cũng trả health/version tại `https://demo.ai2p.id.vn` với phiên bản `git-6ffa63d8b922`.
 - Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
 - T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
-- Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session và ranh giới chưa đăng nhập đã được kiểm tra từ máy ngoài.
+- Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` và `*.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session, ranh giới chưa đăng nhập và hostname Web Service động đã được kiểm tra từ máy ngoài.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
 - Repository động chỉ hỗ trợ GitHub công khai thuộc `TRUSTED_GITHUB_OWNERS`, nhánh `main`, Dockerfile trong build context và cổng 3000; chưa có GitHub App, repository riêng tư, chọn nhánh/tag, webhook, hủy build hoặc xóa service.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; T06 đã nghiệm thu lặp lại trên VPS nhưng nguồn phát tải vẫn chạy cùng máy với hệ thống.
-- Hàng đợi operation bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
+- Hàng đợi operation chưa bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
 - Đây chưa phải sandbox đa thuê: chỉ quản trị viên đăng nhập được tạo service và chỉ repository của nhóm được allowlist. Không dùng để chạy mã từ người dùng Internet không tin cậy.
 
 Dashboard vẫn phân biệt **health HTTP**, **trạng thái container**, **phiên bản mong muốn** và **phiên bản quan sát được**; các giá trị này không được coi là tương đương.
