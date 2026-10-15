@@ -293,6 +293,24 @@ make down
 
 Lệnh này dừng và xóa container cùng mạng do Compose tạo, nhưng không dùng `docker system prune`. Các volume `mini-paas-control-data`, `mini-paas-prometheus-data` và `mini-paas-grafana-data` được giữ lại.
 
+## Sao lưu và diễn tập khôi phục T08
+
+Tạo bản sao nhất quán của SQLite bằng online backup API, không cần dừng Control API:
+
+```bash
+BACKUP_OUTPUT_DIR=/duong-dan-bao-mat/control-$(date -u '+%Y%m%dT%H%M%SZ') make backup-control-data
+```
+
+Thư mục kết quả chứa `control.db`, `summary.json` và `checksums.sha256`. Database backup có password hash, session hash và giá trị biến môi trường đã mã hóa nên vẫn là dữ liệu nhạy cảm: giữ quyền truy cập hạn chế, không commit và không gửi kèm báo cáo. File `.env`, đặc biệt `ENVIRONMENT_ENCRYPTION_KEY`, phải được sao lưu riêng trong kho bí mật; script không chép secret vào archive.
+
+Diễn tập khôi phục an toàn:
+
+```bash
+make test-t08
+```
+
+T08 kiểm tra checksum, restore vào volume tạm, chạy một Control API tạm không publish cổng, đăng nhập, đọc danh sách ứng dụng và truy cập App A qua Gateway. Cuối bài thử, container/volume tạm được xóa và stack live không bị thay đổi. Script restore cố ý từ chối volume live; khôi phục production cần dừng Control API và được người vận hành phê duyệt riêng. Xem [thiết kế sao lưu/khôi phục](docs/architecture/P2_BACKUP_RESTORE.md).
+
 ## Thử bản v2 của Ứng dụng A
 
 Sau khi đăng nhập Dashboard, mở **Ứng dụng → Ứng dụng A → Tổng quan** rồi chọn **Cập nhật lên v2.0.0**. Theo dõi trạng thái tại mục **Lịch sử thao tác**; khi thành công, phiên bản thực tế đổi sang `v2.0.0`. Nút tại cùng vị trí cho phép đưa app về `v1.0.0`.
@@ -333,8 +351,10 @@ tests/integration/p1_observability.sh  Kiểm thử Prometheus/Grafana
 tests/integration/p1_dashboard_navigation.sh  Kiểm thử đường dẫn Dashboard
 tests/integration/p1_environment.sh  Kiểm thử biến môi trường và tái tạo container
 tests/integration/p2_release_rollback.sh  Kiểm thử lịch sử release và rollback theo image ID
+tests/integration/t08_backup_restore.sh  Diễn tập backup/restore trên volume tạm
 tests/performance/k6/       Kịch bản tải cố định T06
 tests/ci/p1_1a.sh           Kiểm thử image gắn với commit
+scripts/backup/             Backup SQLite và restore an toàn vào volume tạm
 scripts/ci/                 Dựng ảnh và kiểm tra image manifest
 scripts/performance/        Chạy tải, lấy Prometheus và tổng hợp kết quả
 .github/workflows/ci.yml    Pipeline GitHub Actions nội bộ
@@ -367,6 +387,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 - Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md) và [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md).
+Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.
