@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-15T14:36:06.967Z",
+  "sourceVolume": "mini-paas-control-data",
+  "sourceCommit": "c6b1be0aa4e0df184a301abb6999202fce26b2f4",
+  "databaseFile": "control.db",
+  "sha256": "88253712a02284964c49c8e586fc33d7278143a170ecb2f1db6c3f1e993d8748",
+  "sqliteUserVersion": 6,
+  "integrityCheck": "ok",
+  "rowCounts": {
+    "users": 1,
+    "applications": 4,
+    "operations": 13,
+    "deployments": 4,
+    "releases": 13,
+    "application_environment_variables": 0,
+    "audit_events": 50
+  }
+}

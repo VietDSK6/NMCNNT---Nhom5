@@ -40,6 +40,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
 - T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
 - Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` và `*.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session, ranh giới chưa đăng nhập và hostname Web Service động đã được kiểm tra từ máy ngoài.
+- T08 đã tạo online backup SQLite, kiểm checksum/integrity, restore vào volume tạm và chạy Control API phục hồi trên VPS; database nhạy cảm được giữ ngoài repository.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 

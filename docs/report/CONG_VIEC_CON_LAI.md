@@ -17,12 +17,14 @@ Từ mốc này không nên thêm tính năng lớn trước khi hoàn tất kh�
 - Quét repository/evidence để bảo đảm không có mật khẩu, token, cookie hoặc khóa riêng.
 - Ghi phiên bản Docker, Compose, Node.js, Prometheus, Grafana, k6 và cloudflared vào README release cuối.
 
-### R2 — Hoàn thành T08 dựng lại/khôi phục
+### R2 — Hoàn thành T08 dựng lại/khôi phục — đã đạt ngày 15/10/2026
 
 - Viết quy trình sao lưu tối thiểu cho SQLite/cấu hình cần giữ, không đưa secret vào Git.
 - Kiểm thử khôi phục trên bản sao hoặc môi trường tách biệt; không phá stack đang demo.
 - Sau khôi phục phải đăng nhập được, đọc danh sách ứng dụng và truy cập ít nhất một Web Service.
 - Lưu `environment`, `procedure`, `test-record`, `result`, `conclusion` và checksum tại `evidence/T08/`.
+
+Kết quả: đã đạt trên VPS ở commit `c6b1be0`; database phục hồi đủ bốn ứng dụng, API tạm hoạt động và stack live không thay đổi. Bằng chứng nằm tại `evidence/T08/2026-10-15-vps/`.
 
 ### R3 — Chuẩn hóa bộ T01–T08
 
@@ -62,9 +64,8 @@ Các mục trên chỉ nên làm sau khi R1–R3 và báo cáo đã hoàn tất;
 
 ## 5. Thứ tự thực hiện đề xuất
 
-1. T08 sao lưu/khôi phục an toàn.
-2. Chốt release candidate và chạy regression cuối.
-3. Hoàn thiện ma trận T01–T08 và kiểm tra secret/checksum.
-4. Viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
-5. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
-6. Quay video trên đúng release cuối và đóng gói hồ sơ.
+1. Chốt release candidate và chạy regression cuối.
+2. Hoàn thiện ma trận T01–T08 và kiểm tra secret/checksum.
+3. Viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
+4. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
+5. Quay video trên đúng release cuối và đóng gói hồ sơ.

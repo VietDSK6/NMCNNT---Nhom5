@@ -1,6 +1,6 @@
 # Sao lưu và khôi phục trạng thái Control Plane
 
-**Trạng thái:** T08 đã đạt vòng phát triển trên macOS/OrbStack ngày 15/10/2026; cần chạy lại trên VPS Linux trước khi đánh dấu nghiệm thu cuối.
+**Trạng thái:** T08 đã đạt vòng phát triển trên macOS/OrbStack và nghiệm thu trên VPS Debian 12 ngày 15/10/2026. Database thật được giữ ngoài Git; evidence đã làm sạch nằm tại `evidence/T08/2026-10-15-vps/`.
 
 ## Phạm vi
 

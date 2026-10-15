@@ -53,6 +53,7 @@ Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/swit
 - [ ] Mỗi test có thời gian, commit, môi trường và người thực hiện.
 - [ ] Mỗi test liên kết tới log/JSON/CSV tương ứng.
 - [x] T06 có ba vòng dữ liệu k6 gốc và metric cùng khoảng thời gian trên VPS Linux.
+- [x] T08 sao lưu/khôi phục SQLite đã nghiệm thu trên volume tạm ở VPS; database nhạy cảm giữ ngoài Git, evidence đã làm sạch.
 - [ ] Không có token, mật khẩu, cookie hoặc khóa trong evidence.
 
 ## 4. Video và bảo vệ

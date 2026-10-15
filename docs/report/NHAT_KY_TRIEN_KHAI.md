@@ -618,3 +618,28 @@ VPS không có default route IPv6 toàn cục và resolver LAN xuất hiện l�
 - `evidence/VPS/2026-10-15-cloudflare-tunnel/`.
 - `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.
 - `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
+
+## 15/10/2026 — T08 sao lưu và khôi phục Control Plane
+
+### Phạm vi và an toàn
+
+- Bổ sung online backup SQLite bằng `node:sqlite`, tương thích database WAL đang hoạt động.
+- Archive chỉ gồm database, summary và checksum; `.env`/khóa mã hóa được giữ riêng ngoài Git.
+- Restore chỉ cho phép volume tạm có tiền tố `mini-paas-t08-restore-*`, không thể ghi đè volume live bằng script thử nghiệm.
+- Control API phục hồi chạy không publish cổng; toàn bộ container/volume tạm được dọn sau bài thử.
+
+### Kết quả VPS
+
+- Commit `c6b1be0`; SQLite integrity `ok`, schema v6 và SHA-256 hợp lệ trước/sau restore.
+- Khớp số dòng bảy nhóm bảng; dữ liệu phục hồi có đủ bốn ứng dụng `app-a`, `app-b`, `demo`, `vps-demo`.
+- Đăng nhập và đọc applications đều HTTP 200; App A qua Gateway HTTP 200.
+- Tám service live tiếp tục chạy; API public và `demo.ai2p.id.vn` vẫn khỏe; không còn tài nguyên tạm.
+
+### Sự cố và cách xử lý
+
+Vòng VPS đầu gặp `EPERM` khi Node dùng `copyFileSync` qua bind mount và named volume trên Linux. Cách chép được đổi thành đọc/ghi byte trực tiếp; checksum và `PRAGMA integrity_check` vẫn là điều kiện bắt buộc. Vòng chạy lại đạt.
+
+### Bằng chứng
+
+- `evidence/T08/2026-10-15-vps/`.
+- `docs/architecture/P2_BACKUP_RESTORE.md`.
