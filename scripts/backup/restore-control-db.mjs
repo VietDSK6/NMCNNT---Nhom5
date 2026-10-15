@@ -1,5 +1,5 @@
 import { DatabaseSync } from "node:sqlite";
-import { chmodSync, chownSync, copyFileSync, existsSync, readdirSync, readFileSync } from "node:fs";
+import { chmodSync, chownSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 
 const sourcePath = process.env.BACKUP_DATABASE_PATH || "/backup/control.db";
@@ -21,7 +21,7 @@ if (digest !== summary.sha256) {
   throw new Error("Checksum control.db không khớp summary.json.");
 }
 
-copyFileSync(sourcePath, targetPath);
+writeFileSync(targetPath, readFileSync(sourcePath), { mode: 0o600 });
 chmodSync(targetPath, 0o600);
 chownSync(
   targetPath,
