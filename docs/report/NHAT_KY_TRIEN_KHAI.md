@@ -526,14 +526,56 @@ Vòng T06 đầu tiên thất bại trước khi phát tải vì container k6 d�
 
 Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả chỉ chứng minh ba mức tải đã định trong môi trường này; không dùng để tuyên bố SLA hoặc năng lực production.
 
-### Công khai dịch vụ và tên miền
+### Công khai dịch vụ và tên miền — phương án dự kiến tại thời điểm 14/10
 
-- `PUBLIC_ORIGIN` được đặt thành `https://vps2.tail5cce4c.ts.net`; cookie phiên bật cờ `Secure`.
+- `PUBLIC_ORIGIN` tạm đặt thành `https://vps2.tail5cce4c.ts.net`; cookie phiên bật cờ `Secure`.
 - Tailscale Funnel yêu cầu chủ tailnet đăng nhập và bật quyền một lần. Chỉ ghi Funnel là “đã hoạt động” sau khi `tailscale funnel status` và request HTTPS từ ngoài đều đạt.
-- Tên miền `paas.ai2p.id.vn` được thiết kế là bản ghi `REDIRECT` sang URL Funnel; không dùng `CNAME` do chứng chỉ Funnel chỉ khớp tên `*.ts.net`.
+- Tên miền `paas.ai2p.id.vn` từng được thiết kế là bản ghi `REDIRECT` sang URL Funnel; phương án này chưa được nghiệm thu và đã được thay bằng Cloudflare Tunnel ngày 15/10/2026.
 
 ### Bằng chứng và tài liệu
 
 - `evidence/T06/2026-10-14-vps-linux/`.
 - `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
 - `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.
+
+## 15/10/2026 — Công khai Mini PaaS bằng Cloudflare Tunnel
+
+### DNS và đường truy cập
+
+- Thêm `ai2p.id.vn` vào Cloudflare, giữ nguyên bản ghi Vercel `@` và `www` ở chế độ DNS only.
+- Đổi nameserver tại TenTen sang `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`; cả resolver Cloudflare và Google đều trả về cặp NS mới.
+- Tạo Tunnel `mini-paas-vps` và published route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`.
+- Không mở Docker API hoặc các service nội bộ ra Internet; Gateway tiếp tục chỉ bind loopback.
+
+### Connector và bảo mật
+
+- Dùng `cloudflared` 2026.10.0 với image ghim digest.
+- Token lưu ngoài repository tại file quyền `0600`; container đọc qua `--token-file`, không đưa token vào biến môi trường hoặc evidence.
+- Sau khi hoàn tất cài đặt, token connector ban đầu đã được xoay trên Cloudflare để thu hồi giá trị cũ. Token mới được chuyển trực tiếp vào file bảo mật trên VPS, không ghi vào Git hoặc nhật ký lệnh.
+- Container dùng `restart=unless-stopped`, host network, UID/GID `1000:1000`, root filesystem read-only, bỏ capabilities và bật `no-new-privileges`.
+- Phát hiện metrics mặc định lắng nghe mọi interface; đã tái tạo connector để metrics chỉ bind `127.0.0.1:20241`.
+- Connector đăng ký bốn kết nối QUIC tới các edge Cloudflare; connectivity pre-check DNS, UDP/QUIC, TCP/HTTP2 và Cloudflare API đều đạt.
+
+### Cấu hình ứng dụng
+
+- Đặt `PUBLIC_ORIGIN=https://paas.ai2p.id.vn` và `SESSION_COOKIE_SECURE=true`.
+- Tái tạo Control API, Grafana và Gateway; tám service Compose đều khỏe.
+
+### Kết quả kiểm thử
+
+- HTTPS `/healthz` và `/api/health` từ máy ngoài trả HTTP 200, xác minh TLS thành công.
+- 10/10 request health lặp từ máy ngoài đạt.
+- Chuỗi chưa đăng nhập → đăng nhập → đọc session → đọc applications → đăng xuất → session cũ cho kết quả `401/200/200/200/204/401`.
+- `make smoke`: 9/9 đạt; P0.2 qua URL public: 15/15 đạt.
+- Sau khi tái tạo connector để siết metrics, bốn edge kết nối lại và 5/5 request health đạt.
+- Sau khi xoay token, connector tiếp tục đăng ký bốn edge mới, tám service vẫn khỏe và 5/5 request health công khai đạt.
+
+### Giới hạn quan sát được
+
+VPS không có default route IPv6 toàn cục và resolver LAN xuất hiện lỗi thoáng qua khi chính VPS gọi ngược URL public. Vòng so sánh ghi nhận curl mặc định đạt 29/30, ép IPv4 đạt 30/30; một lần chạy P0.2 khác lỗi phân giải ở request cuối. Kiểm thử public chính được thực hiện từ máy ngoài và đạt, nhưng hạn chế outbound DNS của VPS vẫn phải được giữ trong báo cáo thay vì coi hệ thống có SLA.
+
+### Bằng chứng
+
+- `evidence/VPS/2026-10-15-cloudflare-tunnel/`.
+- `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.
+- `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.

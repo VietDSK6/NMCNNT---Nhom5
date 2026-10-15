@@ -1,0 +1,90 @@
+THỜI ĐIỂM
+2026-10-15T08:34:44+0700
+
+NAMESERVER QUA 1.1.1.1
+carlos.ns.cloudflare.com.
+stella.ns.cloudflare.com.
+
+HTTPS TỪ MÁY NGOÀI
+{"status":"ok","service":"gateway"}
+health_http=200 remote_ip=104.21.13.150 ssl_verify=0
+{"status":"ok","service":"control-api"}
+api_http=200 remote_ip=172.67.200.160 ssl_verify=0
+repeated_health=10/10
+
+XÁC THỰC TỪ MÁY NGOÀI
+unauth=401
+login=200
+session=200
+applications=200
+logout=204
+old_session=401
+
+CONNECTOR
+name=/mini-paas-cloudflared
+status=running
+restart=unless-stopped
+network=host
+user=1000:1000
+readonly=true
+image=sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
+token_mode=600
+token_owner=user:user
+metrics=127.0.0.1:20241
+registered_edge_connections=4
+
+STACK
+PUBLIC_ORIGIN=https://paas.ai2p.id.vn
+SESSION_COOKIE_SECURE=true
+app-a         healthy
+app-b         healthy
+control-api   healthy
+dashboard     healthy
+gateway       healthy
+grafana       healthy
+prometheus    healthy
+runner        healthy
+
+SMOKE
+P0.1 smoke test: 9/9 kiểm tra đạt.
+
+P0.2 QUA URL PUBLIC
+ĐẠT: Dashboard được phục vụ qua Gateway
+ĐẠT: Control API khỏe qua Gateway
+ĐẠT: Từ chối danh sách ứng dụng khi chưa đăng nhập
+ĐẠT: Từ chối mật khẩu sai
+ĐẠT: Đăng nhập bằng tài khoản hợp lệ
+ĐẠT: Đọc phiên quản trị
+ĐẠT: Đọc hai ứng dụng từ Control API
+ĐẠT: Đọc nhật ký kiểm toán
+ĐẠT: dashboard không công khai cổng trực tiếp
+ĐẠT: control-api không công khai cổng trực tiếp
+ĐẠT: runner không công khai cổng trực tiếp
+ĐẠT: app-a không công khai cổng trực tiếp
+ĐẠT: app-b không công khai cổng trực tiếp
+ĐẠT: Đăng xuất phiên quản trị
+ĐẠT: Phiên cũ bị vô hiệu sau đăng xuất
+P0.2 integration test: 15/15 kiểm tra đạt.
+
+KIỂM TRA ĐƯỜNG GỌI NGƯỢC TỪ VPS
+request curl mặc định: 29/30 đạt, 1/30 lỗi kết nối
+request ép IPv4: 30/30 đạt
+Trong một lần chạy lại, resolver LAN trên VPS trả lỗi phân giải tên ở request cuối. Đây được ghi là giới hạn môi trường; kiểm thử từ máy ngoài và connector edge vẫn đạt.
+
+SAU KHI SIẾT METRICS VỀ LOOPBACK
+registered_edge_connections=4
+connectivity_precheck_dns=PASS
+connectivity_precheck_udp_quic=PASS
+connectivity_precheck_tcp_http2=PASS
+connectivity_precheck_cloudflare_api=PASS
+health_after_restart=5/5 HTTP 200
+
+SAU KHI XOAY TOKEN CONNECTOR
+token_rotation=completed
+old_token=invalidated
+new_token_mode=600
+connector_status=running
+registered_edge_connections=4
+connectivity_precheck=PASS
+stack_health=8/8 healthy
+public_health_after_rotation=5/5 HTTP 200

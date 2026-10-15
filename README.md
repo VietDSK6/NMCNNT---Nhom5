@@ -7,7 +7,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 Đã triển khai và kiểm thử:
 
 - Hai ứng dụng Web mẫu có endpoint `/health` và `/version`.
-- Nginx Gateway là cổng duy nhất được publish ra host, chỉ tại `127.0.0.1:8080`; VPS đưa Gateway ra Internet qua Tailscale Funnel thay vì công khai Docker/API trực tiếp.
+- Nginx Gateway là cổng duy nhất được publish ra host, chỉ tại `127.0.0.1:8080`; VPS đưa Gateway ra Internet tại `https://paas.ai2p.id.vn` qua Cloudflare Tunnel outbound-only thay vì công khai Docker/API trực tiếp.
 - Dashboard dùng React, Vite và TypeScript; thông tin được tách thành tổng quan hệ thống, danh sách ứng dụng và khu vực chi tiết của từng ứng dụng.
 - Control API dùng Fastify và TypeScript; Dashboard/API không mở cổng trực tiếp ra host.
 - SQLite lưu tài khoản quản trị, phiên đăng nhập, danh mục ứng dụng và audit event.
@@ -36,6 +36,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
 - Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
 - T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
+- Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session và ranh giới chưa đăng nhập đã được kiểm tra từ máy ngoài.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
@@ -73,7 +74,7 @@ Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong
 
 Chỉ đặt `SESSION_COOKIE_SECURE=true` sau khi Gateway được cấu hình HTTPS. Môi trường localhost hiện dùng HTTP nên giữ `false`.
 
-Khi triển khai qua Tailscale Funnel và tên miền TenTen, làm theo [hướng dẫn cấu hình tên miền](docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md). Cấu hình hiện tại dùng bản ghi chuyển hướng để giữ chứng chỉ HTTPS hợp lệ của Funnel; không dùng `CNAME` trực tiếp tới tên miền `*.ts.net`.
+Khi triển khai trên VPS với tên miền TenTen/Cloudflare, làm theo [hướng dẫn cấu hình tên miền và Tunnel](docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md). Cấu hình hiện tại dùng Cloudflare làm DNS có thẩm quyền và Tunnel kết thúc HTTPS cho `paas.ai2p.id.vn`; không dùng bản ghi chuyển hướng hoặc mở Docker API ra Internet.
 
 ## Khởi động
 
@@ -93,6 +94,8 @@ Các địa chỉ:
 - Health Gateway: <http://127.0.0.1:8080/healthz>
 - Health Control API: <http://127.0.0.1:8080/api/health>
 - Grafana: <http://127.0.0.1:8080/monitoring/>
+
+Địa chỉ nghiệm thu trên VPS: <https://paas.ai2p.id.vn/>. URL public chỉ hợp lệ khi connector Cloudflare trên VPS đang chạy; môi trường phát triển vẫn dùng các URL loopback phía trên.
 
 Nếu đổi `GATEWAY_PORT` trong `.env`, thay `8080` bằng cổng mới.
 
@@ -342,8 +345,8 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
 - Giá trị biến môi trường được mã hóa trong SQLite và secret không trả lại API, nhưng người có quyền Docker/host vẫn có thể đọc `Config.Env`; đây chưa phải secret manager cấp production.
 - Rollback đối chiếu image ID nhưng vẫn phụ thuộc image cache trên một host; chưa thể thay thế registry digest hoặc bản sao lưu image.
-- Gateway chỉ bind vào `127.0.0.1` theo cấu hình phát triển hiện tại.
-- Cookie local chưa có cờ `Secure` vì môi trường hiện dùng HTTP; VPS có HTTPS phải bật cờ này.
+- Gateway chỉ bind vào `127.0.0.1`; connector Cloudflare chạy outbound-only và chuyển tiếp đúng tới loopback này.
+- Cookie local chưa có cờ `Secure` vì môi trường phát triển dùng HTTP; VPS đã đặt `SESSION_COOKIE_SECURE=true` và `PUBLIC_ORIGIN=https://paas.ai2p.id.vn`.
 - Module `node:sqlite` của Node.js 24 vẫn phát cảnh báo thử nghiệm; đã ghim Node image và cô lập tầng truy cập dữ liệu để có thể thay thư viện nếu cần.
 - Health check không thay thế kiểm thử nghiệp vụ.
 - Chính sách restart không phải failover.

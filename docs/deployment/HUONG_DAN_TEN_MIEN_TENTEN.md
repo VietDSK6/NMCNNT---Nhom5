@@ -1,93 +1,185 @@
-# Hướng dẫn cấu hình tên miền TenTen cho Mini PaaS
+# Cấu hình TenTen, Cloudflare DNS và Tunnel cho Mini PaaS
 
-Tài liệu này áp dụng cho cấu hình hiện tại ngày 14/10/2026:
+Tài liệu này phản ánh cấu hình đã nghiệm thu ngày 15/10/2026:
 
-- Tên miền: `ai2p.id.vn`.
-- Mini PaaS được công khai bằng Tailscale Funnel tại `https://vps2.tail5cce4c.ts.net`.
-- Hai bản ghi đang dùng cho Vercel phải được giữ nguyên:
-  - `@` — `A` — `76.76.21.21`;
-  - `www` — `CNAME` — `cname.vercel-dns.com`.
+- tên miền gốc: `ai2p.id.vn` đăng ký tại TenTen;
+- DNS có thẩm quyền: Cloudflare;
+- URL Mini PaaS: `https://paas.ai2p.id.vn`;
+- origin trên VPS: `http://127.0.0.1:8080`;
+- VPS không cần nhận kết nối Internet trực tiếp tại cổng 80/443.
 
-## Phương án đang dùng
-
-Tạo địa chỉ dễ nhớ `paas.ai2p.id.vn` và chuyển hướng người dùng sang địa chỉ HTTPS của Tailscale Funnel.
-
-Đây là **chuyển hướng HTTP**, không phải trỏ trực tiếp tên miền vào VPS. Sau khi chuyển hướng, thanh địa chỉ của trình duyệt sẽ hiển thị `vps2.tail5cce4c.ts.net`. Cách này phù hợp với hạ tầng hiện tại vì VPS chưa nhận được kết nối Internet đi vào qua cổng 80/443 và chứng chỉ HTTPS của Funnel chỉ được cấp cho tên miền `*.ts.net`.
-
-Không dùng `CNAME` từ `paas.ai2p.id.vn` tới `vps2.tail5cce4c.ts.net`: DNS vẫn giữ tên `paas.ai2p.id.vn` trong trình duyệt, dẫn đến chứng chỉ HTTPS không khớp tên miền. Không dùng loại `FRAME`: Gateway gửi chính sách không cho nhúng trang trong khung.
-
-## Các bước trên trang TenTen
-
-1. Đăng nhập trang quản lý DNS của `ai2p.id.vn`.
-2. Kiểm tra tên miền vẫn dùng các máy chủ DNS của TenTen: `ns-b1.tenten.vn`, `ns-b2.tenten.vn`, `ns-b3.tenten.vn`.
-3. Trong **Record đang sử dụng**, chọn **Thêm**.
-4. Nhập bản ghi mới:
-
-   | Trường | Giá trị |
-   |---|---|
-   | Tên | `paas` |
-   | Loại | `REDIRECT` |
-   | Giá trị | `vps2.tail5cce4c.ts.net` |
-   | Độ ưu tiên | `0` hoặc để mặc định |
-
-5. Lưu bản ghi. Không sửa hoặc xóa hai bản ghi `@` và `www` đang dùng cho Vercel.
-6. Chọn **Cập nhật trạng thái DNS** nếu trang quản trị yêu cầu.
-7. Chờ bản ghi có hiệu lực. Giao diện TenTen thông báo thời gian thường trong khoảng 3 giờ và có thể chậm tới 24 giờ.
-
-TenTen yêu cầu giá trị của loại `REDIRECT` là tên miền nên không nhập đường dẫn `/`, không thêm cổng `8080`. Nếu giao diện cho phép nhập đầy đủ URL đích và bắt buộc giao thức, dùng `https://vps2.tail5cce4c.ts.net`; nếu không, giữ đúng hostname trong bảng trên.
-
-## Kiểm tra sau khi cấu hình
-
-Trước hết kiểm tra địa chỉ Funnel trực tiếp:
-
-```bash
-curl -I https://vps2.tail5cce4c.ts.net/
-curl https://vps2.tail5cce4c.ts.net/healthz
-```
-
-Sau khi TenTen báo bản ghi đã có hiệu lực, mở:
+## 1. Luồng truy cập
 
 ```text
-http://paas.ai2p.id.vn
+Người dùng Internet
+        |
+        | HTTPS cho paas.ai2p.id.vn
+        v
+Cloudflare Edge
+        |
+        | Cloudflare Tunnel, kết nối do VPS chủ động mở ra ngoài
+        v
+cloudflared trên VPS
+        |
+        | HTTP loopback
+        v
+127.0.0.1:8080 -> Gateway -> Dashboard / API / Apps / Grafana
+```
+
+Cloudflare kết thúc TLS ở phía Internet. Đoạn Cloudflare Edge tới connector vẫn đi trong Tunnel đã mã hóa; connector mới chuyển request bằng HTTP tới loopback cùng máy. Docker socket, Control API, Runner, Prometheus và các ứng dụng không có cổng public riêng.
+
+## 2. Chuyển DNS từ TenTen sang Cloudflare
+
+Cloudflare cấp hai nameserver cho zone này:
+
+```text
+carlos.ns.cloudflare.com
+stella.ns.cloudflare.com
+```
+
+Tại `https://id.tenten.vn`, mở tên miền `ai2p.id.vn`, chọn **Cập nhật NS** rồi:
+
+1. thay `ns-b1.tenten.vn`, `ns-b2.tenten.vn`, `ns-b3.tenten.vn` bằng hai nameserver Cloudflare phía trên;
+2. để trống NS3;
+3. tắt DNSSEC cũ trước khi đổi nếu registrar đang bật;
+4. lưu và chờ Cloudflare báo zone `Active`.
+
+Không xóa đăng ký tên miền tại TenTen và không chọn chuyển nhà đăng ký. TenTen vẫn quản lý gia hạn; Cloudflare chỉ quản lý DNS.
+
+## 3. Bản ghi phải giữ khi chuyển DNS
+
+Hai bản ghi Website Vercel đã được sao chép sang Cloudflare trước khi đổi nameserver:
+
+| Loại | Tên | Giá trị | Trạng thái proxy |
+|---|---|---|---|
+| A | `@` | `76.76.21.21` | DNS only |
+| CNAME | `www` | `cname.vercel-dns.com` | DNS only |
+
+Nếu có MX/TXT phục vụ email hoặc xác minh thì cũng phải sao chép nguyên trạng. Không tạo `A paas` trỏ vào IP chiều ra của VPS và không dùng `REDIRECT`/`FRAME`.
+
+Route Tunnel tự tạo bản ghi proxied:
+
+```text
+paas.ai2p.id.vn CNAME <tunnel-id>.cfargotunnel.com
+```
+
+Không sửa CNAME này bằng tay.
+
+## 4. Tunnel và connector trên VPS
+
+Tunnel có tên `mini-paas-vps`, route published application:
+
+| Thuộc tính | Giá trị |
+|---|---|
+| Hostname | `paas.ai2p.id.vn` |
+| Service URL | `http://127.0.0.1:8080` |
+| Connector | `cloudflared` 2026.10.0 |
+| Image | `cloudflare/cloudflared@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07` |
+| Restart policy | `unless-stopped` |
+| Network mode | `host` |
+
+Token connector không lưu trong Git, tài liệu, lệnh minh chứng hoặc biến môi trường của container. Trên VPS, token nằm tại:
+
+```text
+/home/user/.config/cloudflared/token
+```
+
+File có quyền `0600`. Container đọc token qua bind mount read-only và cờ `--token-file`; root filesystem của container là read-only, chạy UID/GID `1000:1000`, bỏ toàn bộ Linux capabilities và bật `no-new-privileges`.
+
+Lệnh tái tạo connector sau khi token đã được cấp riêng trên VPS:
+
+```bash
+docker run -d \
+  --name mini-paas-cloudflared \
+  --restart unless-stopped \
+  --network host \
+  --user 1000:1000 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --cap-drop ALL \
+  --security-opt no-new-privileges:true \
+  --mount type=bind,src=/home/user/.config/cloudflared/token,dst=/run/secrets/cloudflared-token,readonly \
+  cloudflare/cloudflared@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07 \
+  tunnel --metrics 127.0.0.1:20241 run --token-file /run/secrets/cloudflared-token
+```
+
+Không thay đường dẫn token bằng token thật trong command history.
+
+Nếu token từng xuất hiện trong chat, ảnh chụp, terminal hoặc nơi không kiểm soát, vào trang chi tiết Tunnel và chọn `Rotate token`. Ngay sau đó cập nhật file `/home/user/.config/cloudflared/token`, giữ quyền `0600`, rồi khởi động lại `mini-paas-cloudflared`. Token cũ sẽ mất hiệu lực; phải kiểm tra connector đăng ký lại đủ kết nối edge và URL public trả HTTP 200 trước khi kết luận hoàn tất.
+
+## 5. Cấu hình Mini PaaS trên VPS
+
+`.env` trên VPS phải có:
+
+```dotenv
+PUBLIC_ORIGIN=https://paas.ai2p.id.vn
+SESSION_COOKIE_SECURE=true
+```
+
+Sau khi đổi giá trị, tái tạo `control-api`, `grafana` và `gateway` để origin, cookie và URL Grafana đồng bộ. File `.env` tiếp tục giữ quyền `0600`.
+
+## 6. Kiểm tra
+
+Kiểm tra từ máy ngoài VPS:
+
+```bash
+dig +short NS ai2p.id.vn @1.1.1.1
+curl https://paas.ai2p.id.vn/healthz
+curl https://paas.ai2p.id.vn/api/health
 ```
 
 Kết quả mong đợi:
 
-1. Trình duyệt được chuyển sang `https://vps2.tail5cce4c.ts.net`.
-2. Chứng chỉ HTTPS hợp lệ cho `vps2.tail5cce4c.ts.net`.
-3. Trang đăng nhập Mini PaaS xuất hiện.
-4. Đăng nhập, xem App A/App B và thực hiện thao tác quản trị không xuất hiện lỗi `Origin không hợp lệ`.
+- nameserver là `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`;
+- HTTPS hợp lệ, không dùng `-k`;
+- Gateway trả `{"status":"ok","service":"gateway"}`;
+- Control API trả `{"status":"ok","service":"control-api"}`;
+- API quản trị chưa đăng nhập trả `401`;
+- đăng nhập, đọc session, đọc danh sách ứng dụng và đăng xuất hoạt động qua cookie `Secure`.
 
-Có thể kiểm tra chuyển hướng bằng dòng lệnh:
+Trên VPS:
 
 ```bash
-curl -I http://paas.ai2p.id.vn
+docker ps --filter name=mini-paas-cloudflared
+docker logs --tail 50 mini-paas-cloudflared
+cd /home/user/mini-paas
+docker compose ps
+make smoke
 ```
 
-Phản hồi cần có mã chuyển hướng `301`, `302`, `307` hoặc `308` và tiêu đề `Location` trỏ tới `vps2.tail5cce4c.ts.net`.
+Cảnh báo ICMP proxy do container bỏ capability không ảnh hưởng route HTTP. Không cấp thêm capability chỉ để loại cảnh báo này. Endpoint metrics của connector chỉ bind `127.0.0.1:20241`.
 
-## Nếu không hoạt động
+VPS hiện không có default route IPv6 toàn cục và DNS LAN có thể nhiễu khi chính VPS gọi ngược URL public. Bài nghiệm thu public ưu tiên máy ngoài; nếu cần chạy test từ VPS thì tách kiểm tra DNS công cộng và request IPv4/Cloudflare Edge. Không dùng hiện tượng này để kết luận Tunnel mất kết nối khi dashboard Cloudflare và bốn connector edge vẫn khỏe.
 
-- Nếu `paas.ai2p.id.vn` chưa phân giải: chờ thêm, rồi dùng nút **Cập nhật trạng thái DNS** của TenTen.
-- Nếu mở tên miền nhưng không chuyển hướng: kiểm tra loại bản ghi là `REDIRECT`, không phải `CNAME` hoặc `FRAME`.
-- Nếu trang chuyển tới `http://vps2.tail5cce4c.ts.net`: sửa đích trong tính năng chuyển tiếp Website của TenTen thành URL đầy đủ `https://vps2.tail5cce4c.ts.net`. Nếu gói TenTen không hỗ trợ chuyển tiếp HTTPS, dùng trực tiếp địa chỉ Funnel.
-- Nếu Funnel không truy cập được: trên VPS chạy `sudo tailscale funnel status` và `docker compose ps` trong `/home/user/mini-paas`.
-- Nếu đăng nhập được nhưng thao tác POST bị từ chối: kiểm tra `.env` trên VPS có `PUBLIC_ORIGIN=https://vps2.tail5cce4c.ts.net` và `SESSION_COOKIE_SECURE=true`, sau đó chạy `docker compose up -d --wait`.
+## 7. Vận hành và xử lý sự cố
 
-## Muốn giữ `paas.ai2p.id.vn` trên thanh địa chỉ
+- `502/503`: kiểm tra `curl http://127.0.0.1:8080/healthz` trên VPS và route Service URL.
+- Tunnel `Down`: kiểm tra `docker ps`, `docker logs` và kết nối outbound; khởi động lại đúng container bằng `docker restart mini-paas-cloudflared`.
+- Đăng nhập được nhưng POST bị `403`: kiểm tra `PUBLIC_ORIGIN` đúng chính xác `https://paas.ai2p.id.vn`.
+- Cookie không được gửi: kiểm tra URL là HTTPS và `SESSION_COOKIE_SECURE=true`.
+- Route báo trùng DNS: xóa bản ghi `paas` cũ trước khi để Tunnel tạo CNAME; không xóa bản ghi `@`/`www`.
 
-Phương án chuyển hướng ở trên không giữ tên miền tùy chỉnh. Muốn dùng trực tiếp `https://paas.ai2p.id.vn`, nhóm phải bổ sung một điểm vào hỗ trợ tên miền tùy chỉnh và chứng chỉ TLS, chẳng hạn:
+## 8. Giới hạn độ ổn định
 
-- cấu hình NAT/port forwarding 80/443 tới VPS rồi dùng reverse proxy và Let's Encrypt; hoặc
-- dùng một tunnel hỗ trợ custom hostname, sau đó cập nhật `PUBLIC_ORIGIN=https://paas.ai2p.id.vn`.
+Cloudflare duy trì nhiều kết nối edge và container tự khởi động lại, nhưng hệ thống vẫn có các điểm lỗi đơn:
 
-Đây là phương án mở rộng. Không trỏ `A`/`CNAME` tùy ý khi chưa có đường mạng vào và chứng chỉ TLS phù hợp.
+- một VPS;
+- một Docker Engine và một Gateway;
+- một đường Internet của VPS;
+- một connector replica.
 
-## Hoàn tác
+Cấu hình đủ cho bài tập lớn và demo có kiểm chứng, không được mô tả là high availability hoặc có SLA. Muốn tăng độ sẵn sàng cần thêm replica connector và origin ở host khác, sau đó kiểm thử failover riêng.
 
-Nếu cần bỏ địa chỉ phụ, chỉ xóa bản ghi `paas` loại `REDIRECT`. Việc này không ảnh hưởng Website chính vì hai bản ghi `@` và `www` được giữ nguyên.
+## 9. Hoàn tác
+
+1. Xóa published route `paas.ai2p.id.vn` trong Tunnel.
+2. Dừng/xóa container `mini-paas-cloudflared` nếu không còn route nào dùng.
+3. Xóa file token trên VPS sau khi token đã bị xoay hoặc Tunnel bị xóa.
+4. Chỉ đổi nameserver về TenTen nếu đã tạo lại đầy đủ bản ghi DNS tại TenTen; nếu không Website/email hiện có sẽ gián đoạn.
 
 ## Tài liệu tham khảo
 
-- [Tailscale CLI — Funnel](https://tailscale.com/docs/reference/tailscale-cli/funnel), truy cập ngày 14/10/2026.
-- Giao diện quản lý DNS TenTen của chính tên miền `ai2p.id.vn`, đối chiếu ngày 14/10/2026.
+- [Cloudflare — Set up Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/get-started/), truy cập ngày 15/10/2026.
+- [Cloudflare — Routing](https://developers.cloudflare.com/tunnel/concepts/routing/), truy cập ngày 15/10/2026.
+- [Cloudflare — Full DNS setup](https://developers.cloudflare.com/dns/zone-setups/full-setup/setup/), truy cập ngày 15/10/2026.
+- [TenTen — Đổi Name Server và DNS](https://support.tenten.vn/index.php?title=H%C6%B0%E1%BB%9Bng-d%E1%BA%ABn-c%E1%BA%A5u-h%C3%ACnh-%C4%91%E1%BB%95i-Name-server-v%C3%A0-DNS-t%C3%AAn-mi%E1%BB%81n-%E1%BB%9F-trang-IDTENTENVN&type=page&urlcode=412797), truy cập ngày 15/10/2026.

@@ -34,5 +34,6 @@ Minh chứng hiện có:
 - `P1-environment/2026-10-13-macos`: biến thường/secret giả, tái tạo container, bảo toàn qua v1 → v2, audit và trạng thái dọn sạch; 21 kiểm tra tích hợp đạt.
 - `P1-git-latest/2026-10-13-macos`: phân giải `main` thành SHA, build/deploy commit mới nhất, đối chiếu image/release và dọn App A về v1; 15 kiểm tra tích hợp đạt.
 - `P2-rollback/2026-10-13-macos`: release bất biến, rollback đúng image ID, audit và trạng thái dọn sạch; 17 kiểm tra tích hợp đạt.
+- `VPS/2026-10-15-cloudflare-tunnel`: đổi DNS có thẩm quyền sang Cloudflare, connector outbound-only, HTTPS custom domain, kiểm thử xác thực từ máy ngoài, P0.2 qua URL public và giới hạn DNS/IPv6 khi VPS tự gọi ngược.
 
 Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.

@@ -1,0 +1,26 @@
+# Các lệnh kiểm tra đã dùng; placeholder không phải token thật.
+dig +short NS ai2p.id.vn @1.1.1.1
+dig +short NS ai2p.id.vn @8.8.8.8
+curl https://paas.ai2p.id.vn/healthz
+curl https://paas.ai2p.id.vn/api/health
+
+docker inspect mini-paas-cloudflared
+ss -ltn | grep 20241
+docker logs --tail 50 mini-paas-cloudflared
+docker compose ps
+make smoke
+BASE_URL=https://paas.ai2p.id.vn ./tests/integration/p0_2.sh
+
+# Connector được tạo với token-file; không ghi token vào command history.
+docker run -d \
+  --name mini-paas-cloudflared \
+  --restart unless-stopped \
+  --network host \
+  --user 1000:1000 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+  --cap-drop ALL \
+  --security-opt no-new-privileges:true \
+  --mount type=bind,src=/home/user/.config/cloudflared/token,dst=/run/secrets/cloudflared-token,readonly \
+  cloudflare/cloudflared@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07 \
+  tunnel --metrics 127.0.0.1:20241 run --token-file /run/secrets/cloudflared-token
