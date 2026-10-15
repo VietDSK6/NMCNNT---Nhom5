@@ -26,6 +26,12 @@ export interface ApplicationRecord {
   readonly healthPath: string;
   readonly versionPath: string;
   readonly desiredVersion: string;
+  readonly kind: "catalog" | "git";
+  readonly repositoryUrl: string | null;
+  readonly defaultBranch: string | null;
+  readonly buildContext: string | null;
+  readonly publicHost: string | null;
+  readonly internalPort: number;
 }
 
 export interface EnvironmentVariableRecord {
@@ -242,6 +248,18 @@ const migration005 = `
     AND image_id IS NOT NULL;
 `;
 
+const migration006 = `
+  ALTER TABLE applications ADD COLUMN kind TEXT NOT NULL DEFAULT 'catalog'
+    CHECK(kind IN ('catalog', 'git'));
+  ALTER TABLE applications ADD COLUMN repository_url TEXT;
+  ALTER TABLE applications ADD COLUMN default_branch TEXT;
+  ALTER TABLE applications ADD COLUMN build_context TEXT;
+  ALTER TABLE applications ADD COLUMN public_host TEXT;
+  ALTER TABLE applications ADD COLUMN internal_port INTEGER NOT NULL DEFAULT 3000;
+  CREATE UNIQUE INDEX applications_public_host_idx
+    ON applications(public_host) WHERE public_host IS NOT NULL;
+`;
+
 export class ControlDatabase {
   readonly #db: DatabaseSync;
 
@@ -310,6 +328,17 @@ export class ControlDatabase {
         throw error;
       }
     }
+    if (version.user_version < 6) {
+      this.#db.exec("BEGIN IMMEDIATE;");
+      try {
+        this.#db.exec(migration006);
+        this.#db.exec("PRAGMA user_version = 6;");
+        this.#db.exec("COMMIT;");
+      } catch (error) {
+        this.#db.exec("ROLLBACK;");
+        throw error;
+      }
+    }
   }
 
   ensureAdmin(username: string, password: string): UserRecord {
@@ -372,7 +401,9 @@ export class ControlDatabase {
 
   listApplications(): readonly ApplicationRecord[] {
     const rows = this.#db.prepare(`
-      SELECT id, slug, name, description, route_path, health_path, version_path, desired_version
+      SELECT id, slug, name, description, route_path, health_path, version_path,
+             desired_version, kind, repository_url, default_branch, build_context,
+             public_host, internal_port
       FROM applications ORDER BY name ASC
     `).all() as readonly Record<string, unknown>[];
     return rows.map((row) => ({
@@ -384,7 +415,44 @@ export class ControlDatabase {
       healthPath: String(row.health_path),
       versionPath: String(row.version_path),
       desiredVersion: String(row.desired_version),
+      kind: String(row.kind) as "catalog" | "git",
+      repositoryUrl: row.repository_url === null ? null : String(row.repository_url),
+      defaultBranch: row.default_branch === null ? null : String(row.default_branch),
+      buildContext: row.build_context === null ? null : String(row.build_context),
+      publicHost: row.public_host === null ? null : String(row.public_host),
+      internalPort: Number(row.internal_port),
     }));
+  }
+
+  createWebService(input: {
+    slug: string;
+    name: string;
+    repositoryUrl: string;
+    defaultBranch: string;
+    buildContext: string;
+    publicHost: string;
+  }): ApplicationRecord {
+    const now = new Date().toISOString();
+    this.#db.prepare(`
+      INSERT INTO applications (
+        id, slug, name, description, route_path, health_path, version_path,
+        desired_version, kind, repository_url, default_branch, build_context,
+        public_host, internal_port, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, '/health', '/version', 'Chưa triển khai', 'git', ?, ?, ?, ?, 3000, ?, ?)
+    `).run(
+      input.slug,
+      input.slug,
+      input.name,
+      `Web Service triển khai từ ${input.repositoryUrl}.`,
+      `/services/${input.slug}/`,
+      input.repositoryUrl,
+      input.defaultBranch,
+      input.buildContext,
+      input.publicHost,
+      now,
+      now,
+    );
+    return this.findApplication(input.slug)!;
   }
 
   findApplication(id: string): ApplicationRecord | undefined {

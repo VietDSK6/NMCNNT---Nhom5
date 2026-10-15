@@ -1,6 +1,6 @@
 # Mini PaaS
 
-Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành và stack đã được dựng lại trên VPS Debian 12. Sản phẩm hiện cho phép quản trị viên chọn repository tin cậy, triển khai commit mới nhất của nhánh mặc định hoặc nhập một commit SHA cụ thể, build image, triển khai App A, xem lịch sử/build log và theo dõi tài nguyên theo thời gian bằng Prometheus/Grafana. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng này.
+Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành và stack đã được dựng lại trên VPS Debian 12. Ngoài App A/B dùng cho kiểm thử hồi quy, sản phẩm cho phép quản trị viên đăng ký repository GitHub công khai thuộc owner tin cậy, build commit mới nhất hoặc commit cụ thể thành image riêng, chạy một container Web Service riêng và cấp URL theo slug. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng deployment của sản phẩm.
 
 ## Trạng thái hiện tại
 
@@ -13,7 +13,7 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - SQLite lưu tài khoản quản trị, phiên đăng nhập, danh mục ứng dụng và audit event.
 - Session dùng cookie `HttpOnly`, `SameSite=Strict`; POST từ Origin không hợp lệ bị từ chối.
 - Dashboard đọc phiên bản và health HTTP thực tế của App A, App B qua Gateway.
-- Deployment Runner là thành phần duy nhất gắn Docker socket; chỉ quản lý App A/App B theo danh sách cho phép.
+- Deployment Runner là thành phần duy nhất gắn Docker socket; chỉ nhận repository GitHub công khai thuộc owner được cấu hình và chỉ tạo container với giới hạn cố định.
 - Dashboard có thao tác dừng, khởi động, khởi động lại và cập nhật App A giữa v1.0.0/v2.0.0.
 - Dashboard đọc tối đa 50/100/200 dòng log gần nhất và ảnh chụp CPU, working set RAM, PID, lưu lượng mạng của từng ứng dụng.
 - Log và stats chỉ được lấy khi quản trị viên yêu cầu; lỗi của từng nguồn được hiển thị độc lập để phần còn lại của giao diện vẫn dùng được.
@@ -34,17 +34,20 @@ Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đ
 - Bộ k6 được ghim version/digest, chạy tải cố định qua Gateway và ghép kết quả p95/thông lượng/lỗi với CPU/RAM từ Prometheus.
 - Mỗi ứng dụng có trang quản lý biến môi trường; giá trị được mã hóa trong SQLite, secret bị che khi đọc và Runner tái tạo container để áp dụng cấu hình.
 - Mỗi lần cập nhật/deploy thành công tạo một release; quản trị viên có thể rollback về image cũ nếu image ID vẫn còn khớp trên Docker host.
+- Dashboard có biểu mẫu **Tạo Web Service**. Mỗi service động có image `mini-paas/service-<slug>`, container, log, biến môi trường, release và hostname riêng; không dùng đường dẫn con của App A/B.
+- Gateway định tuyến `slug.localhost` khi phát triển và `slug.ai2p.id.vn` trên VPS tới alias Docker `service-<slug>:3000`; Control API kiểm tra health trực tiếp trong mạng edge mà không công khai tuyến kiểm tra nội bộ.
+- Vòng tích hợp macOS đã tạo `render-demo`, build commit `680e789…`, xác nhận deployment thành công, giới hạn RAM 128 MiB và truy cập bằng `http://render-demo.localhost:8080`. Tính năng này chưa được tính là nghiệm thu VPS cho tới khi code và wildcard Tunnel được cập nhật trên VPS.
 - Stack 8 service đã chạy khỏe trên VPS Debian 12; `make smoke`, `make test` và triển khai commit mới nhất đều đạt.
 - T06 đã được lặp lại ba vòng chuẩn trên VPS ở 10/25/50 req/s; cả chín tổ hợp đều đạt, lỗi 0% và không rơi iteration.
 - Cloudflare Tunnel dùng connector 2026.10.0 đã ghim image digest, route `paas.ai2p.id.vn` tới `http://127.0.0.1:8080`; HTTPS, session và ranh giới chưa đăng nhập đã được kiểm tra từ máy ngoài.
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
-- Source hiện được quản trị bằng allowlist trong mã; nhánh mặc định cố định là `main`, chưa có màn hình đăng ký repository, chọn nhánh/tag, webhook hoặc hủy build.
+- Repository động chỉ hỗ trợ GitHub công khai thuộc `TRUSTED_GITHUB_OWNERS`, nhánh `main`, Dockerfile trong build context và cổng 3000; chưa có GitHub App, repository riêng tư, chọn nhánh/tag, webhook, hủy build hoặc xóa service.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; T06 đã nghiệm thu lặp lại trên VPS nhưng nguồn phát tải vẫn chạy cùng máy với hệ thống.
 - Hàng đợi operation bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
-- Nhận repository/build mã người dùng; hệ thống chỉ dùng app và image tin cậy đã khai báo.
+- Đây chưa phải sandbox đa thuê: chỉ quản trị viên đăng nhập được tạo service và chỉ repository của nhóm được allowlist. Không dùng để chạy mã từ người dùng Internet không tin cậy.
 
 Dashboard vẫn phân biệt **health HTTP**, **trạng thái container**, **phiên bản mong muốn** và **phiên bản quan sát được**; các giá trị này không được coi là tương đương.
 
@@ -70,7 +73,7 @@ Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHAN
 
 Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên Dashboard cũ bị hủy. Grafana chỉ dùng mật khẩu môi trường khi khởi tạo volume `grafana-data` lần đầu; thay biến sau đó không tự đổi mật khẩu trong volume đã tồn tại. Hãy đổi mật khẩu trong Grafana trước khi cập nhật `.env`, không xóa volume chỉ để đổi mật khẩu.
 
-`PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này.
+`PUBLIC_ORIGIN` phải đúng với địa chỉ người dùng mở Gateway. Giá trị phát triển mặc định là `http://127.0.0.1:8080`; khi dùng domain/HTTPS trên VPS phải thay giá trị này. `SERVICE_BASE_DOMAIN` quyết định hậu tố URL của Web Service (`localhost` khi phát triển, `ai2p.id.vn` trên VPS). `TRUSTED_GITHUB_OWNERS` là danh sách owner GitHub được phép, phân tách bằng dấu phẩy.
 
 Chỉ đặt `SESSION_COOKIE_SECURE=true` sau khi Gateway được cấu hình HTTPS. Môi trường localhost hiện dùng HTTP nên giữ `false`.
 
@@ -94,6 +97,7 @@ Các địa chỉ:
 - Health Gateway: <http://127.0.0.1:8080/healthz>
 - Health Control API: <http://127.0.0.1:8080/api/health>
 - Grafana: <http://127.0.0.1:8080/monitoring/>
+- Web Service động: `http://<slug>.localhost:8080/`
 
 Địa chỉ nghiệm thu trên VPS: <https://paas.ai2p.id.vn/>. URL public chỉ hợp lệ khi connector Cloudflare trên VPS đang chạy; môi trường phát triển vẫn dùng các URL loopback phía trên.
 
@@ -166,7 +170,7 @@ Dashboard phân biệt hai phạm vi:
 - Phạm vi toàn hệ thống: `/`, `/applications`, `/deployments`, `/operations`, `/audit` và `/observability`.
 - Phạm vi một ứng dụng: `/applications/:appId`, `/applications/:appId/deployments`, `/applications/:appId/environment` và `/applications/:appId/observability`.
 
-Trang tổng quan chỉ tóm tắt tình trạng chung. Từ danh sách **Ứng dụng**, người quản trị mở App A hoặc App B để thao tác vòng đời, triển khai và quan sát đúng ngữ cảnh. Nginx trả entrypoint React cho đường dẫn Dashboard hợp lệ nên có thể tải lại trang chi tiết trực tiếp.
+Trang tổng quan chỉ tóm tắt tình trạng chung. Từ danh sách **Ứng dụng**, người quản trị mở App A, App B hoặc Web Service đã tạo để thao tác vòng đời, triển khai và quan sát đúng ngữ cảnh. Nginx trả entrypoint React cho đường dẫn Dashboard hợp lệ nên có thể tải lại trang chi tiết trực tiếp.
 
 Kiểm tra riêng các đường dẫn:
 
@@ -198,6 +202,16 @@ make test-p2-rollback
 
 Rollback không build hay tải lại image. Nếu image cục bộ đã bị xóa hoặc tag trỏ sang nội dung khác, thao tác bị từ chối. Vì chưa có registry digest, tính năng hiện chỉ bảo đảm trên cùng Docker host và gây gián đoạn ngắn khi thay một replica.
 
+## Tạo Web Service riêng từ GitHub
+
+1. Tạo repository GitHub công khai dưới một owner có trong `TRUSTED_GITHUB_OWNERS`.
+2. Đặt `Dockerfile` tại thư mục gốc hoặc một build context con; container phải lắng nghe `PORT=3000` và nên có `GET /health`, `GET /version`.
+3. Mở **Ứng dụng → Tạo Web Service**, nhập tên, slug, repository và build context.
+4. Control API yêu cầu Runner xác minh HEAD nhánh `main`, sau đó mới đăng ký service và xếp hàng deployment đầu tiên.
+5. Theo dõi build log ở tab **Triển khai**; khi thành công mở URL hiển thị trên trang chi tiết.
+
+Mỗi service được tạo với root filesystem chỉ đọc, bỏ toàn bộ Linux capability, bật `no-new-privileges`, giới hạn 0,35 CPU, RAM 128 MiB và 100 PID. Giao diện không cho truyền command, host port, volume, chế độ privileged hoặc network tùy ý. Trên VPS cần thêm wildcard hostname `*.ai2p.id.vn` vào cùng Cloudflare Tunnel; xem [hướng dẫn tên miền](docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md).
+
 ## Triển khai App A từ Git
 
 Trong Dashboard, mở **Ứng dụng → Ứng dụng A → Triển khai**, chọn source `Ứng dụng A từ GitHub` rồi dùng một trong hai cách:
@@ -205,7 +219,7 @@ Trong Dashboard, mở **Ứng dụng → Ứng dụng A → Triển khai**, ch�
 - **Triển khai commit mới nhất:** Runner đọc HEAD của nhánh `main` đã khai báo, kiểm tra SHA 40 ký tự rồi dùng pipeline build/deploy hiện có.
 - **Triển khai commit đã nhập:** nhập SHA đầy đủ 40 ký tự để triển khai đúng mốc mong muốn.
 
-Trang **Triển khai từ Git** ở menu chính vẫn cung cấp góc nhìn toàn hệ thống. Source URL, nhánh mặc định và thư mục build do Runner cố định; giao diện không nhận repository, tên nhánh hoặc Dockerfile tùy ý. Hệ thống không tự deploy khi push.
+Trang **Triển khai từ Git** ở menu chính vẫn cung cấp góc nhìn toàn hệ thống. App A dùng source cố định để giữ kiểm thử hồi quy; Web Service động dùng repository/build context đã đăng ký và được Runner xác minh lại. Hệ thống không tự deploy khi push.
 
 Kiểm thử commit mới nhất:
 

@@ -536,6 +536,32 @@ Generator chạy cùng VPS và endpoint là JSON nhỏ, vì vậy kết quả ch
 
 - `evidence/T06/2026-10-14-vps-linux/`.
 - `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
+
+## 15/10/2026 — Web Service động và hostname riêng
+
+### Phạm vi triển khai
+
+- Bổ sung migration SQLite 006 để lưu loại ứng dụng, repository, nhánh, build context, hostname và cổng nội bộ.
+- Dashboard có biểu mẫu tạo Web Service từ repository GitHub công khai thuộc owner allowlist.
+- Runner xác minh lại repository/owner/context, build commit SHA và tạo container riêng với giới hạn quyền/tài nguyên cố định.
+- Gateway định tuyến hostname `slug.localhost` hoặc `slug.ai2p.id.vn` tới Docker alias `service-<slug>:3000`.
+- Web Service dùng lại quản lý vòng đời, log, stats, biến môi trường, deployment history và rollback hiện có.
+
+### Kết quả vòng phát triển macOS
+
+- Runner unit: 30/30 đạt; Control API: 14/14 đạt.
+- Dashboard typecheck và production build đạt; Compose config hợp lệ.
+- Tạo `render-demo` từ `VietDSK6/NMCNNT---Nhom5`, context `apps/app-a`.
+- Commit `680e789e551fa6270d2751d6a7d8d54cdce86e70` được build thành `mini-paas/service-render-demo:git-680e789e551f`.
+- Deployment đạt `succeeded`; container riêng chạy trên `mini-paas-edge`, RAM giới hạn 128 MiB.
+- Host route `render-demo.localhost` trả đúng health/version; Control API quan sát đúng version và tổng 3/3 ứng dụng khỏe.
+
+### Giới hạn và bước tiếp theo
+
+- Chưa nghiệm thu phiên bản này trên VPS Linux; chưa cấu hình route Tunnel wildcard `*.ai2p.id.vn`.
+- Chỉ owner allowlist, repository công khai, nhánh main, cổng 3000 và Dockerfile tại build context.
+- Chưa có xóa service, webhook, registry digest hoặc sandbox đa thuê.
+- Chi tiết kiến trúc và tiêu chí nghiệm thu nằm tại `docs/architecture/P2_DYNAMIC_WEB_SERVICES.md`.
 - `docs/deployment/HUONG_DAN_TEN_MIEN_TENTEN.md`.
 
 ## 15/10/2026 — Công khai Mini PaaS bằng Cloudflare Tunnel

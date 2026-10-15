@@ -8,6 +8,8 @@ const runtime = {
   listSources: () => [{ id: "github-app-a", appId: "app-a", defaultBranch: "main" }],
   latestRevision: async (sourceId) => ({ sourceId, appId: "app-a", branch: "main", commit: "b".repeat(40) }),
   deploySource: async (sourceId, commit) => ({ sourceId, commit, version: `git-${commit.slice(0, 12)}` }),
+  latestServiceRevision: async (service) => ({ sourceId: `github-${service.appId}`, appId: service.appId, branch: "main", commit: "c".repeat(40) }),
+  deployService: async (service, commit) => ({ appId: service.appId, commit, version: `git-${commit.slice(0, 12)}` }),
   status: async (appId) => ({ appId, status: "running" }),
   logs: async (appId, tail) => ({ appId, requestedTail: tail, lines: [] }),
   stats: async (appId) => ({ appId, cpuPercent: 1.5 }),
@@ -146,4 +148,23 @@ test("liệt kê source tin cậy và yêu cầu triển khai theo commit", asyn
   });
   assert.equal(deployment.statusCode, 200);
   assert.equal(deployment.body.data.version, `git-${"a".repeat(12)}`);
+});
+
+test("phân giải và triển khai Web Service động qua API nội bộ", async () => {
+  const headers = { "x-runner-token": token, "content-type": "application/json" };
+  const service = {
+    appId: "demo-web",
+    name: "Demo Web",
+    repositoryUrl: "https://github.com/VietDSK6/demo-web",
+    defaultBranch: "main",
+    contextPath: ".",
+  };
+  const latest = await invoke({ method: "POST", path: "/v1/services/latest-revision", headers, body: { service } });
+  assert.equal(latest.statusCode, 200);
+  assert.equal(latest.body.data.sourceId, "github-demo-web");
+
+  const commit = "d".repeat(40);
+  const deployment = await invoke({ method: "POST", path: "/v1/services/deployments", headers, body: { service, commit } });
+  assert.equal(deployment.statusCode, 200);
+  assert.equal(deployment.body.data.appId, "demo-web");
 });

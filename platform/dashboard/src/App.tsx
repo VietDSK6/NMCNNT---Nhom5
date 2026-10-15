@@ -46,6 +46,7 @@ const actionLabels: Record<string, string> = {
   "application.environment.update": "Cập nhật biến môi trường",
   "deployment.create": "Triển khai từ Git",
   "release.rollback": "Khôi phục phiên bản",
+  "service.create": "Tạo Web Service",
 };
 
 const operationActionLabels: Record<OperationAction, string> = {
@@ -870,6 +871,66 @@ function ObservabilityPanel({ applications }: { readonly applications: readonly 
   );
 }
 
+function CreateServicePanel({
+  submitting,
+  onCreate,
+}: {
+  readonly submitting: boolean;
+  readonly onCreate: (input: {
+    name: string;
+    slug: string;
+    repositoryUrl: string;
+    defaultBranch: "main";
+    buildContext: string;
+  }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [repositoryUrl, setRepositoryUrl] = useState("");
+  const [buildContext, setBuildContext] = useState(".");
+  const [validationError, setValidationError] = useState("");
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const normalizedSlug = slug.trim().toLowerCase();
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(normalizedSlug)) {
+      setValidationError("Slug chỉ gồm chữ thường, số và dấu gạch ngang.");
+      return;
+    }
+    if (!/^https:\/\/github\.com\/[^/]+\/[^/]+(?:\.git)?$/.test(repositoryUrl.trim())) {
+      setValidationError("Hãy nhập URL repository GitHub công khai.");
+      return;
+    }
+    setValidationError("");
+    onCreate({
+      name: name.trim(),
+      slug: normalizedSlug,
+      repositoryUrl: repositoryUrl.trim(),
+      defaultBranch: "main",
+      buildContext: buildContext.trim() || ".",
+    });
+  }
+
+  return (
+    <section className="create-service" aria-labelledby="create-service-title">
+      <div className="create-service__heading">
+        <div><span className="eyebrow">WEB SERVICE MỚI</span><h2 id="create-service-title">Triển khai một sản phẩm độc lập</h2><p>Mini PaaS đọc nhánh main, build Dockerfile và cấp URL theo slug. Repository phải thuộc owner đã được quản trị viên cho phép.</p></div>
+        <span className="create-service__policy"><ShieldIcon />Giới hạn tài nguyên mặc định</span>
+      </div>
+      <form className="create-service__form" onSubmit={submit}>
+        <label><span>Tên dịch vụ</span><input required minLength={2} maxLength={80} value={name} onChange={(event) => setName(event.target.value)} placeholder="Website giới thiệu" /></label>
+        <label><span>Slug</span><input required maxLength={63} value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} placeholder="website-gioi-thieu" /><small>URL dự kiến: {slug || "slug"}.ai2p.id.vn</small></label>
+        <label className="create-service__repository"><span>Repository GitHub công khai</span><input required value={repositoryUrl} onChange={(event) => setRepositoryUrl(event.target.value)} placeholder="https://github.com/VietDSK6/ten-repository" /></label>
+        <label><span>Build context</span><input required value={buildContext} onChange={(event) => setBuildContext(event.target.value)} placeholder="." /><small>Dùng . nếu Dockerfile ở thư mục gốc.</small></label>
+        <div className="create-service__submit">
+          {validationError && <span className="field-error" role="alert">{validationError}</span>}
+          <button className="button button--primary" type="submit" disabled={submitting}><DeployIcon />{submitting ? "Đang kiểm tra và triển khai…" : "Tạo Web Service"}</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
 function ApplicationDirectory({ applications }: { readonly applications: readonly ApplicationItem[] }) {
   if (applications.length === 0) {
     return (
@@ -982,6 +1043,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
   const [submittingApp, setSubmittingApp] = useState<string | null>(null);
   const [submittingDeployment, setSubmittingDeployment] = useState(false);
   const [submittingReleaseId, setSubmittingReleaseId] = useState<string | null>(null);
+  const [submittingService, setSubmittingService] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const pathname = useDashboardPath();
@@ -1085,6 +1147,24 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
       setError(requestError instanceof Error ? requestError.message : "Không thể rollback release.");
     } finally {
       setSubmittingReleaseId(null);
+    }
+  }
+
+  async function createService(input: Parameters<typeof api.createService>[0]) {
+    setSubmittingService(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await api.createService(input);
+      setNotice(`Đã đăng ký ${input.name}; deployment commit mới nhất đang được xử lý.`);
+      await loadData(true);
+      window.history.pushState({}, "", `/applications/${response.data.application.id}/deployments`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.scrollTo({ top: 0 });
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể tạo Web Service.");
+    } finally {
+      setSubmittingService(false);
     }
   }
 
@@ -1224,6 +1304,7 @@ function Dashboard({ session, onLoggedOut }: { readonly session: UserSession; re
       return (
         <>
           <section className="page-intro"><div><span className="eyebrow">DANH MỤC DỊCH VỤ</span><h2>Ứng dụng</h2><p>Mỗi ứng dụng có không gian vận hành riêng cho vòng đời, deployment và quan sát.</p></div><span className="last-updated">Tự động làm mới mỗi 5 giây</span></section>
+          <CreateServicePanel submitting={submittingService} onCreate={(input) => void createService(input)} />
           {applications ? <ApplicationDirectory applications={applications.data} /> : <div className="skeleton-list"><i /><i /></div>}
         </>
       );

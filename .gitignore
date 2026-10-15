@@ -12,3 +12,4 @@ output/
 *.db-wal
 .idea/
 .vscode/
+local-repos/

@@ -30,7 +30,7 @@ function runCommand(command, args, options = {}) {
 function assertContextInsideCheckout(checkoutPath, contextPath) {
   const resolvedCheckout = resolve(checkoutPath);
   const resolvedContext = resolve(checkoutPath, contextPath);
-  if (!resolvedContext.startsWith(`${resolvedCheckout}${sep}`)) {
+  if (resolvedContext !== resolvedCheckout && !resolvedContext.startsWith(`${resolvedCheckout}${sep}`)) {
     throw new RunnerInputError("invalid_source_context", "Thư mục build của source không hợp lệ.");
   }
   return resolvedContext;
@@ -140,6 +140,7 @@ export class TrustedSourceBuilder {
           "org.opencontainers.image.revision": commit,
           "org.opencontainers.image.source": source.repositoryUrl,
           "io.mini-paas.source-id": source.id,
+          "io.mini-paas.app-id": source.appId,
         },
       });
       log = boundedAppend(log, build.log ?? "");

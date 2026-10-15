@@ -79,6 +79,46 @@ export function createRunnerServer({ runtime, token, logger = console }) {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/v1/services/latest-revision") {
+      try {
+        const body = await readJson(request);
+        const data = await runtime.latestServiceRevision(body.service);
+        logger.info?.({ appId: data.appId, branch: data.branch, commit: data.commit }, "service_latest_revision_resolved");
+        json(response, 200, { data });
+      } catch (error) {
+        const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+        const code = typeof error?.code === "string" ? error.code : "runner_internal_error";
+        const message = statusCode < 500 && error instanceof Error
+          ? error.message
+          : "Runner không thể phân giải commit mới nhất của Web Service.";
+        logger.error?.({ code, statusCode }, "service_latest_revision_failed");
+        json(response, statusCode, { error: code, message });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/v1/services/deployments") {
+      try {
+        const body = await readJson(request);
+        if (!body || typeof body !== "object" || Array.isArray(body) || typeof body.commit !== "string") {
+          json(response, 400, { error: "validation_error", message: "Yêu cầu phải có cấu hình service và commit SHA hợp lệ." });
+          return;
+        }
+        const data = await runtime.deployService(body.service, body.commit);
+        logger.info?.({ appId: data.appId, commit: body.commit, result: "succeeded" }, "service_deployment_completed");
+        json(response, 200, { data });
+      } catch (error) {
+        const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+        const code = typeof error?.code === "string" ? error.code : "runner_internal_error";
+        const message = statusCode < 500 && error instanceof Error
+          ? error.message
+          : "Runner không thể build và triển khai Web Service.";
+        logger.error?.({ code, statusCode }, "service_deployment_failed");
+        json(response, statusCode, { error: code, message });
+      }
+      return;
+    }
+
     const latestRevisionMatch = url.pathname.match(/^\/v1\/sources\/([a-z0-9-]+)\/latest-revision$/);
     if (request.method === "GET" && latestRevisionMatch) {
       try {

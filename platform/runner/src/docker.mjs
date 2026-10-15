@@ -190,6 +190,16 @@ export class DockerClient {
     return this.request("GET", `/containers/json?all=1&filters=${filters}`);
   }
 
+  async listProjectManaged(project) {
+    const filters = encodeURIComponent(JSON.stringify({
+      label: [
+        `com.docker.compose.project=${project}`,
+        "io.mini-paas.managed=true",
+      ],
+    }));
+    return this.request("GET", `/containers/json?all=1&filters=${filters}`);
+  }
+
   inspect(id) { return this.request("GET", `/containers/${encodeURIComponent(id)}/json`); }
   logs(id, tail) {
     const query = new URLSearchParams({ stdout: "1", stderr: "1", timestamps: "1", tail: String(tail) });

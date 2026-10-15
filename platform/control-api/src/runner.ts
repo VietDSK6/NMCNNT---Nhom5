@@ -71,6 +71,14 @@ export interface SourceRevision {
   readonly commit: string;
 }
 
+export interface ServiceSourceInput {
+  readonly appId: string;
+  readonly name: string;
+  readonly repositoryUrl: string;
+  readonly defaultBranch: string;
+  readonly contextPath: string;
+}
+
 export interface SourceDeploymentResult {
   readonly sourceId: string;
   readonly appId: string;
@@ -87,6 +95,8 @@ export interface RunnerClient {
   sources(): Promise<readonly TrustedSource[]>;
   latestRevision(sourceId: string): Promise<SourceRevision>;
   deploySource(sourceId: string, commit: string): Promise<SourceDeploymentResult>;
+  latestServiceRevision(service: ServiceSourceInput): Promise<SourceRevision>;
+  deployService(service: ServiceSourceInput, commit: string): Promise<SourceDeploymentResult>;
   status(appId: string): Promise<RunnerStatus>;
   logs(appId: string, tail: number): Promise<RunnerLogs>;
   stats(appId: string): Promise<RunnerStats>;
@@ -160,6 +170,22 @@ export class HttpRunnerClient implements RunnerClient {
     return this.request<SourceDeploymentResult>(
       `/v1/sources/${encodeURIComponent(sourceId)}/deployments`,
       { method: "POST", body: JSON.stringify({ commit }) },
+      180_000,
+    );
+  }
+
+  latestServiceRevision(service: ServiceSourceInput): Promise<SourceRevision> {
+    return this.request<SourceRevision>(
+      "/v1/services/latest-revision",
+      { method: "POST", body: JSON.stringify({ service }) },
+      15_000,
+    );
+  }
+
+  deployService(service: ServiceSourceInput, commit: string): Promise<SourceDeploymentResult> {
+    return this.request<SourceDeploymentResult>(
+      "/v1/services/deployments",
+      { method: "POST", body: JSON.stringify({ service, commit }) },
       180_000,
     );
   }

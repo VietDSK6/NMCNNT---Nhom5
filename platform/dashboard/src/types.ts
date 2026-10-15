@@ -28,6 +28,11 @@ export interface ApplicationItem {
   readonly name: string;
   readonly description: string;
   readonly route: string;
+  readonly kind: "catalog" | "git";
+  readonly repositoryUrl: string | null;
+  readonly defaultBranch: string | null;
+  readonly buildContext: string | null;
+  readonly publicHost: string | null;
   readonly desiredVersion: string;
   readonly observedVersion: string | null;
   readonly health: {
@@ -52,6 +57,14 @@ export interface ApplicationItem {
     readonly message?: string;
   };
   readonly activeOperation: OperationItem | null;
+}
+
+export interface CreateServiceInput {
+  readonly name: string;
+  readonly slug: string;
+  readonly repositoryUrl: string;
+  readonly defaultBranch: "main";
+  readonly buildContext: string;
 }
 
 export interface ApplicationsResponse {

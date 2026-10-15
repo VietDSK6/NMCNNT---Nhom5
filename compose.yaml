@@ -96,6 +96,8 @@ services:
       ENVIRONMENT_ENCRYPTION_KEY: ${ENVIRONMENT_ENCRYPTION_KEY:-}
       APP_A_VERSION: ${APP_A_VERSION:-v1.0.0}
       APP_B_VERSION: ${APP_B_VERSION:-v1.0.0}
+      SERVICE_BASE_DOMAIN: ${SERVICE_BASE_DOMAIN:-localhost}
+      TRUSTED_GITHUB_OWNERS: ${TRUSTED_GITHUB_OWNERS:-VietDSK6}
     depends_on:
       runner:
         condition: service_healthy
@@ -103,6 +105,7 @@ services:
       - "3000"
     networks:
       - control
+      - edge
     volumes:
       - control-data:/data
     healthcheck:
@@ -143,6 +146,7 @@ services:
       DOCKER_SOCKET: /var/run/docker.sock
       COMPOSE_PROJECT_NAME: mini-paas
       RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?Hãy tạo file .env và đặt RUNNER_SHARED_SECRET}
+      TRUSTED_GITHUB_OWNERS: ${TRUSTED_GITHUB_OWNERS:-VietDSK6}
     expose:
       - "3001"
     networks:

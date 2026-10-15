@@ -114,9 +114,36 @@ Nếu token từng xuất hiện trong chat, ảnh chụp, terminal hoặc nơi 
 ```dotenv
 PUBLIC_ORIGIN=https://paas.ai2p.id.vn
 SESSION_COOKIE_SECURE=true
+SERVICE_BASE_DOMAIN=ai2p.id.vn
+TRUSTED_GITHUB_OWNERS=VietDSK6
 ```
 
 Sau khi đổi giá trị, tái tạo `control-api`, `grafana` và `gateway` để origin, cookie và URL Grafana đồng bộ. File `.env` tiếp tục giữ quyền `0600`.
+
+### Route wildcard cho Web Service
+
+Trong **Cloudflare Dashboard → Zero Trust → Networks → Tunnels → mini-paas-vps → Published application routes**, giữ route chính xác:
+
+```text
+paas.ai2p.id.vn  ->  http://127.0.0.1:8080
+```
+
+và thêm route:
+
+```text
+*.ai2p.id.vn     ->  http://127.0.0.1:8080
+```
+
+Đặt route chính xác `paas.ai2p.id.vn` trước wildcard. Cloudflare tạo/nhắc tạo bản ghi DNS wildcard cho Tunnel; không tạo bản ghi A trỏ IP chiều ra VPS. Universal SSL của Cloudflare bao phủ domain gốc và wildcard cấp một, phù hợp các URL dạng `demo.ai2p.id.vn`; MVP không cấp hostname nhiều cấp như `a.b.ai2p.id.vn`.
+
+Sau khi lưu, tạo một Web Service từ Dashboard rồi kiểm tra từ máy ngoài:
+
+```bash
+curl https://demo.ai2p.id.vn/health
+curl https://demo.ai2p.id.vn/version
+```
+
+Không dùng URL `/apps/<slug>/` hoặc `/services/<slug>/` cho Web Service động. `paas.ai2p.id.vn` chỉ là Control Center; traffic của service được Gateway tách theo header `Host`.
 
 ## 6. Kiểm tra
 

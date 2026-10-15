@@ -22,6 +22,8 @@ const config: AppConfig = {
   environmentEncryptionKey: "environment-test-key-at-least-32-characters",
   appAVersion: "v1.0.0",
   appBVersion: "v1.0.0",
+  serviceBaseDomain: "ai2p.id.vn",
+  trustedGithubOwners: ["VietDSK6"],
 };
 
 const database = new ControlDatabase(":memory:");
@@ -71,6 +73,34 @@ const runnerClient: RunnerClient = {
       observedVersion: `git-${commit.slice(0, 12)}`,
       health: "healthy",
       startedAt: "2026-10-12T00:00:00.000Z",
+      environmentVariableCount: 0,
+    },
+  }),
+  latestServiceRevision: async (service) => ({
+    sourceId: `github-${service.appId}`,
+    appId: service.appId,
+    branch: service.defaultBranch,
+    commit: "c".repeat(40),
+  }),
+  deployService: async (service, commit) => ({
+    sourceId: `github-${service.appId}`,
+    appId: service.appId,
+    commit,
+    version: `git-${commit.slice(0, 12)}`,
+    imageReference: `mini-paas/service-${service.appId}:git-${commit.slice(0, 12)}`,
+    imageId: `sha256:${"4".repeat(64)}`,
+    log: "Step 1/1\n",
+    message: "Đã build và triển khai Web Service.",
+    runtime: {
+      appId: service.appId,
+      status: "running",
+      containerId: "fedcba987654",
+      containerName: `mini-paas-service-${service.appId}`,
+      image: `mini-paas/service-${service.appId}:git-${commit.slice(0, 12)}`,
+      imageId: `sha256:${"4".repeat(64)}`,
+      observedVersion: `git-${commit.slice(0, 12)}`,
+      health: null,
+      startedAt: "2026-10-15T00:00:00.000Z",
       environmentVariableCount: 0,
     },
   }),
@@ -542,4 +572,46 @@ test("lưu biến môi trường có mã hóa, che giá trị nhạy cảm và c
   });
   assert.equal(cleared.statusCode, 200);
   assert.equal(database.listEnvironmentVariables("app-a").length, 0);
+});
+
+test("tạo Web Service từ repository tin cậy và xếp hàng deployment đầu tiên", async () => {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+
+  const response = await server.inject({
+    method: "POST",
+    url: "/api/v1/services",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: {
+      name: "Demo Web",
+      slug: "demo-web",
+      repositoryUrl: "https://github.com/VietDSK6/demo-web",
+      defaultBranch: "main",
+      buildContext: ".",
+    },
+  });
+  assert.equal(response.statusCode, 202);
+  assert.equal(response.json().data.application.publicHost, "demo-web.ai2p.id.vn");
+  assert.equal(response.json().data.deployment.sourceId, "github-demo-web");
+  assert.equal(database.findApplication("demo-web")?.kind, "git");
+
+  const blocked = await server.inject({
+    method: "POST",
+    url: "/api/v1/services",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: {
+      name: "Kho lạ",
+      slug: "foreign-repo",
+      repositoryUrl: "https://github.com/attacker/example",
+    },
+  });
+  assert.equal(blocked.statusCode, 403);
+  assert.equal(blocked.json().error, "repository_owner_not_allowed");
 });

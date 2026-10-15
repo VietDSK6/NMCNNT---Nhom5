@@ -121,3 +121,54 @@ test("rollback từ chối khi tag image không còn khớp image ID của relea
     imageId: `sha256:${"2".repeat(64)}`,
   }), { code: "release_image_changed", statusCode: 409 });
 });
+
+test("deployment đầu tiên tạo container Web Service độc lập với giới hạn an toàn", async () => {
+  const commit = "d".repeat(40);
+  let createBody = null;
+  let createName = null;
+  const docker = {
+    listManaged: async () => [],
+    image: async () => ({ Id: `sha256:${"4".repeat(64)}` }),
+    create: async (name, body) => { createName = name; createBody = body; return { Id: "dynamic-container" }; },
+    start: async () => undefined,
+    inspect: async () => ({
+      Id: "dynamic-container",
+      Image: `sha256:${"4".repeat(64)}`,
+      Name: "/mini-paas-service-demo-web",
+      Config: createBody,
+      State: { Running: true, StartedAt: "2026-10-15T00:00:00Z" },
+    }),
+    remove: async () => undefined,
+  };
+  const runtime = new DeploymentRuntime(docker, {
+    trustedOwners: ["VietDSK6"],
+    waitTimeoutMs: 100,
+    pollIntervalMs: 1,
+    sourceBuilder: {
+      build: async (source, revision) => ({
+        sourceId: source.id,
+        appId: source.appId,
+        commit: revision,
+        version: `git-${revision.slice(0, 12)}`,
+        imageReference: `mini-paas/service-demo-web:git-${revision.slice(0, 12)}`,
+        imageId: `sha256:${"4".repeat(64)}`,
+        log: "built",
+      }),
+    },
+  });
+  const result = await runtime.deployService({
+    appId: "demo-web",
+    name: "Demo Web",
+    repositoryUrl: "https://github.com/VietDSK6/demo-web",
+    defaultBranch: "main",
+    contextPath: ".",
+  }, commit);
+
+  assert.equal(result.runtime.status, "running");
+  assert.equal(createName, "mini-paas-service-demo-web");
+  assert.equal(createBody.Labels["com.docker.compose.service"], "service-demo-web");
+  assert.equal(createBody.HostConfig.ReadonlyRootfs, true);
+  assert.deepEqual(createBody.HostConfig.CapDrop, ["ALL"]);
+  assert.equal(createBody.HostConfig.Memory, 134_217_728);
+  assert.deepEqual(createBody.NetworkingConfig.EndpointsConfig["mini-paas-edge"].Aliases, ["service-demo-web", "mini-paas-service-demo-web"]);
+});

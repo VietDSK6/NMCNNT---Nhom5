@@ -14,6 +14,8 @@ export interface AppConfig {
   readonly environmentEncryptionKey: string;
   readonly appAVersion: string;
   readonly appBVersion: string;
+  readonly serviceBaseDomain: string;
+  readonly trustedGithubOwners: readonly string[];
 }
 
 function integerFromEnv(value: string | undefined, fallback: number, name: string): number {
@@ -82,5 +84,10 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     environmentEncryptionKey: environmentEncryptionKey(env, runnerSharedSecret),
     appAVersion: env.APP_A_VERSION || "v1.0.0",
     appBVersion: env.APP_B_VERSION || "v1.0.0",
+    serviceBaseDomain: (env.SERVICE_BASE_DOMAIN || "localhost").toLowerCase(),
+    trustedGithubOwners: (env.TRUSTED_GITHUB_OWNERS || "VietDSK6")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
   };
 }

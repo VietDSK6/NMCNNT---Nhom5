@@ -24,7 +24,9 @@ export async function inspectApplication(
 ): Promise<ApplicationHealth> {
   const startedAt = performance.now();
   const checkedAt = new Date().toISOString();
-  const baseUrl = `${gatewayBaseUrl}${application.routePath}`;
+  const baseUrl = application.kind === "git"
+    ? `http://service-${application.slug}:${application.internalPort}/`
+    : `${gatewayBaseUrl}${application.routePath}`;
 
   try {
     const [health, version] = await Promise.all([

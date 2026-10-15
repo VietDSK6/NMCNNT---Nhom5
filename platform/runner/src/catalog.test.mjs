@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getAppSpec, getSourceSpec, listPublicSources, validateAction, validateCommitSha, validateRollbackTarget } from "./catalog.mjs";
+import { createDynamicSourceSpec, getAppSpec, getSourceSpec, listPublicSources, validateAction, validateCommitSha, validateRollbackTarget } from "./catalog.mjs";
 
 test("chỉ chấp nhận ứng dụng trong danh sách cho phép", () => {
   assert.equal(getAppSpec("app-a").service, "app-a");
@@ -60,4 +60,22 @@ test("rollback chỉ chấp nhận image thuộc catalog hoặc source tin cậy
     sourceId: "github-app-a",
     commitSha: commit,
   }), { code: "rollback_target_not_allowed" });
+});
+
+test("chuẩn hóa Web Service động và chặn repository ngoài owner tin cậy", () => {
+  const source = createDynamicSourceSpec({
+    appId: "demo-web",
+    name: "Demo Web",
+    repositoryUrl: "https://github.com/VietDSK6/demo-web.git",
+    defaultBranch: "main",
+    contextPath: ".",
+  }, ["VietDSK6"]);
+  assert.equal(source.id, "github-demo-web");
+  assert.equal(source.repositoryUrl, "https://github.com/VietDSK6/demo-web");
+  assert.equal(source.imageRepository, "mini-paas/service-demo-web");
+  assert.throws(() => createDynamicSourceSpec({
+    appId: "demo-web",
+    name: "Demo Web",
+    repositoryUrl: "https://github.com/attacker/demo-web",
+  }, ["VietDSK6"]), { code: "repository_owner_not_allowed", statusCode: 403 });
 });

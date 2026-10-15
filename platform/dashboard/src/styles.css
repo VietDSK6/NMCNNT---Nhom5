@@ -353,6 +353,22 @@ td strong { color: #313c52; font-weight: 600; }
 .text-link svg { width: 14px; height: 14px; }
 .text-link:hover { color: #174ba9; }
 
+.create-service { margin-bottom: 18px; padding: 22px; border: 1px solid var(--line); border-radius: 13px; background: var(--panel); box-shadow: 0 2px 8px rgba(25, 39, 65, .025); }
+.create-service__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.create-service__heading h2 { margin: 6px 0 6px; font-size: 18px; letter-spacing: -.035em; }
+.create-service__heading p { max-width: 760px; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+.create-service__policy { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border-radius: 7px; color: #3f5f91; background: #f1f5fb; font-size: 9px; font-weight: 650; }
+.create-service__policy svg { width: 14px; height: 14px; }
+.create-service__form { display: grid; grid-template-columns: minmax(180px, .75fr) minmax(180px, .75fr) minmax(180px, .55fr); gap: 12px; align-items: end; margin-top: 20px; padding-top: 18px; border-top: 1px solid #edf0f4; }
+.create-service__form label { min-width: 0; }
+.create-service__form label > span { display: block; margin-bottom: 6px; color: #5b6679; font-size: 9px; font-weight: 650; }
+.create-service__form input { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #d7ddea; border-radius: 7px; color: var(--ink); background: #fff; font-size: 10px; }
+.create-service__form input:focus { border-color: #6e96ed; box-shadow: 0 0 0 3px rgba(40, 100, 220, .1); outline: none; }
+.create-service__form small { display: block; overflow: hidden; margin-top: 5px; color: #8a94a5; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.create-service__repository { grid-column: span 2; }
+.create-service__submit { display: flex; grid-column: 1 / -1; align-items: center; justify-content: flex-end; gap: 12px; }
+.create-service__submit .field-error { margin: 0 auto 0 0; }
+
 .service-directory { overflow: hidden; border: 1px solid var(--line); border-radius: 13px; background: var(--panel); }
 .service-row { display: grid; grid-template-columns: minmax(260px, 1.3fr) auto minmax(300px, .9fr) auto; gap: 24px; align-items: center; padding: 20px 22px; border-bottom: 1px solid #edf0f4; }
 .service-row:last-child { border-bottom: 0; }

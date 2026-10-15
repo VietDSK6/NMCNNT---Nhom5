@@ -13,6 +13,7 @@ import type {
   ReleasesResponse,
   SourcesResponse,
   UserSession,
+  CreateServiceInput,
 } from "./types";
 
 export class ApiError extends Error {
@@ -55,6 +56,12 @@ export const api = {
   }),
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
   applications: () => request<ApplicationsResponse>("/api/v1/applications"),
+  createService: (input: CreateServiceInput) => request<{
+    data: { application: { id: string }; deployment: DeploymentItem };
+  }>("/api/v1/services", {
+    method: "POST",
+    body: JSON.stringify(input),
+  }),
   operations: () => request<OperationsResponse>("/api/v1/operations?limit=12"),
   sources: () => request<SourcesResponse>("/api/v1/sources"),
   deployments: () => request<DeploymentsResponse>("/api/v1/deployments?limit=12"),

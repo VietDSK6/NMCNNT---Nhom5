@@ -15,6 +15,10 @@ const sourceBuilder = new TrustedSourceBuilder(docker);
 const runtime = new DeploymentRuntime(docker, {
   project: process.env.COMPOSE_PROJECT_NAME || "mini-paas",
   sourceBuilder,
+  trustedOwners: (process.env.TRUSTED_GITHUB_OWNERS || "VietDSK6")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean),
 });
 const server = createRunnerServer({ runtime, token });
 

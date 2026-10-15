@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
+  createDynamicSourceSpec,
   getAppSpec,
+  getRuntimeAppSpec,
   getSourceSpec,
   listAppIds,
   listPublicSources,
@@ -86,6 +88,7 @@ export class DeploymentRuntime {
     this.project = options.project || "mini-paas";
     this.waitTimeoutMs = options.waitTimeoutMs || 30_000;
     this.pollIntervalMs = options.pollIntervalMs || 500;
+    this.trustedOwners = options.trustedOwners || ["VietDSK6"];
     this.locks = new Set();
   }
 
@@ -101,7 +104,7 @@ export class DeploymentRuntime {
   }
 
   async status(appId) {
-    const spec = getAppSpec(appId);
+    const spec = getRuntimeAppSpec(appId);
     return publicStatus(appId, await this.findContainer(spec));
   }
 
@@ -111,6 +114,19 @@ export class DeploymentRuntime {
 
   async latestRevision(sourceId) {
     const source = getSourceSpec(sourceId);
+    if (!this.sourceBuilder) {
+      throw new RunnerRuntimeError("source_builder_unavailable", "Runner chưa được cấu hình bộ đọc mã nguồn.", 503);
+    }
+    return {
+      sourceId: source.id,
+      appId: source.appId,
+      branch: source.defaultBranch,
+      commit: await this.sourceBuilder.resolveLatestCommit(source),
+    };
+  }
+
+  async latestServiceRevision(input) {
+    const source = createDynamicSourceSpec(input, this.trustedOwners);
     if (!this.sourceBuilder) {
       throw new RunnerRuntimeError("source_builder_unavailable", "Runner chưa được cấu hình bộ đọc mã nguồn.", 503);
     }
@@ -149,8 +165,39 @@ export class DeploymentRuntime {
     }
   }
 
+  async deployService(input, commit) {
+    const source = createDynamicSourceSpec(input, this.trustedOwners);
+    const revision = validateCommitSha(commit);
+    if (!this.sourceBuilder) {
+      throw new RunnerRuntimeError("source_builder_unavailable", "Runner chưa được cấu hình bộ dựng mã nguồn.", 503);
+    }
+    if (this.locks.has(source.appId)) {
+      throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
+    }
+    this.locks.add(source.appId);
+    try {
+      const build = await this.sourceBuilder.build(source, revision);
+      const spec = getRuntimeAppSpec(source.appId);
+      let deployment;
+      try {
+        const current = await this.findContainer(spec);
+        deployment = await this.updateExisting(spec, current, build.version, build.imageReference);
+      } catch (error) {
+        if (error?.code !== "container_not_found") throw error;
+        deployment = await this.createDynamicContainer(spec, build.version, build.imageReference);
+      }
+      return {
+        ...build,
+        message: `Đã build commit ${revision.slice(0, 12)} và triển khai ${source.name}.`,
+        runtime: deployment.runtime,
+      };
+    } finally {
+      this.locks.delete(source.appId);
+    }
+  }
+
   async logs(appId, tail = OBSERVABILITY_LIMITS.defaultTail) {
-    const spec = getAppSpec(appId);
+    const spec = getRuntimeAppSpec(appId);
     if (!Number.isInteger(tail) || tail < 1 || tail > OBSERVABILITY_LIMITS.maximumTail) {
       throw new RunnerInputError("invalid_log_tail", `Số dòng log phải từ 1 đến ${OBSERVABILITY_LIMITS.maximumTail}.`);
     }
@@ -166,7 +213,7 @@ export class DeploymentRuntime {
   }
 
   async stats(appId) {
-    const spec = getAppSpec(appId);
+    const spec = getRuntimeAppSpec(appId);
     const container = await this.findContainer(spec);
     if (!container.State?.Running) {
       throw new RunnerRuntimeError("container_not_running", "Không thể lấy số liệu khi container đang dừng.", 409);
@@ -179,7 +226,19 @@ export class DeploymentRuntime {
   }
 
   async prometheusMetrics() {
-    const samples = await Promise.all(listAppIds().map(async (appId) => {
+    let appIds = listAppIds();
+    if (typeof this.docker.listProjectManaged === "function") {
+      try {
+        const containers = await this.docker.listProjectManaged(this.project);
+        appIds = [...new Set([
+          ...appIds,
+          ...containers.map((container) => container.Labels?.["io.mini-paas.app-id"]).filter(Boolean),
+        ])];
+      } catch {
+        // Giữ metric của catalog khi Docker tạm thời không liệt kê được container động.
+      }
+    }
+    const samples = await Promise.all(appIds.map(async (appId) => {
       try {
         const status = await this.status(appId);
         const running = ["running", "starting", "unhealthy"].includes(status.status);
@@ -259,7 +318,7 @@ export class DeploymentRuntime {
   }
 
   async configureEnvironment(appId, input) {
-    const spec = getAppSpec(appId);
+    const spec = getRuntimeAppSpec(appId);
     const variables = validateEnvironmentVariables(input);
     if (this.locks.has(appId)) {
       throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
@@ -394,25 +453,77 @@ export class DeploymentRuntime {
     }
   }
 
-  async update(spec, version, preparedImage) {
-    const targetImage = preparedImage ?? spec.versions[version];
-    if (!targetImage) {
-      throw new RunnerInputError("version_not_allowed", "Phiên bản cập nhật không nằm trong danh sách cho phép.");
+  async createDynamicContainer(spec, version, imageReference) {
+    const image = await this.docker.image(imageReference).catch((error) => {
+      if (error?.statusCode === 404) {
+        throw new RunnerRuntimeError("image_not_prepared", `Ảnh ${imageReference} chưa được chuẩn bị trên máy chủ.`, 409);
+      }
+      throw error;
+    });
+    const containerName = `mini-paas-service-${spec.id}`;
+    const labels = {
+      "com.docker.compose.project": this.project,
+      "com.docker.compose.service": spec.service,
+      "com.docker.compose.image": String(image.Id || ""),
+      "io.mini-paas.managed": "true",
+      "io.mini-paas.dynamic": "true",
+      "io.mini-paas.app-id": spec.id,
+      "io.mini-paas.slug": spec.id,
+      [ENVIRONMENT_KEYS_LABEL]: "",
+    };
+    const body = {
+      Image: imageReference,
+      Env: [`APP_VERSION=${version}`, "PORT=3000"],
+      Labels: labels,
+      ExposedPorts: { "3000/tcp": {} },
+      HostConfig: {
+        NetworkMode: spec.network,
+        RestartPolicy: { Name: "unless-stopped", MaximumRetryCount: 0 },
+        ReadonlyRootfs: true,
+        Tmpfs: { "/tmp": "size=16m,noexec,nosuid" },
+        CapDrop: ["ALL"],
+        SecurityOpt: ["no-new-privileges:true"],
+        NanoCpus: 350_000_000,
+        Memory: 134_217_728,
+        PidsLimit: 100,
+        LogConfig: { Type: "json-file", Config: { "max-size": "5m", "max-file": "2" } },
+        Init: true,
+      },
+      NetworkingConfig: {
+        EndpointsConfig: { [spec.network]: { Aliases: [spec.service, containerName] } },
+      },
+    };
+    let containerId = null;
+    try {
+      const created = await this.docker.create(containerName, body);
+      containerId = created.Id;
+      await this.docker.start(containerId);
+      const status = await this.waitFor(
+        spec.id,
+        containerId,
+        (item) => runtimeStatus(item) === "running",
+        "Container mới không đạt trạng thái hoạt động trong thời gian cho phép.",
+      );
+      return { message: `Ứng dụng đã được triển khai ở ${version}.`, runtime: status };
+    } catch (error) {
+      if (containerId) await this.docker.remove(containerId).catch(() => undefined);
+      throw error;
     }
+  }
+
+  async updateExisting(spec, current, version, targetImage) {
     const image = await this.docker.image(targetImage).catch((error) => {
       if (error?.statusCode === 404) {
         throw new RunnerRuntimeError("image_not_prepared", `Ảnh ${targetImage} chưa được chuẩn bị trên máy chủ.`, 409);
       }
       throw error;
     });
-    const current = await this.findContainer(spec);
     const currentVersion = envValue(current.Config?.Env, "APP_VERSION");
     if (currentVersion === version && runtimeStatus(current) === "running") {
       return { message: `Ứng dụng đã ở phiên bản ${version}.`, runtime: publicStatus(spec.id, current) };
     }
-
     const labels = {
-      ...current.Config.Labels,
+      ...current.Config?.Labels,
       "com.docker.compose.image": String(image.Id || ""),
       "io.mini-paas.managed": "true",
       "io.mini-paas.app-id": spec.id,
@@ -425,5 +536,14 @@ export class DeploymentRuntime {
       labels,
       `Ứng dụng đã được cập nhật lên ${version}.`,
     );
+  }
+
+  async update(spec, version, preparedImage) {
+    const targetImage = preparedImage ?? spec.versions[version];
+    if (!targetImage) {
+      throw new RunnerInputError("version_not_allowed", "Phiên bản cập nhật không nằm trong danh sách cho phép.");
+    }
+    const current = await this.findContainer(spec);
+    return this.updateExisting(spec, current, version, targetImage);
   }
 }
