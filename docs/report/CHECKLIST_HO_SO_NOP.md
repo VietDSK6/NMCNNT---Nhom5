@@ -28,7 +28,7 @@ Phụ lục dự kiến:
 - [x] Repository GitHub và lịch sử commit.
 - [x] Mã nguồn P0, Compose, Nginx, Dashboard, API và Runner.
 - [x] README có yêu cầu môi trường, cách chạy và cách kiểm thử P0.
-- [ ] README release cuối ghi toàn bộ phiên bản công cụ đã dùng trên VPS.
+- [x] README release candidate ghi toàn bộ phiên bản công cụ đã dùng trên VPS; đối soát lại nếu tạo release mới.
 - [x] Luồng sản phẩm Git → build → image → deploy đã nghiệm thu trên VPS cho App A và Web Service động từ repository công khai thuộc owner allowlist.
 - [ ] Sơ đồ kiến trúc bản cuối.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
@@ -38,7 +38,7 @@ Phụ lục dự kiến:
 - [x] Web Service độc lập có repository, image, container và hostname riêng; `demo.ai2p.id.vn` đã trả đúng health/version.
 - [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và kiểm thử tích hợp vòng phát triển; còn phải nghiệm thu trên VPS Linux.
 - [x] Lịch sử release và rollback theo image ID cục bộ có kiểm thử tích hợp; còn phải nghiệm thu VPS và chưa có registry digest.
-- [ ] Gói release cuối không chứa secret.
+- [x] Gói `v1.0.0-rc.1` đã quét cây/lịch sử Git và không phát hiện secret xác suất cao; database T08 giữ ngoài repository.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.
 
@@ -54,7 +54,7 @@ Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/swit
 - [ ] Mỗi test liên kết tới log/JSON/CSV tương ứng.
 - [x] T06 có ba vòng dữ liệu k6 gốc và metric cùng khoảng thời gian trên VPS Linux.
 - [x] T08 sao lưu/khôi phục SQLite đã nghiệm thu trên volume tạm ở VPS; database nhạy cảm giữ ngoài Git, evidence đã làm sạch.
-- [ ] Không có token, mật khẩu, cookie hoặc khóa trong evidence.
+- [x] Không phát hiện token, mật khẩu, cookie hoặc khóa trong evidence tại mốc `v1.0.0-rc.1`.
 
 ## 4. Video và bảo vệ
 

@@ -10,12 +10,13 @@ Từ mốc này không nên thêm tính năng lớn trước khi hoàn tất kh�
 
 ## 2. Việc kỹ thuật bắt buộc còn lại
 
-### R1 — Chốt release candidate
+### R1 — Chốt release candidate — đã đạt ngày 16/10/2026
 
-- Chọn commit cuối, gắn nhãn phiên bản và không thay đổi kiến trúc trong thời gian làm hồ sơ.
-- Chạy lại typecheck/build, unit/integration, `make smoke` và các kiểm tra public trên đúng commit cuối.
-- Quét repository/evidence để bảo đảm không có mật khẩu, token, cookie hoặc khóa riêng.
-- Ghi phiên bản Docker, Compose, Node.js, Prometheus, Grafana, k6 và cloudflared vào README release cuối.
+- Đã chọn `v1.0.0-rc.1`, khóa kiến trúc và ghi manifest tại `docs/release/RELEASE_CANDIDATE_1.md`.
+- `make test`, deploy latest, T08, public HTTPS và ranh giới 401 đều đạt trên VPS; log tại `evidence/RELEASE/2026-10-16-v1.0.0-rc.1/`.
+- Đã sửa hai assertion hồi quy cũ để cho phép Web Service động nhưng vẫn bắt buộc App A/App B khỏe.
+- Đã quét cây/lịch sử Git; không phát hiện secret xác suất cao và không có database/file khóa được theo dõi.
+- README đã ghi phiên bản Docker, Compose, Node.js, Nginx, Prometheus, Grafana, k6 và cloudflared.
 
 ### R2 — Hoàn thành T08 dựng lại/khôi phục — đã đạt ngày 15/10/2026
 
@@ -64,8 +65,8 @@ Các mục trên chỉ nên làm sau khi R1–R3 và báo cáo đã hoàn tất;
 
 ## 5. Thứ tự thực hiện đề xuất
 
-1. Chốt release candidate và chạy regression cuối.
-2. Hoàn thiện ma trận T01–T08 và kiểm tra secret/checksum.
+1. ~~Chốt release candidate và chạy regression cuối.~~ Hoàn thành với `v1.0.0-rc.1`.
+2. Hoàn thiện ma trận T01–T08 và đối soát các evidence cũ theo mẫu thống nhất.
 3. Viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
 4. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
 5. Quay video trên đúng release cuối và đóng gói hồ sơ.

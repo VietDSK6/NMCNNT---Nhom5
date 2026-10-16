@@ -129,8 +129,8 @@ make test
 
 Kết quả chuẩn hiện tại:
 
-- Deployment Runner unit test: 27/27 đạt.
-- Control API unit test: 13/13 đạt.
+- Deployment Runner unit test: 30/30 đạt.
+- Control API unit test: 14/14 đạt.
 - Dashboard production build: đạt.
 - P0.1: 9/9 kiểm tra đạt.
 - P0.2: 15/15 kiểm tra đạt.

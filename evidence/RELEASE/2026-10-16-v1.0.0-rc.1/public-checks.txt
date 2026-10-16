@@ -1,0 +1,14 @@
+Thời gian kiểm tra: 2026-10-16, Asia/Ho_Chi_Minh
+Commit runtime: 37289d852a9e2078490e08528f925d0500781f96
+
+dashboard                     HTTP 200  ĐẠT
+control-api health            HTTP 200  ĐẠT  service=control-api
+applications chưa đăng nhập  HTTP 401  ĐẠT  authentication_required
+demo health                   HTTP 200  ĐẠT  version=git-6ffa63d8b922
+demo version                  HTTP 200  ĐẠT  version=git-6ffa63d8b922
+vps-demo health               HTTP 200  ĐẠT  version=git-2c8a4af1ea22
+vps-demo version              HTTP 200  ĐẠT  version=git-2c8a4af1ea22
+
+VPS: 8 service Compose ở trạng thái running/healthy.
+Ánh xạ cổng host duy nhất: Gateway 127.0.0.1:8080 -> 8080/tcp.
+App A, App B, Dashboard, Control API, Runner, Prometheus và Grafana không publish cổng trực tiếp.

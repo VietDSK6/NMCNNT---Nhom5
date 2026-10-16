@@ -1,0 +1,19 @@
+# Chạy hồi quy đầy đủ trên VPS
+cd /home/user/mini-paas
+git pull --ff-only origin main
+docker compose config --quiet
+make test
+
+# Kiểm thử deploy commit mới nhất và T08
+make test-p1-git-latest
+make test-t08
+
+# Kiểm tra nhanh sau khi đồng bộ commit/tag cuối
+make smoke
+
+# Kiểm tra public, thay URL nếu cấu hình miền khác
+curl --fail --show-error https://paas.ai2p.id.vn/api/health
+curl --fail --show-error https://demo.ai2p.id.vn/health
+curl --fail --show-error https://vps-demo.ai2p.id.vn/health
+
+# Không sao chép .env, Tunnel token, cookie jar hoặc control.db vào evidence.

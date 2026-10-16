@@ -643,3 +643,30 @@ Vòng VPS đầu gặp `EPERM` khi Node dùng `copyFileSync` qua bind mount và 
 
 - `evidence/T08/2026-10-15-vps/`.
 - `docs/architecture/P2_BACKUP_RESTORE.md`.
+
+## 16/10/2026 — Chốt release candidate `v1.0.0-rc.1`
+
+### Phạm vi
+
+- Tạo `VERSION`, manifest release và bảng phiên bản môi trường VPS.
+- Chạy toàn bộ hồi quy trên macOS và VPS, sau đó chạy riêng deploy latest, T08 và kiểm tra public HTTPS.
+- Không thêm tính năng mới, không chạy kiểm tra responsive/trình duyệt.
+
+### Sự cố phát hiện trong hồi quy
+
+P0.2 và P1 observability còn giả định danh mục/metric chỉ có đúng App A và App B. Sau khi nền tảng hỗ trợ Web Service động, local có thêm `render-demo` và Prometheus có ba chuỗi nên hai assertion thất bại dù mọi service đều khỏe. Test được sửa để chọn và bắt buộc hai app lõi tồn tại/khỏe, đồng thời chấp nhận các service động hợp lệ.
+
+### Kết quả
+
+- Commit runtime `37289d852a9e2078490e08528f925d0500781f96`.
+- Local và VPS: Runner 30/30, Control API 14/14, Dashboard build đạt; toàn bộ integration P0/P1/P2 đạt.
+- Deploy latest 15 kiểm tra đạt và đưa App A về v1 sau thử nghiệm.
+- T08 đạt, đủ bốn ứng dụng, stack live không đổi; database backup chuyển ra ngoài repository với quyền `0700/0600`.
+- Dashboard/API/`demo`/`vps-demo` public đạt; API applications chưa đăng nhập trả 401.
+- 8/8 service VPS running/healthy; chỉ Gateway bind `127.0.0.1:8080`.
+- Quét cây và lịch sử Git không phát hiện mẫu secret xác suất cao.
+
+### Bằng chứng
+
+- `evidence/RELEASE/2026-10-16-v1.0.0-rc.1/`.
+- `docs/release/RELEASE_CANDIDATE_1.md`.
