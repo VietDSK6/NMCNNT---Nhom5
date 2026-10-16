@@ -379,9 +379,9 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Chỉ Deployment Runner được gắn Docker socket; đây vẫn là quyền rất cao trên host.
 - Runner không có API nhận shell/URL/Dockerfile tùy ý; chỉ nhận app/action/source trong catalog và commit SHA đầy đủ.
 - Runner có mạng `source-egress` để tải source GitHub đã allowlist; mạng `control` vẫn internal và Runner không publish cổng host.
-- `/metrics` chỉ chứa số liệu hai app trong allowlist và chỉ được scrape qua mạng `control`; Prometheus không có route Gateway hoặc cổng host.
+- `/metrics` chỉ chứa số liệu ứng dụng được Mini PaaS quản lý và chỉ được scrape qua mạng `control`; Prometheus không có route Gateway hoặc cổng host.
 - Grafana tắt anonymous access, có mật khẩu cấu hình riêng (fallback về mật khẩu Dashboard cho môi trường cũ) và không dùng chung cookie Dashboard.
-- API log chỉ đọc App A/App B, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
+- API log chỉ đọc container ứng dụng được Mini PaaS quản lý, tối đa 200 dòng và 2 MiB dữ liệu thô mỗi yêu cầu; mỗi dòng trả về tối đa 4.096 ký tự.
 - Bộ lọc chỉ che một số mẫu bí mật phổ biến; ứng dụng vẫn không được ghi mật khẩu, token hoặc khóa vào log.
 - Control API không có quyền Docker và chỉ gọi Runner qua mạng `control` nội bộ bằng secret riêng.
 - Giá trị biến môi trường được mã hóa trong SQLite và secret không trả lại API, nhưng người có quyền Docker/host vẫn có thể đọc `Config.Env`; đây chưa phải secret manager cấp production.
@@ -394,6 +394,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 - Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Đọc thiết kế tại [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
+Kiến trúc bản cuối dùng cho báo cáo/slide nằm tại [KIEN_TRUC_TONG_THE_CUOI.md](docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md). Các tài liệu theo mốc gồm [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

@@ -5,8 +5,8 @@
 ## 1. Báo cáo 12–18 trang nội dung chính
 
 - [ ] Yêu cầu và giả định.
-- [ ] Kiến trúc tổng thể, control plane/data plane/observability plane.
-- [ ] Sơ đồ hệ thống và luồng Git → build → image → deploy → route.
+- [x] Kiến trúc tổng thể, control plane/data plane/observability plane đã chốt trong tài liệu kiến trúc cuối.
+- [x] Sơ đồ hệ thống và luồng Git → build → image → deploy → route đã có bản Mermaid dùng cho báo cáo/slide.
 - [ ] Bảng tài nguyên/IP/quyền.
 - [ ] Mô tả triển khai đúng với phiên bản đã kiểm thử.
 - [ ] Bảng kiểm thử có kỳ vọng và thực tế.
@@ -30,7 +30,7 @@ Phụ lục dự kiến:
 - [x] README có yêu cầu môi trường, cách chạy và cách kiểm thử P0.
 - [x] README release candidate ghi toàn bộ phiên bản công cụ đã dùng trên VPS; đối soát lại nếu tạo release mới.
 - [x] Luồng sản phẩm Git → build → image → deploy đã nghiệm thu trên VPS cho App A và Web Service động từ repository công khai thuộc owner allowlist.
-- [ ] Sơ đồ kiến trúc bản cuối.
+- [x] Sơ đồ kiến trúc bản cuối tại `docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md`.
 - [x] Bảng tài nguyên/IP/quyền bản phát triển tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN.md`.
 - [x] Bảng tài nguyên/IP/quyền bản VPS đã đối soát tại `docs/architecture/BANG_TAI_NGUYEN_IP_QUYEN_VPS.md`.
 - [x] Script/cấu hình monitoring Prometheus/Grafana và T06 có ba vòng dữ liệu gốc trên VPS Linux.

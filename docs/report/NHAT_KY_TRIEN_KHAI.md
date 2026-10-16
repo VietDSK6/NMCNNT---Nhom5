@@ -685,3 +685,18 @@ P0.2 và P1 observability còn giả định danh mục/metric chỉ có đúng 
 
 - `docs/test-plan/BANG_KIEM_THU_T01_T08.md`.
 - `evidence/AUDIT/2026-10-16-v1.0.0-rc.1/`.
+
+## 16/10/2026 — Chốt kiến trúc tổng thể cuối
+
+### Nội dung
+
+- Hợp nhất kiến trúc đã triển khai thành một tài liệu nguồn duy nhất cho báo cáo và slide.
+- Bổ sung sơ đồ thành phần cuối gồm Cloudflare Tunnel, Gateway, control plane, data plane, observability plane, GitHub và Docker Engine.
+- Bổ sung sơ đồ mạng/ràng buộc quyền, sequence Git → build → image → deploy → route và luồng quan sát/khôi phục.
+- Liên kết yêu cầu với T01–T08 và các bài thử P1/P2; ghi rõ điểm lỗi đơn, giới hạn một host, image cache cục bộ và owner allowlist.
+- Cập nhật Chương 3 theo trạng thái release candidate; không chạy kiểm tra trình duyệt/responsive vì thay đổi chỉ thuộc tài liệu.
+
+### Tài liệu
+
+- `docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md`.
+- `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.

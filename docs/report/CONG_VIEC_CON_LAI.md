@@ -71,6 +71,6 @@ Các mục trên chỉ nên làm sau khi R1–R3 và báo cáo đã hoàn tất;
 
 1. ~~Chốt release candidate và chạy regression cuối.~~ Hoàn thành với `v1.0.0-rc.1`.
 2. ~~Hoàn thiện ma trận T01–T08 và đối soát các evidence cũ theo mẫu thống nhất.~~ Hoàn thành; còn thay tên/MSSV người thực hiện.
-3. Chốt sơ đồ kiến trúc bản cuối và viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
+3. ~~Chốt sơ đồ kiến trúc bản cuối.~~ Hoàn thành tại `docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md`; tiếp theo viết đủ sáu chương báo cáo rồi rút nội dung thành slide.
 4. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
 5. Quay video trên đúng release cuối và đóng gói hồ sơ.

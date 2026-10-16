@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản nháp cập nhật đến P2 release/rollback vòng phát triển ngày 13/10/2026. Nội dung dùng thì hiện tại cho phần đã kiểm thử; registry digest và nghiệm thu VPS vẫn là nội dung dự kiến.
+> Bản thiết kế cuối đối soát với release candidate `v1.0.0-rc.1` ngày 16/10/2026. Các chức năng mô tả ở thì hiện tại đã được hồi quy trên VPS; registry digest, webhook và kiến trúc nhiều máy vẫn là giới hạn/hướng phát triển.
 
 ## 3.1. Phân tích bài toán
 
@@ -41,47 +41,15 @@ Phạm vi phù hợp với bài tập lớn là một máy chạy Docker và cá
 
 ## 3.3. Kiến trúc tổng thể một máy
 
-Hệ thống được chia thành mặt phẳng điều khiển, mặt phẳng dữ liệu và mặt phẳng quan sát. P1 bổ sung đường tải source Git tin cậy, build image và chuỗi thu thập metric riêng.
+Hệ thống được chia thành mặt phẳng truy cập, điều khiển, dữ liệu và quan sát. Cloudflare Edge kết thúc HTTPS; connector outbound-only đưa request tới Gateway loopback. Gateway phân phối Control Center, API, Grafana, App A/B và Web Service động. Control API giữ dữ liệu nghiệp vụ trong SQLite và chỉ Runner được gắn Docker socket. Runner có mạng egress riêng để tải snapshot GitHub thuộc owner allowlist. Prometheus scrape metric từ Runner và Grafana truy vấn Prometheus qua mạng nội bộ.
 
-```text
-                        NGƯỜI QUẢN TRỊ
-                              |
-                              v
-                     Nginx Gateway :8080
-                    /          |           \
-                   v           v            v
-             Dashboard    Control API    App A / App B
-                              |              ^
-                              v              |
-                           SQLite        mạng edge
-                              |
-                              v
-                     Deployment Runner
-                       /      |      \
-          GitHub archive      |    build log
-                    (egress)  |
-                              v
-                    Docker Engine API
-                    /       |        \
-                 trạng thái log      stats
-                                      |
-                                      v
-                                  /metrics
-                                      |
-                                      v
-                             Prometheus -> Grafana
-                                             |
-                                             v
-                                   Gateway /monitoring/
-```
-
-Mặt phẳng dữ liệu là lưu lượng từ Gateway tới App A/App B. Mặt phẳng điều khiển gồm Dashboard, Control API, SQLite và Runner. Mặt phẳng quan sát gồm exporter tại Runner, Prometheus và Grafana. Gateway chuyển tiếp request của người dùng, nhưng quyền Docker chỉ nằm ở Runner.
+Sơ đồ thành phần, mạng, ranh giới quyền, luồng Git → build → image → deploy → route và luồng quan sát được chốt tại [`KIEN_TRUC_TONG_THE_CUOI.md`](../architecture/KIEN_TRUC_TONG_THE_CUOI.md). Tài liệu này là nguồn sơ đồ chính dùng cho báo cáo và slide; các sơ đồ P0/P1 còn lại chỉ mô tả tiến trình phát triển theo từng mốc.
 
 ## 3.4. Thiết kế thành phần
 
 ### 3.4.1. Nginx Gateway
 
-Gateway là cổng HTTP duy nhất bind vào `127.0.0.1:8080` trong môi trường phát triển. Các nhóm route gồm:
+Gateway là cổng HTTP duy nhất bind vào `127.0.0.1:8080` trên máy phát triển và VPS. Trên VPS, Cloudflare Tunnel chuyển tiếp tới đúng địa chỉ loopback này. Các nhóm route gồm:
 
 - `/`: Dashboard.
 - `/api/*`: Control API.
@@ -123,7 +91,7 @@ Runner cung cấp status, start, stop, restart, update, cấu hình biến môi 
 
 ### 3.4.5. Prometheus và Grafana
 
-Runner xuất metric của hai ứng dụng trong allowlist tại `/metrics`. Prometheus scrape mỗi 5 giây, lưu TSDB tối đa 7 ngày/256 MiB và đánh giá ba rule cho health, RAM cao và lỗi đọc stats. Grafana truy vấn Prometheus qua mạng nội bộ, nạp datasource/dashboard từ file trong Git và hiển thị sáu vùng health, CPU, RAM, PID và mạng.
+Runner xuất metric của các ứng dụng được quản lý tại `/metrics`; App A/B luôn là hai chuỗi lõi và Web Service động hợp lệ có thể xuất hiện thêm. Prometheus scrape mỗi 5 giây, lưu TSDB tối đa 7 ngày/256 MiB và đánh giá ba rule cho health, RAM cao và lỗi đọc stats. Grafana truy vấn Prometheus qua mạng nội bộ, nạp datasource/dashboard từ file trong Git và hiển thị sáu vùng health, CPU, RAM, PID và mạng.
 
 Không dùng cAdvisor trong lát cắt này vì Runner đã có quyền Docker và catalog giới hạn; thêm cAdvisor sẽ phát sinh thêm mount/quyền quan sát toàn host. Đổi lại, metric phụ thuộc Runner và chưa bao phủ các service nền tảng.
 
@@ -272,4 +240,4 @@ Hệ thống vẫn phụ thuộc một host, một Gateway, một API, một Run
 
 Kịch bản k6 đã chạy ba vòng chuẩn 10/25/50 req/s trên VPS; cả chín tổ hợp đều đạt ngưỡng đã đặt, nhưng nguồn tạo tải vẫn dùng chung máy nên không đại diện năng lực production. Biến môi trường đã được triển khai ở mức một host, có mã hóa SQLite và che secret nhưng chưa dùng secret manager chuyên dụng. Lịch sử release và rollback đã đối chiếu image ID trước khi thay container, nhưng vẫn phụ thuộc image cache trên cùng Docker host; nếu image bị xóa hoặc chuyển máy thì metadata SQLite chưa đủ để phục hồi.
 
-Bước tiếp theo là chốt release candidate, thực hiện T08 dựng lại/khôi phục, chuẩn hóa ma trận bằng chứng và hoàn thiện báo cáo/video/phiếu đóng góp. Registry digest có thể bổ sung nếu còn thời gian nhưng không được trì hoãn hồ sơ và khả năng dựng lại. Các phần tiếp theo phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
+Release candidate, T08, ma trận bằng chứng và sơ đồ kiến trúc cuối đã hoàn thành. Công việc còn lại tập trung vào biên tập báo cáo 12–18 trang, slide, video và phiếu đóng góp. Registry digest, webhook hoặc chức năng mở rộng không được làm trì hoãn hồ sơ; mọi phần sau vẫn phải giữ nguyên nguyên tắc không công khai Docker socket và chỉ triển khai repository/image đã cho phép.
