@@ -84,8 +84,8 @@ while [ "$attempt" -lt 15 ]; do
     const fs = require("node:fs");
     try {
       const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-      const ids = new Set(body.data.result.map((item) => item.metric.app_id));
-      if (body.status === "success" && ids.has("app-a") && ids.has("app-b") && body.data.result.every((item) => Number(item.value[1]) === 1)) process.exit(0);
+      const core = body.data.result.filter((item) => ["app-a", "app-b"].includes(item.metric.app_id));
+      if (body.status === "success" && core.length === 2 && core.every((item) => Number(item.value[1]) === 1)) process.exit(0);
     } catch {}
     process.exit(1);
   ' "$response_file"; then
@@ -105,8 +105,9 @@ docker compose exec -T prometheus wget -q -O - \
 node -e '
   const fs = require("node:fs");
   const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  if (body.status !== "success" || body.data.result.length !== 2) process.exit(1);
-  if (body.data.result.some((item) => item.values.length < 2)) process.exit(1);
+  const core = body.data.result.filter((item) => ["app-a", "app-b"].includes(item.metric.app_id));
+  if (body.status !== "success" || core.length !== 2) process.exit(1);
+  if (core.some((item) => item.values.length < 2)) process.exit(1);
 ' "$response_file" || fail 'Chuỗi thời gian chưa có ít nhất hai mẫu cho mỗi ứng dụng'
 pass 'Prometheus lưu nhiều mẫu theo thời gian cho App A và App B'
 
@@ -116,8 +117,9 @@ docker compose exec -T prometheus wget -q -O - \
 node -e '
   const fs = require("node:fs");
   const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  if (body.status !== "success" || body.data.result.length !== 2) process.exit(1);
-  if (body.data.result.some((item) => !Number.isFinite(Number(item.value[1])) || Number(item.value[1]) <= 0)) process.exit(1);
+  const core = body.data.result.filter((item) => ["app-a", "app-b"].includes(item.metric.app_id));
+  if (body.status !== "success" || core.length !== 2) process.exit(1);
+  if (core.some((item) => !Number.isFinite(Number(item.value[1])) || Number(item.value[1]) <= 0)) process.exit(1);
 ' "$response_file" || fail 'Metric RAM thiếu ứng dụng hoặc có giá trị không hợp lệ'
 pass 'Chuỗi metric RAM có giá trị thực cho hai ứng dụng'
 

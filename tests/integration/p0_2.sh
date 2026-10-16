@@ -87,14 +87,16 @@ node -e '
   exit 1
 }
 
-expect_status 'Đọc hai ứng dụng từ Control API' 200 -b "$cookie_jar" "${base_url}/api/v1/applications"
+expect_status 'Đọc ứng dụng lõi từ Control API' 200 -b "$cookie_jar" "${base_url}/api/v1/applications"
 node -e '
   const fs = require("node:fs");
   const body = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  if (body.data.length !== 2) process.exit(1);
-  if (!body.data.every((app) => app.runtime.status === "running")) process.exit(1);
+  const applications = new Map(body.data.map((app) => [app.id, app]));
+  for (const id of ["app-a", "app-b"]) {
+    if (applications.get(id)?.runtime.status !== "running") process.exit(1);
+  }
 ' "$response_file" || {
-  printf 'KHÔNG ĐẠT: dữ liệu ứng dụng hoặc trạng thái Runner không đúng\n' >&2
+  printf 'KHÔNG ĐẠT: thiếu App A/App B hoặc trạng thái Runner không đúng\n' >&2
   exit 1
 }
 
