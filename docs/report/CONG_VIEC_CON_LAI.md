@@ -1,6 +1,6 @@
 # Công việc còn lại để chốt bản nộp Mini PaaS
 
-> Đối soát ngày 15/10/2026 sau khi Web Service động, hostname wildcard và giao diện tạo service riêng đã hoạt động trên VPS.
+> Đối soát ngày 16/10/2026 sau khi chốt release candidate và chuẩn hóa ma trận T01–T08.
 
 ## 1. Kết luận phạm vi sản phẩm
 
@@ -27,12 +27,16 @@ Từ mốc này không nên thêm tính năng lớn trước khi hoàn tất kh�
 
 Kết quả: đã đạt trên VPS ở commit `c6b1be0`; database phục hồi đủ bốn ứng dụng, API tạm hoạt động và stack live không thay đổi. Bằng chứng nằm tại `evidence/T08/2026-10-15-vps/`.
 
-### R3 — Chuẩn hóa bộ T01–T08
+### R3 — Chuẩn hóa bộ T01–T08 — đã hoàn thành kỹ thuật ngày 16/10/2026
 
-- T06 đã có ba vòng VPS và dữ liệu gốc; không cần đo lại nếu release cuối không thay đổi đường xử lý request.
-- Đối soát T01–T05 và T07 trên release candidate/VPS; chạy lại phần nào chưa có bằng chứng VPS đủ rõ.
-- Gán tên người thực hiện, thời gian, commit và đường dẫn bằng chứng cho mọi dòng.
-- Ghi một vòng triển khai **commit mới nhất** hoặc **commit cụ thể** của `demo`, kèm build log và version trả về từ URL public.
+- Ma trận thống nhất đã có tại `docs/test-plan/BANG_KIEM_THU_T01_T08.md`, gồm điều kiện, thao tác, kỳ vọng, thực tế, kết quả, thời gian, commit, môi trường, người thực hiện và đường dẫn bằng chứng.
+- T01–T05 và T07 được đối soát với hồi quy release candidate trên VPS; T08 được chạy lại trên đúng release candidate.
+- T06 giữ nguyên ba vòng dữ liệu gốc trên commit `5cc99b1` vì release candidate không thay đổi đường xử lý request; báo cáo phải nêu rõ đây không phải phép đo SLA/production.
+- Đã kiểm tra 11/11 manifest checksum sẵn có và tạo manifest cho 29 tệp nguồn lịch sử tại `evidence/AUDIT/2026-10-16-v1.0.0-rc.1/`.
+- T01 được đánh dấu `Đạt có lưu ý`: có nhật ký dựng VPS và hồi quy release candidate nhưng thiếu raw log nguyên bản của lần dựng VPS sạch ngày 14/10; không tạo lại hoặc bịa bằng chứng quá khứ.
+- Luồng deploy commit mới nhất có build log/image/release trong hồ sơ release; Web Service `demo` có health/version qua URL public trong bằng chứng VPS.
+
+Việc hành chính còn lại của R3: thay nhãn tạm `TV1 – chủ dự án` bằng họ tên và MSSV thật trước khi nộp. Nếu muốn nâng T01 lên mức đầy đủ tuyệt đối, phải dựng lại từ VPS/máy sạch và thu raw log mới, ghi rõ đó là lần chạy mới.
 
 ## 3. Hồ sơ phải hoàn thiện
 
@@ -66,7 +70,7 @@ Các mục trên chỉ nên làm sau khi R1–R3 và báo cáo đã hoàn tất;
 ## 5. Thứ tự thực hiện đề xuất
 
 1. ~~Chốt release candidate và chạy regression cuối.~~ Hoàn thành với `v1.0.0-rc.1`.
-2. Hoàn thiện ma trận T01–T08 và đối soát các evidence cũ theo mẫu thống nhất.
-3. Viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
+2. ~~Hoàn thiện ma trận T01–T08 và đối soát các evidence cũ theo mẫu thống nhất.~~ Hoàn thành; còn thay tên/MSSV người thực hiện.
+3. Chốt sơ đồ kiến trúc bản cuối và viết đủ sáu chương báo cáo, sau đó rút nội dung thành slide.
 4. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
 5. Quay video trên đúng release cuối và đóng gói hồ sơ.

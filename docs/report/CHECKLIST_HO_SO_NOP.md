@@ -36,22 +36,22 @@ Phụ lục dự kiến:
 - [x] Script/cấu hình monitoring Prometheus/Grafana và T06 có ba vòng dữ liệu gốc trên VPS Linux.
 - [x] Cloudflare Tunnel công khai Control Center và wildcard Web Service qua HTTPS mà không mở Docker socket/API ra Internet.
 - [x] Web Service độc lập có repository, image, container và hostname riêng; `demo.ai2p.id.vn` đã trả đúng health/version.
-- [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và kiểm thử tích hợp vòng phát triển; còn phải nghiệm thu trên VPS Linux.
-- [x] Lịch sử release và rollback theo image ID cục bộ có kiểm thử tích hợp; còn phải nghiệm thu VPS và chưa có registry digest.
+- [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và hồi quy đạt trên VPS Linux ở release candidate.
+- [x] Lịch sử release và rollback theo image ID cục bộ đã hồi quy đạt trên VPS; chưa có registry digest và không tuyên bố rollback đa máy.
 - [x] Gói `v1.0.0-rc.1` đã quét cây/lịch sử Git và không phát hiện secret xác suất cao; database T08 giữ ngoài repository.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.
 
 ## 3. Kiểm thử và dữ liệu đo
 
-- [ ] T01–T08 có bản ghi theo mẫu thống nhất.
-- [ ] Mỗi test ghi đầu vào/điều kiện trước.
-- [ ] Mỗi test ghi thao tác.
-- [ ] Mỗi test ghi kết quả mong đợi.
-- [ ] Mỗi test ghi kết quả thực tế.
-- [ ] Mỗi test đánh dấu đạt/chưa đạt.
-- [ ] Mỗi test có thời gian, commit, môi trường và người thực hiện.
-- [ ] Mỗi test liên kết tới log/JSON/CSV tương ứng.
+- [x] T01–T08 có bản ghi theo mẫu thống nhất; T01 ghi rõ thiếu raw log của lần dựng VPS sạch ban đầu.
+- [x] Mỗi test ghi đầu vào/điều kiện trước.
+- [x] Mỗi test ghi thao tác.
+- [x] Mỗi test ghi kết quả mong đợi.
+- [x] Mỗi test ghi kết quả thực tế.
+- [x] Mỗi test đánh dấu đạt/chưa đạt; T01 dùng trạng thái `Đạt có lưu ý`.
+- [x] Mỗi test có thời gian, commit, môi trường và người thực hiện tạm `TV1 – chủ dự án`; phải thay bằng họ tên/MSSV trước khi nộp.
+- [x] Mỗi test liên kết tới log/JSON/CSV hoặc hồ sơ nguồn tương ứng; khoảng trống dữ liệu thô được ghi công khai trong biên bản audit.
 - [x] T06 có ba vòng dữ liệu k6 gốc và metric cùng khoảng thời gian trên VPS Linux.
 - [x] T08 sao lưu/khôi phục SQLite đã nghiệm thu trên volume tạm ở VPS; database nhạy cảm giữ ngoài Git, evidence đã làm sạch.
 - [x] Không phát hiện token, mật khẩu, cookie hoặc khóa trong evidence tại mốc `v1.0.0-rc.1`.

@@ -35,5 +35,11 @@ Minh chứng hiện có:
 - `P1-git-latest/2026-10-13-macos`: phân giải `main` thành SHA, build/deploy commit mới nhất, đối chiếu image/release và dọn App A về v1; 15 kiểm tra tích hợp đạt.
 - `P2-rollback/2026-10-13-macos`: release bất biến, rollback đúng image ID, audit và trạng thái dọn sạch; 17 kiểm tra tích hợp đạt.
 - `VPS/2026-10-15-cloudflare-tunnel`: đổi DNS có thẩm quyền sang Cloudflare, connector outbound-only, HTTPS custom domain, kiểm thử xác thực từ máy ngoài, P0.2 qua URL public và giới hạn DNS/IPv6 khi VPS tự gọi ngược.
+- `VPS/2026-10-15-dynamic-web-service`: tạo Web Service độc lập từ repository GitHub công khai thuộc owner allowlist, build image, chạy container riêng và cấp hostname wildcard HTTPS.
+- `T08/2026-10-15-vps`: sao lưu và khôi phục SQLite trên volume tạm, đối chiếu checksum/toàn vẹn dữ liệu và xác nhận stack live không thay đổi.
+- `RELEASE/2026-10-16-v1.0.0-rc.1`: hồi quy release candidate trên local/VPS, deploy commit mới nhất, T08, public HTTPS và quét secret.
+- `AUDIT/2026-10-16-v1.0.0-rc.1`: đối soát cấu trúc T01–T08, kiểm tra 11/11 manifest checksum sẵn có và bổ sung manifest cho 29 nguồn minh chứng lịch sử.
 
-Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác; nghiệm thu cuối phải tạo bộ bằng chứng mới trên VPS Linux.
+Các thư mục này là kết quả phát triển trên macOS/OrbStack nếu không ghi khác. Các bài thử cuối trên VPS Linux được tập hợp tại `RELEASE/2026-10-16-v1.0.0-rc.1`; ma trận chuẩn hóa nằm tại `docs/test-plan/BANG_KIEM_THU_T01_T08.md`.
+
+Hạn chế còn lại: T01 có nhật ký triển khai lại VPS và kết quả release candidate nhưng không có raw log nguyên bản của lần dựng VPS sạch ngày 14/10; vì vậy ma trận ghi `Đạt có lưu ý`, không suy diễn rằng dữ liệu thô này đã tồn tại.

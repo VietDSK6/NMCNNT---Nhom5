@@ -1,0 +1,18 @@
+Thời điểm: 2026-10-16T19:03:27+07:00
+Tag: v1.0.0-rc.1
+Commit tag: a8388b973e7821b89aeb53989850232244a92494
+
+PASS evidence/RELEASE/2026-10-16-v1.0.0-rc.1/checksums.sha256
+PASS evidence/T06/2026-10-12T2200-pilot-macos/checksums.sha256
+PASS evidence/T06/2026-10-12T2202-macos/checksums.sha256
+PASS evidence/T06/2026-10-14-vps-linux/checksums.sha256
+PASS evidence/T06/2026-10-14T1335-vps-pilot/checksums.sha256
+PASS evidence/T06/2026-10-14T1340-vps-debian12/checksums.sha256
+PASS evidence/T06/2026-10-14T1345-vps-debian12-run02/checksums.sha256
+PASS evidence/T06/2026-10-14T1350-vps-debian12-run03/checksums.sha256
+PASS evidence/T08/2026-10-15-vps/checksums.sha256
+PASS evidence/VPS/2026-10-15-cloudflare-tunnel/checksums.sha256
+PASS evidence/VPS/2026-10-15-dynamic-web-service/checksums.sha256
+
+TOTAL=11 PASS=11 FAIL=0
+HISTORICAL_FILES_HASHED=29

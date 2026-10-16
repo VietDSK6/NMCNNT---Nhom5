@@ -670,3 +670,18 @@ P0.2 và P1 observability còn giả định danh mục/metric chỉ có đúng 
 
 - `evidence/RELEASE/2026-10-16-v1.0.0-rc.1/`.
 - `docs/release/RELEASE_CANDIDATE_1.md`.
+
+## 16/10/2026 — Chuẩn hóa ma trận T01–T08 và kiểm toán bằng chứng
+
+### Kết quả
+
+- Chuẩn hóa ma trận T01–T08 theo yêu cầu hồ sơ: điều kiện, thao tác, kỳ vọng, thực tế, kết quả, thời gian, commit, môi trường, người thực hiện và liên kết bằng chứng.
+- Đối soát T01–T05/T07 với hồi quy release candidate; dùng đúng dữ liệu gốc ba vòng VPS của T06 và lần chạy lại T08 trên release candidate.
+- Xác minh 11/11 manifest checksum đã có đều đạt; tạo thêm manifest SHA-256 cho 29 tệp nguồn lịch sử.
+- Ghi rõ T01 là `Đạt có lưu ý` do không còn raw log nguyên bản của lần dựng VPS sạch ngày 14/10. T06 được đo ở commit `5cc99b1`, trên cùng VPS với bộ phát tải, nên không dùng để tuyên bố SLA hoặc năng lực production.
+- Nhãn người thực hiện hiện là `TV1 – chủ dự án`; đây là nhãn tạm và phải thay bằng họ tên/MSSV thật trước khi nộp.
+
+### Bằng chứng
+
+- `docs/test-plan/BANG_KIEM_THU_T01_T08.md`.
+- `evidence/AUDIT/2026-10-16-v1.0.0-rc.1/`.
