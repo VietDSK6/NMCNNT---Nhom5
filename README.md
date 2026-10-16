@@ -2,6 +2,12 @@
 
 Mini PaaS là bài tập lớn môn Nhập môn công nghệ nền tảng. P0 đã hoàn thành và stack đã được dựng lại trên VPS Debian 12. Ngoài App A/B dùng cho kiểm thử hồi quy, sản phẩm cho phép quản trị viên đăng ký repository GitHub công khai thuộc owner tin cậy, build commit mới nhất hoặc commit cụ thể thành image riêng, chạy một container Web Service riêng và cấp URL theo slug. Workflow GitHub Actions vẫn chỉ là CI nội bộ hỗ trợ phát triển, tách biệt với chức năng deployment của sản phẩm.
 
+## Release candidate
+
+Ứng viên phát hành hiện tại là **`v1.0.0-rc.1`**; phiên bản máy đọc nằm trong [`VERSION`](VERSION), còn tiêu chí khóa release và bảng phiên bản đầy đủ nằm tại [`docs/release/RELEASE_CANDIDATE_1.md`](docs/release/RELEASE_CANDIDATE_1.md). Đây là mốc dùng để chạy hồi quy cuối và sau đó thống nhất báo cáo, slide, video với đúng một commit/tag.
+
+Môi trường nghiệm thu được chốt ở Debian 12 `x86_64`, Docker Engine `29.9.0`, Docker Compose `5.6.0`, Node.js `24.21.0`, Nginx `1.28.3`, Prometheus `3.14.0`, Grafana `13.2.2`, k6 `2.3.0` và cloudflared `2026.10.0`. Image k6 và cloudflared được ghim bằng digest; dependency Node chính xác được khóa trong `package-lock.json`.
+
 ## Trạng thái hiện tại
 
 Đã triển khai và kiểm thử:
