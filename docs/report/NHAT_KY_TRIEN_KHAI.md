@@ -700,3 +700,27 @@ P0.2 và P1 observability còn giả định danh mục/metric chỉ có đúng 
 
 - `docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md`.
 - `docs/report/CHUONG_3_PHAN_TICH_VA_THIET_KE.md`.
+
+## 17/10/2026 — Tái cấu trúc mã nguồn và hồi quy cục bộ
+
+### Phạm vi
+
+- Chia Dashboard theo route, chức năng nghiệp vụ và tiện ích dùng chung; giữ `App.tsx` làm tầng ghép cấp cao.
+- Chia Control API theo nhóm route; cô lập kiểu dữ liệu, migration và bộ chuyển đổi bản ghi SQLite khỏi `database.ts`.
+- Tách chuẩn hóa trạng thái/biến môi trường và chính sách giới hạn container khỏi `runtime.mjs` của Runner.
+- Không thay đổi endpoint, schema SQLite v6, mạng Compose, URL, giới hạn tài nguyên hoặc luồng Docker đang dùng.
+- Không kiểm tra responsive hoặc tự động hóa trình duyệt theo quy tắc chung của dự án.
+
+### Kết quả kiểm chứng trên macOS/OrbStack
+
+- `docker compose config --quiet`: đạt; toàn bộ sáu image do dự án tự build được dựng thành công.
+- Stack gồm Gateway, Dashboard, Control API, Runner, App A/B, Prometheus và Grafana đều đạt health check.
+- Runner 30/30 test và Control API 14/14 test đạt; Dashboard production build đạt.
+- SQLite mới tạo đạt schema v6, `PRAGMA integrity_check = ok` và đọc lại được sau khi đóng/mở database.
+- Smoke P0.1 đạt 9/9.
+- Các bài tích hợp đạt: P0.2 15/15, P0.2B 21/21, P0.2C 12/12, quan sát 15/15, điều hướng Dashboard 11/11, biến môi trường 21/21 và rollback 17/17.
+- Tổng cộng 121 kiểm tra tích hợp đạt; App A được đưa về v1.0.0 và App B hoạt động sau bài thử.
+
+### Trạng thái phát hành
+
+Đây là kết quả hồi quy cục bộ cho mã nguồn chưa phát hành. Runtime VPS vẫn là `v1.0.0-rc.1` đã nghiệm thu ngày 16/10/2026; cần commit, đẩy mã và chạy lại hồi quy VPS trước khi gắn phiên bản release mới.

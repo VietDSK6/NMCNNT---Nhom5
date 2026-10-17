@@ -2,263 +2,45 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
+import {
+  applicationFromRow,
+  auditFromRow,
+  deploymentFromRow,
+  environmentVariableFromRow,
+  operationFromRow,
+  releaseFromRow,
+  sessionUserFromRow,
+  userFromRow,
+} from "./database/mappers.js";
+import { runMigrations } from "./database/migrations.js";
+import type {
+  ApplicationRecord,
+  AuditRecord,
+  DeploymentRecord,
+  EnvironmentVariableRecord,
+  OperationAction,
+  OperationRecord,
+  ReleaseOrigin,
+  ReleaseRecord,
+  SessionUser,
+  UserRecord,
+} from "./database/types.js";
 import { hashPassword, verifyPassword } from "./security.js";
 
-export interface UserRecord {
-  readonly id: string;
-  readonly username: string;
-  readonly passwordHash: string;
-  readonly passwordSalt: string;
-}
-
-export interface SessionUser {
-  readonly id: string;
-  readonly username: string;
-  readonly expiresAt: string;
-}
-
-export interface ApplicationRecord {
-  readonly id: string;
-  readonly slug: string;
-  readonly name: string;
-  readonly description: string;
-  readonly routePath: string;
-  readonly healthPath: string;
-  readonly versionPath: string;
-  readonly desiredVersion: string;
-  readonly kind: "catalog" | "git";
-  readonly repositoryUrl: string | null;
-  readonly defaultBranch: string | null;
-  readonly buildContext: string | null;
-  readonly publicHost: string | null;
-  readonly internalPort: number;
-}
-
-export interface EnvironmentVariableRecord {
-  readonly applicationId: string;
-  readonly key: string;
-  readonly encryptedValue: string;
-  readonly sensitive: boolean;
-  readonly updatedAt: string;
-}
-
-export interface AuditRecord {
-  readonly id: number;
-  readonly actorUsername: string | null;
-  readonly action: string;
-  readonly resourceType: string;
-  readonly resourceId: string | null;
-  readonly outcome: string;
-  readonly detail: string | null;
-  readonly ipAddress: string | null;
-  readonly createdAt: string;
-}
-
-export type OperationAction = "start" | "stop" | "restart" | "update";
-export type OperationStatus = "queued" | "running" | "succeeded" | "failed";
-
-export interface OperationRecord {
-  readonly id: string;
-  readonly applicationId: string;
-  readonly applicationName: string;
-  readonly action: OperationAction;
-  readonly requestedVersion: string | null;
-  readonly status: OperationStatus;
-  readonly message: string | null;
-  readonly requestedBy: string;
-  readonly createdAt: string;
-  readonly startedAt: string | null;
-  readonly finishedAt: string | null;
-}
-
-export type DeploymentStatus = "queued" | "running" | "succeeded" | "failed";
-
-export interface DeploymentRecord {
-  readonly id: string;
-  readonly applicationId: string;
-  readonly applicationName: string;
-  readonly sourceId: string;
-  readonly repositoryUrl: string;
-  readonly commitSha: string;
-  readonly status: DeploymentStatus;
-  readonly version: string | null;
-  readonly imageReference: string | null;
-  readonly imageId: string | null;
-  readonly buildLog: string | null;
-  readonly message: string | null;
-  readonly requestedBy: string;
-  readonly createdAt: string;
-  readonly startedAt: string | null;
-  readonly finishedAt: string | null;
-}
-
-export type ReleaseOrigin = "catalog" | "source" | "rollback";
-
-export interface ReleaseRecord {
-  readonly id: string;
-  readonly applicationId: string;
-  readonly applicationName: string;
-  readonly origin: ReleaseOrigin;
-  readonly version: string;
-  readonly imageReference: string;
-  readonly imageId: string;
-  readonly sourceId: string | null;
-  readonly commitSha: string | null;
-  readonly deploymentId: string | null;
-  readonly rollbackOfReleaseId: string | null;
-  readonly requestedBy: string;
-  readonly createdAt: string;
-}
-
-const migration001 = `
-  CREATE TABLE users (
-    id TEXT PRIMARY KEY,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    password_salt TEXT NOT NULL,
-    created_at TEXT NOT NULL
-  );
-
-  CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash TEXT NOT NULL UNIQUE,
-    created_at TEXT NOT NULL,
-    expires_at TEXT NOT NULL,
-    last_seen_at TEXT NOT NULL
-  );
-  CREATE INDEX sessions_token_hash_idx ON sessions(token_hash);
-  CREATE INDEX sessions_expires_at_idx ON sessions(expires_at);
-
-  CREATE TABLE applications (
-    id TEXT PRIMARY KEY,
-    slug TEXT NOT NULL UNIQUE,
-    name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    route_path TEXT NOT NULL UNIQUE,
-    health_path TEXT NOT NULL,
-    version_path TEXT NOT NULL,
-    desired_version TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-
-  CREATE TABLE audit_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    actor_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-    actor_username TEXT,
-    action TEXT NOT NULL,
-    resource_type TEXT NOT NULL,
-    resource_id TEXT,
-    outcome TEXT NOT NULL,
-    detail TEXT,
-    ip_address TEXT,
-    created_at TEXT NOT NULL
-  );
-  CREATE INDEX audit_events_created_at_idx ON audit_events(created_at DESC);
-`;
-
-const migration002 = `
-  CREATE TABLE operations (
-    id TEXT PRIMARY KEY,
-    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
-    action TEXT NOT NULL CHECK(action IN ('start', 'stop', 'restart', 'update')),
-    requested_version TEXT,
-    status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
-    message TEXT,
-    requested_by TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    started_at TEXT,
-    finished_at TEXT
-  );
-  CREATE INDEX operations_created_at_idx ON operations(created_at DESC);
-  CREATE UNIQUE INDEX operations_one_active_per_app_idx
-    ON operations(application_id)
-    WHERE status IN ('queued', 'running');
-`;
-
-const migration003 = `
-  CREATE TABLE deployments (
-    id TEXT PRIMARY KEY,
-    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
-    source_id TEXT NOT NULL,
-    repository_url TEXT NOT NULL,
-    commit_sha TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('queued', 'running', 'succeeded', 'failed')),
-    version TEXT,
-    image_reference TEXT,
-    image_id TEXT,
-    build_log TEXT,
-    message TEXT,
-    requested_by TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    started_at TEXT,
-    finished_at TEXT
-  );
-  CREATE INDEX deployments_created_at_idx ON deployments(created_at DESC);
-  CREATE UNIQUE INDEX deployments_one_active_per_app_idx
-    ON deployments(application_id)
-    WHERE status IN ('queued', 'running');
-`;
-
-const migration004 = `
-  CREATE TABLE application_environment_variables (
-    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-    key TEXT NOT NULL,
-    encrypted_value TEXT NOT NULL,
-    sensitive INTEGER NOT NULL CHECK(sensitive IN (0, 1)),
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    PRIMARY KEY (application_id, key)
-  );
-  CREATE INDEX application_environment_variables_application_idx
-    ON application_environment_variables(application_id);
-`;
-
-const migration005 = `
-  CREATE TABLE releases (
-    id TEXT PRIMARY KEY,
-    application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE RESTRICT,
-    origin TEXT NOT NULL CHECK(origin IN ('catalog', 'source', 'rollback')),
-    version TEXT NOT NULL,
-    image_reference TEXT NOT NULL,
-    image_id TEXT NOT NULL,
-    source_id TEXT,
-    commit_sha TEXT,
-    deployment_id TEXT UNIQUE REFERENCES deployments(id) ON DELETE SET NULL,
-    rollback_of_release_id TEXT REFERENCES releases(id) ON DELETE SET NULL,
-    requested_by TEXT NOT NULL,
-    created_at TEXT NOT NULL
-  );
-  CREATE INDEX releases_application_created_idx
-    ON releases(application_id, created_at DESC);
-
-  INSERT INTO releases (
-    id, application_id, origin, version, image_reference, image_id,
-    source_id, commit_sha, deployment_id, requested_by, created_at
-  )
-  SELECT
-    lower(hex(randomblob(16))), application_id, 'source', version,
-    image_reference, image_id, source_id, commit_sha, id, requested_by,
-    COALESCE(finished_at, created_at)
-  FROM deployments
-  WHERE status = 'succeeded'
-    AND version IS NOT NULL
-    AND image_reference IS NOT NULL
-    AND image_id IS NOT NULL;
-`;
-
-const migration006 = `
-  ALTER TABLE applications ADD COLUMN kind TEXT NOT NULL DEFAULT 'catalog'
-    CHECK(kind IN ('catalog', 'git'));
-  ALTER TABLE applications ADD COLUMN repository_url TEXT;
-  ALTER TABLE applications ADD COLUMN default_branch TEXT;
-  ALTER TABLE applications ADD COLUMN build_context TEXT;
-  ALTER TABLE applications ADD COLUMN public_host TEXT;
-  ALTER TABLE applications ADD COLUMN internal_port INTEGER NOT NULL DEFAULT 3000;
-  CREATE UNIQUE INDEX applications_public_host_idx
-    ON applications(public_host) WHERE public_host IS NOT NULL;
-`;
+export type {
+  ApplicationRecord,
+  AuditRecord,
+  DeploymentRecord,
+  DeploymentStatus,
+  EnvironmentVariableRecord,
+  OperationAction,
+  OperationRecord,
+  OperationStatus,
+  ReleaseOrigin,
+  ReleaseRecord,
+  SessionUser,
+  UserRecord,
+} from "./database/types.js";
 
 export class ControlDatabase {
   readonly #db: DatabaseSync;
@@ -268,77 +50,7 @@ export class ControlDatabase {
     this.#db = new DatabaseSync(path);
     this.#db.exec("PRAGMA foreign_keys = ON;");
     if (path !== ":memory:") this.#db.exec("PRAGMA journal_mode = WAL;");
-    this.#migrate();
-  }
-
-  #migrate(): void {
-    const version = this.#db.prepare("PRAGMA user_version").get() as { user_version: number };
-    if (version.user_version < 1) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration001);
-        this.#db.exec("PRAGMA user_version = 1;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
-    if (version.user_version < 2) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration002);
-        this.#db.exec("PRAGMA user_version = 2;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
-    if (version.user_version < 3) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration003);
-        this.#db.exec("PRAGMA user_version = 3;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
-    if (version.user_version < 4) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration004);
-        this.#db.exec("PRAGMA user_version = 4;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
-    if (version.user_version < 5) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration005);
-        this.#db.exec("PRAGMA user_version = 5;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
-    if (version.user_version < 6) {
-      this.#db.exec("BEGIN IMMEDIATE;");
-      try {
-        this.#db.exec(migration006);
-        this.#db.exec("PRAGMA user_version = 6;");
-        this.#db.exec("COMMIT;");
-      } catch (error) {
-        this.#db.exec("ROLLBACK;");
-        throw error;
-      }
-    }
+    runMigrations(this.#db);
   }
 
   ensureAdmin(username: string, password: string): UserRecord {
@@ -369,12 +81,7 @@ export class ControlDatabase {
       FROM users WHERE username = ?
     `).get(username) as Record<string, unknown> | undefined;
     if (!row) return undefined;
-    return {
-      id: String(row.id),
-      username: String(row.username),
-      passwordHash: String(row.password_hash),
-      passwordSalt: String(row.password_salt),
-    };
+    return userFromRow(row);
   }
 
   seedApplications(appAVersion: string, appBVersion: string): void {
@@ -406,22 +113,7 @@ export class ControlDatabase {
              public_host, internal_port
       FROM applications ORDER BY name ASC
     `).all() as readonly Record<string, unknown>[];
-    return rows.map((row) => ({
-      id: String(row.id),
-      slug: String(row.slug),
-      name: String(row.name),
-      description: String(row.description),
-      routePath: String(row.route_path),
-      healthPath: String(row.health_path),
-      versionPath: String(row.version_path),
-      desiredVersion: String(row.desired_version),
-      kind: String(row.kind) as "catalog" | "git",
-      repositoryUrl: row.repository_url === null ? null : String(row.repository_url),
-      defaultBranch: row.default_branch === null ? null : String(row.default_branch),
-      buildContext: row.build_context === null ? null : String(row.build_context),
-      publicHost: row.public_host === null ? null : String(row.public_host),
-      internalPort: Number(row.internal_port),
-    }));
+    return rows.map(applicationFromRow);
   }
 
   createWebService(input: {
@@ -472,13 +164,7 @@ export class ControlDatabase {
       WHERE application_id = ?
       ORDER BY key ASC
     `).all(applicationId) as readonly Record<string, unknown>[];
-    return rows.map((row) => ({
-      applicationId: String(row.application_id),
-      key: String(row.key),
-      encryptedValue: String(row.encrypted_value),
-      sensitive: Number(row.sensitive) === 1,
-      updatedAt: String(row.updated_at),
-    }));
+    return rows.map(environmentVariableFromRow);
   }
 
   replaceEnvironmentVariables(
@@ -535,7 +221,7 @@ export class ControlDatabase {
       WHERE operations.application_id = ? AND operations.status IN ('queued', 'running')
       LIMIT 1
     `).get(applicationId) as Record<string, unknown> | undefined;
-    return row ? this.#operationFromRow(row) : undefined;
+    return row ? operationFromRow(row) : undefined;
   }
 
   findOperation(id: string): OperationRecord | undefined {
@@ -545,7 +231,7 @@ export class ControlDatabase {
       JOIN applications ON applications.id = operations.application_id
       WHERE operations.id = ?
     `).get(id) as Record<string, unknown> | undefined;
-    return row ? this.#operationFromRow(row) : undefined;
+    return row ? operationFromRow(row) : undefined;
   }
 
   markOperationRunning(id: string): void {
@@ -568,23 +254,7 @@ export class ControlDatabase {
       JOIN applications ON applications.id = operations.application_id
       ORDER BY operations.created_at DESC LIMIT ?
     `).all(limit) as readonly Record<string, unknown>[];
-    return rows.map((row) => this.#operationFromRow(row));
-  }
-
-  #operationFromRow(row: Record<string, unknown>): OperationRecord {
-    return {
-      id: String(row.id),
-      applicationId: String(row.application_id),
-      applicationName: String(row.application_name),
-      action: String(row.action) as OperationAction,
-      requestedVersion: row.requested_version === null ? null : String(row.requested_version),
-      status: String(row.status) as OperationStatus,
-      message: row.message === null ? null : String(row.message),
-      requestedBy: String(row.requested_by),
-      createdAt: String(row.created_at),
-      startedAt: row.started_at === null ? null : String(row.started_at),
-      finishedAt: row.finished_at === null ? null : String(row.finished_at),
-    };
+    return rows.map(operationFromRow);
   }
 
   createDeployment(input: {
@@ -621,7 +291,7 @@ export class ControlDatabase {
       WHERE deployments.application_id = ? AND deployments.status IN ('queued', 'running')
       LIMIT 1
     `).get(applicationId) as Record<string, unknown> | undefined;
-    return row ? this.#deploymentFromRow(row) : undefined;
+    return row ? deploymentFromRow(row) : undefined;
   }
 
   findDeployment(id: string): DeploymentRecord | undefined {
@@ -631,7 +301,7 @@ export class ControlDatabase {
       JOIN applications ON applications.id = deployments.application_id
       WHERE deployments.id = ?
     `).get(id) as Record<string, unknown> | undefined;
-    return row ? this.#deploymentFromRow(row) : undefined;
+    return row ? deploymentFromRow(row) : undefined;
   }
 
   markDeploymentRunning(id: string): void {
@@ -672,28 +342,7 @@ export class ControlDatabase {
       JOIN applications ON applications.id = deployments.application_id
       ORDER BY deployments.created_at DESC LIMIT ?
     `).all(limit) as readonly Record<string, unknown>[];
-    return rows.map((row) => this.#deploymentFromRow(row));
-  }
-
-  #deploymentFromRow(row: Record<string, unknown>): DeploymentRecord {
-    return {
-      id: String(row.id),
-      applicationId: String(row.application_id),
-      applicationName: String(row.application_name),
-      sourceId: String(row.source_id),
-      repositoryUrl: String(row.repository_url),
-      commitSha: String(row.commit_sha),
-      status: String(row.status) as DeploymentStatus,
-      version: row.version === null ? null : String(row.version),
-      imageReference: row.image_reference === null ? null : String(row.image_reference),
-      imageId: row.image_id === null ? null : String(row.image_id),
-      buildLog: row.build_log === null ? null : String(row.build_log),
-      message: row.message === null ? null : String(row.message),
-      requestedBy: String(row.requested_by),
-      createdAt: String(row.created_at),
-      startedAt: row.started_at === null ? null : String(row.started_at),
-      finishedAt: row.finished_at === null ? null : String(row.finished_at),
-    };
+    return rows.map(deploymentFromRow);
   }
 
   createRelease(input: {
@@ -739,7 +388,7 @@ export class ControlDatabase {
       JOIN applications ON applications.id = releases.application_id
       WHERE releases.id = ?
     `).get(id) as Record<string, unknown> | undefined;
-    return row ? this.#releaseFromRow(row) : undefined;
+    return row ? releaseFromRow(row) : undefined;
   }
 
   listReleases(limit: number, applicationId?: string): readonly ReleaseRecord[] {
@@ -760,25 +409,7 @@ export class ControlDatabase {
     const rows = applicationId
       ? this.#db.prepare(query).all(applicationId, limit)
       : this.#db.prepare(query).all(limit);
-    return (rows as readonly Record<string, unknown>[]).map((row) => this.#releaseFromRow(row));
-  }
-
-  #releaseFromRow(row: Record<string, unknown>): ReleaseRecord {
-    return {
-      id: String(row.id),
-      applicationId: String(row.application_id),
-      applicationName: String(row.application_name),
-      origin: String(row.origin) as ReleaseOrigin,
-      version: String(row.version),
-      imageReference: String(row.image_reference),
-      imageId: String(row.image_id),
-      sourceId: row.source_id === null ? null : String(row.source_id),
-      commitSha: row.commit_sha === null ? null : String(row.commit_sha),
-      deploymentId: row.deployment_id === null ? null : String(row.deployment_id),
-      rollbackOfReleaseId: row.rollback_of_release_id === null ? null : String(row.rollback_of_release_id),
-      requestedBy: String(row.requested_by),
-      createdAt: String(row.created_at),
-    };
+    return (rows as readonly Record<string, unknown>[]).map(releaseFromRow);
   }
 
   createSession(userId: string, tokenHash: string, ttlSeconds: number): string {
@@ -802,11 +433,7 @@ export class ControlDatabase {
     `).get(tokenHash, now) as Record<string, unknown> | undefined;
     if (!row) return undefined;
     this.#db.prepare("UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?").run(now, tokenHash);
-    return {
-      id: String(row.id),
-      username: String(row.username),
-      expiresAt: String(row.expires_at),
-    };
+    return sessionUserFromRow(row);
   }
 
   revokeSession(tokenHash: string): void {
@@ -847,17 +474,7 @@ export class ControlDatabase {
              detail, ip_address, created_at
       FROM audit_events ORDER BY id DESC LIMIT ?
     `).all(limit) as readonly Record<string, unknown>[];
-    return rows.map((row) => ({
-      id: Number(row.id),
-      actorUsername: row.actor_username === null ? null : String(row.actor_username),
-      action: String(row.action),
-      resourceType: String(row.resource_type),
-      resourceId: row.resource_id === null ? null : String(row.resource_id),
-      outcome: String(row.outcome),
-      detail: row.detail === null ? null : String(row.detail),
-      ipAddress: row.ip_address === null ? null : String(row.ip_address),
-      createdAt: String(row.created_at),
-    }));
+    return rows.map(auditFromRow);
   }
 
   close(): void {

@@ -1,6 +1,6 @@
 # Kiến trúc tổng thể cuối — Mini PaaS một máy
 
-> Phiên bản tài liệu: `v1.0.0-rc.1` — đối soát ngày 16/10/2026. Đây là kiến trúc đã triển khai và kiểm thử trên VPS Debian 12, không phải kiến trúc PaaS thương mại hoặc hệ thống nhiều máy.
+> Phiên bản runtime: `v1.0.0-rc.1` — đối soát trên VPS ngày 16/10/2026. Tổ chức module mã nguồn được cập nhật và kiểm thử cục bộ ngày 17/10/2026; cần chạy lại hồi quy VPS trước khi coi phần tái cấu trúc là release mới. Đây không phải kiến trúc PaaS thương mại hoặc hệ thống nhiều máy.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -81,6 +81,35 @@ flowchart LR
 | Khôi phục | Volume `control-data`, script backup/restore | Snapshot SQLite nhất quán và diễn tập phục hồi trên volume tạm |
 
 Runner là thành phần duy nhất có Docker socket. Việc đặt Runner trong mặt phẳng điều khiển không làm quyền này trở nên an toàn tuyệt đối: nếu Runner bị chiếm quyền, toàn bộ Docker host có thể bị ảnh hưởng.
+
+### Tổ chức module mã nguồn
+
+Việc chia module bám theo trách nhiệm kỹ thuật, không tạo thêm service hoặc thay đổi luồng mạng lúc chạy:
+
+```text
+Dashboard
+  App.tsx                 ghép layout và trạng thái dùng chung
+  app/routing.tsx         ánh xạ URL sang màn hình
+  features/*              thành phần theo ứng dụng, deployment, env, log, audit
+  shared/*                định dạng và nhãn dùng lại
+
+Control API
+  server.ts               khởi tạo Fastify và đăng ký route
+  routes/*                kiểm tra HTTP và gọi nghiệp vụ theo từng miền
+  database.ts             giao diện dữ liệu ổn định cho các route
+  database/types.ts       kiểu bản ghi
+  database/migrations.ts  schema SQLite v1–v6 và transaction migration
+  database/mappers.ts     chuyển tên cột SQLite sang đối tượng nghiệp vụ
+
+Deployment Runner
+  server.mjs              API nội bộ và xác thực shared secret
+  runtime.mjs             điều phối build, deploy, rollback và vòng đời
+  runtime-state.mjs       trạng thái công khai và biến môi trường container
+  container-policy.mjs    chính sách giới hạn/quyền áp dụng đồng nhất
+  docker.mjs              adapter Docker Engine API
+```
+
+`ControlDatabase` vẫn là điểm vào duy nhất của tầng dữ liệu để các route không phụ thuộc trực tiếp câu lệnh SQL. Tương tự, Control API chỉ gọi Runner qua API nội bộ; Dashboard không gọi Docker hoặc Runner trực tiếp. Tái cấu trúc này thay đổi cách tổ chức mã nguồn, không thay đổi endpoint, schema SQLite, mạng Compose hay URL công khai.
 
 ## 3. Sơ đồ mạng và ranh giới tin cậy
 

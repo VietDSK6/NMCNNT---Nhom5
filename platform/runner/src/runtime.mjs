@@ -14,8 +14,16 @@ import {
 import { decodeDockerLogs, OBSERVABILITY_LIMITS, summarizeDockerStats } from "./observability.mjs";
 import { renderPrometheusMetrics } from "./metrics.mjs";
 import { validateEnvironmentVariables } from "./environment.mjs";
-
-const ENVIRONMENT_KEYS_LABEL = "io.mini-paas.environment-keys";
+import { hardenedHostConfig } from "./container-policy.mjs";
+import {
+  ENVIRONMENT_KEYS_LABEL,
+  envValue,
+  managedEnvironmentKeys,
+  publicStatus,
+  replaceEnv,
+  replaceManagedEnvironment,
+  runtimeStatus,
+} from "./runtime-state.mjs";
 
 export class RunnerRuntimeError extends Error {
   constructor(code, message, statusCode = 500) {
@@ -27,59 +35,6 @@ export class RunnerRuntimeError extends Error {
 }
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-function envValue(environment, key) {
-  const prefix = `${key}=`;
-  return environment?.find((item) => item.startsWith(prefix))?.slice(prefix.length) ?? null;
-}
-
-function replaceEnv(environment = [], key, value) {
-  const prefix = `${key}=`;
-  return [...environment.filter((item) => !item.startsWith(prefix)), `${key}=${value}`];
-}
-
-function environmentKey(item) {
-  const index = item.indexOf("=");
-  return index === -1 ? item : item.slice(0, index);
-}
-
-function managedEnvironmentKeys(labels = {}) {
-  const value = labels?.[ENVIRONMENT_KEYS_LABEL];
-  if (typeof value !== "string" || value === "") return [];
-  return value.split(",").filter((key) => /^[A-Z][A-Z0-9_]{0,63}$/.test(key));
-}
-
-function replaceManagedEnvironment(environment = [], previousKeys, variables) {
-  const managed = new Set([...previousKeys, ...variables.map((variable) => variable.key)]);
-  return [
-    ...environment.filter((item) => !managed.has(environmentKey(item))),
-    ...variables.map((variable) => `${variable.key}=${variable.value}`),
-  ];
-}
-
-function runtimeStatus(inspect) {
-  if (inspect.State?.Restarting) return "starting";
-  if (!inspect.State?.Running) return "stopped";
-  const health = inspect.State?.Health?.Status;
-  if (health === "starting") return "starting";
-  if (health === "unhealthy") return "unhealthy";
-  return "running";
-}
-
-function publicStatus(appId, inspect) {
-  return {
-    appId,
-    status: runtimeStatus(inspect),
-    containerId: String(inspect.Id).slice(0, 12),
-    containerName: String(inspect.Name || "").replace(/^\//, ""),
-    image: String(inspect.Config?.Image || ""),
-    imageId: String(inspect.Image || ""),
-    observedVersion: envValue(inspect.Config?.Env, "APP_VERSION"),
-    health: inspect.State?.Health?.Status ?? null,
-    startedAt: inspect.State?.StartedAt || null,
-    environmentVariableCount: managedEnvironmentKeys(inspect.Config?.Labels).length,
-  };
-}
 
 export class DeploymentRuntime {
   constructor(docker, options = {}) {
@@ -411,19 +366,7 @@ export class DeploymentRuntime {
       Labels: labels,
       ExposedPorts: current.Config?.ExposedPorts || { "3000/tcp": {} },
       Healthcheck: current.Config?.Healthcheck,
-      HostConfig: {
-        NetworkMode: spec.network,
-        RestartPolicy: { Name: "unless-stopped", MaximumRetryCount: 0 },
-        ReadonlyRootfs: true,
-        Tmpfs: { "/tmp": "size=16m,noexec,nosuid" },
-        CapDrop: ["ALL"],
-        SecurityOpt: ["no-new-privileges:true"],
-        NanoCpus: 350_000_000,
-        Memory: 134_217_728,
-        PidsLimit: 100,
-        LogConfig: { Type: "json-file", Config: { "max-size": "5m", "max-file": "2" } },
-        Init: true,
-      },
+      HostConfig: hardenedHostConfig(spec.network),
       NetworkingConfig: {
         EndpointsConfig: {
           [spec.network]: { Aliases: [spec.service, originalName] },
@@ -476,19 +419,7 @@ export class DeploymentRuntime {
       Env: [`APP_VERSION=${version}`, "PORT=3000"],
       Labels: labels,
       ExposedPorts: { "3000/tcp": {} },
-      HostConfig: {
-        NetworkMode: spec.network,
-        RestartPolicy: { Name: "unless-stopped", MaximumRetryCount: 0 },
-        ReadonlyRootfs: true,
-        Tmpfs: { "/tmp": "size=16m,noexec,nosuid" },
-        CapDrop: ["ALL"],
-        SecurityOpt: ["no-new-privileges:true"],
-        NanoCpus: 350_000_000,
-        Memory: 134_217_728,
-        PidsLimit: 100,
-        LogConfig: { Type: "json-file", Config: { "max-size": "5m", "max-file": "2" } },
-        Init: true,
-      },
+      HostConfig: hardenedHostConfig(spec.network),
       NetworkingConfig: {
         EndpointsConfig: { [spec.network]: { Aliases: [spec.service, containerName] } },
       },

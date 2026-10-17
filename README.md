@@ -343,9 +343,22 @@ Sau khi đăng nhập Dashboard, có thể mở **Log và tài nguyên** để q
 ```text
 apps/app-a/                 Ứng dụng mẫu A
 apps/app-b/                 Ứng dụng mẫu B
-platform/control-api/       Xác thực, SQLite, metadata và audit
+platform/control-api/       Xác thực, metadata và điều phối nghiệp vụ
+  src/server.ts             Khởi tạo HTTP server và đăng ký nhóm route
+  src/routes/               Route theo miền auth/app/deploy/env/release/quan sát
+  src/database.ts           API dữ liệu ổn định dùng bởi tầng nghiệp vụ
+  src/database/             Kiểu dữ liệu, migration và chuyển đổi bản ghi SQLite
 platform/dashboard/         Dashboard React/Vite
+  src/App.tsx               Ghép layout, trạng thái chung và điều hướng cấp cao
+  src/app/                  Cấu hình route của Dashboard
+  src/features/             Màn hình/thành phần theo chức năng nghiệp vụ
+  src/shared/               Hàm định dạng và nhãn dùng chung
 platform/runner/            Ranh giới đặc quyền và Docker Engine API
+  src/server.mjs            API nội bộ có xác thực giữa Control API và Runner
+  src/runtime.mjs           Điều phối vòng đời/build/deploy/rollback
+  src/runtime-state.mjs     Chuẩn hóa trạng thái và biến môi trường container
+  src/container-policy.mjs  Giới hạn CPU/RAM/PID và chính sách bảo vệ container
+  src/docker.mjs            Adapter giao tiếp Docker Engine API
 platform/gateway/           Ảnh và cấu hình Nginx
 platform/monitoring/        Prometheus, alert rule và Grafana provisioning
 tests/smoke/p0_1.sh         Kiểm thử nhanh P0.1
@@ -388,7 +401,7 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Rollback đối chiếu image ID nhưng vẫn phụ thuộc image cache trên một host; chưa thể thay thế registry digest hoặc bản sao lưu image.
 - Gateway chỉ bind vào `127.0.0.1`; connector Cloudflare chạy outbound-only và chuyển tiếp đúng tới loopback này.
 - Cookie local chưa có cờ `Secure` vì môi trường phát triển dùng HTTP; VPS đã đặt `SESSION_COOKIE_SECURE=true` và `PUBLIC_ORIGIN=https://paas.ai2p.id.vn`.
-- Module `node:sqlite` của Node.js 24 vẫn phát cảnh báo thử nghiệm; đã ghim Node image và cô lập tầng truy cập dữ liệu để có thể thay thư viện nếu cần.
+- Module `node:sqlite` của Node.js 24 vẫn phát cảnh báo thử nghiệm; đã ghim Node image và cô lập migration, kiểu dữ liệu, bộ chuyển đổi bản ghi cùng API dữ liệu để có thể thay thư viện có kiểm soát nếu cần.
 - Health check không thay thế kiểm thử nghiệp vụ.
 - Chính sách restart không phải failover.
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
