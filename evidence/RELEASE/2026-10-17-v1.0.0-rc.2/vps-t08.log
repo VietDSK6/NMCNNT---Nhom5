@@ -1,0 +1,24 @@
+./tests/integration/t08_backup_restore.sh
+ Container mini-paas-runner-1 Running
+ Container mini-paas-control-api-1 Running
+ Container mini-paas-runner-1 Waiting
+ Container mini-paas-runner-1 Healthy
+ Container mini-paas-runner-1 Waiting
+ Container mini-paas-control-api-1 Waiting
+ Container mini-paas-runner-1 Healthy
+ Container mini-paas-control-api-1 Healthy
+T08_START=2026-10-17T12:19:51Z
+SOURCE_COMMIT=2ce0e1c1dedf03f84cb77a426559706d4982f2d6
+{"schemaVersion":1,"createdAt":"2026-10-17T12:19:52.054Z","sourceVolume":"mini-paas-control-data","sourceCommit":"2ce0e1c1dedf03f84cb77a426559706d4982f2d6","databaseFile":"control.db","sha256":"2a523b23b30af72232ae5accbc21ec753e29a5e1b34267c23360e58eb50eb750","sqliteUserVersion":6,"integrityCheck":"ok","rowCounts":{"users":1,"applications":4,"operations":37,"deployments":6,"releases":33,"application_environment_variables":0,"audit_events":107}}
+BACKUP_DIRECTORY=/home/user/mini-paas/output/t08/20261017T121949Z/backup
+control.db: OK
+summary.json: OK
+{"restored":true,"target":"/target/control.db","integrityCheck":"ok","sqliteUserVersion":6,"rowCounts":{"users":1,"applications":4,"operations":37,"deployments":6,"releases":33,"application_environment_variables":0,"audit_events":107}}
+RESTORED_VOLUME=mini-paas-t08-restore-20261017T121949Z-38131
+{"loginStatus":200,"applicationsStatus":200,"applicationCount":4,"slugs":["app-a","app-b","demo","vps-demo"]}
+{"gatewayHealthStatus":200,"app":{"status":"ok","appId":"app-a","version":"v1.0.0","uptimeSeconds":27,"startedAt":"2026-10-17T12:19:31.742Z"}}
+LIVE_STACK_UNCHANGED=true
+TEMP_CONTAINER_PUBLISHED_PORTS={}
+T08_RESULT=PASS
+T08_FINISH=2026-10-17T12:19:59Z
+T08_OUTPUT_DIRECTORY=/home/user/mini-paas/output/t08/20261017T121949Z

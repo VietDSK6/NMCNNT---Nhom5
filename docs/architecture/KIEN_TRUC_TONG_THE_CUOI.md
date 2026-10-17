@@ -1,6 +1,6 @@
 # Kiến trúc tổng thể cuối — Mini PaaS một máy
 
-> Phiên bản runtime: `v1.0.0-rc.1` — đối soát trên VPS ngày 16/10/2026. Tổ chức module mã nguồn được cập nhật và kiểm thử cục bộ ngày 17/10/2026; cần chạy lại hồi quy VPS trước khi coi phần tái cấu trúc là release mới. Đây không phải kiến trúc PaaS thương mại hoặc hệ thống nhiều máy.
+> Phiên bản runtime: `v1.0.0-rc.2` — mã runtime `2ce0e1c` đã được hồi quy trên VPS Debian 12 ngày 17/10/2026. RC2 chuẩn hóa tổ chức module nhưng không thay đổi endpoint, schema SQLite, mạng hoặc phạm vi chức năng của RC1. Đây không phải kiến trúc PaaS thương mại hoặc hệ thống nhiều máy.
 
 ## 1. Mục tiêu và phạm vi
 

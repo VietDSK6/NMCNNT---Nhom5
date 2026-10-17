@@ -1,0 +1,242 @@
+cd platform/runner && npm test
+
+> @mini-paas/deployment-runner@0.2.0 test
+> node --test src/*.test.mjs
+
+✔ chỉ chấp nhận ứng dụng trong danh sách cho phép (7.999224ms)
+✔ chỉ chấp nhận thao tác và phiên bản đã khai báo (1.082851ms)
+✔ chỉ chấp nhận source được khai báo và commit SHA đầy đủ (4.238352ms)
+✔ rollback chỉ chấp nhận image thuộc catalog hoặc source tin cậy (7.901089ms)
+✔ chuẩn hóa Web Service động và chặn repository ngoài owner tin cậy (2.199784ms)
+✔ chuẩn hóa danh sách biến môi trường theo tên (30.441853ms)
+✔ chặn tên lặp, tên dành riêng và payload vượt giới hạn (2.099775ms)
+✔ xuất metric Prometheus hữu hạn cho ứng dụng đang chạy (4.551955ms)
+✔ ứng dụng dừng vẫn có trạng thái nhưng không tạo metric tài nguyên giả (0.802243ms)
+✔ escape nhãn và thay giá trị không hữu hạn bằng 0 (3.102246ms)
+✔ giải mã log multiplex, chuẩn hóa thời gian và phân biệt stdout/stderr (7.455866ms)
+✔ giới hạn số dòng, độ dài và ẩn trường bí mật thường gặp (1.268676ms)
+✔ tính CPU, working set RAM, PID và lưu lượng mạng từ Docker stats (1.037931ms)
+✔ metric phân biệt container đang chạy nhưng unhealthy với container đã dừng (11.190264ms)
+✔ phân giải commit mới nhất chỉ qua source và nhánh đã khai báo (3.065614ms)
+✔ rollback xác minh image ID và giữ biến môi trường đang quản lý (9.287406ms)
+✔ rollback từ chối khi tag image không còn khớp image ID của release (2.547382ms)
+✔ deployment đầu tiên tạo container Web Service độc lập với giới hạn an toàn (3.636309ms)
+✔ health không yêu cầu secret (6.022528ms)
+✔ metrics chỉ đọc được trong mạng nội bộ mà không cần secret quản trị (1.424947ms)
+✔ từ chối API quản trị khi thiếu secret (0.809363ms)
+✔ đọc trạng thái và thực hiện thao tác có xác thực (13.700216ms)
+✔ đọc log và số liệu với giới hạn số dòng (1.957752ms)
+✔ cấu hình biến môi trường qua API nội bộ mà không ghi giá trị vào phản hồi (3.72219ms)
+✔ rollback release qua API nội bộ có xác thực (5.550231ms)
+✔ liệt kê source tin cậy và yêu cầu triển khai theo commit (6.078725ms)
+✔ phân giải và triển khai Web Service động qua API nội bộ (8.789714ms)
+✔ phân giải nhánh mặc định thành commit SHA bất biến (99.905257ms)
+✔ từ chối metadata không có commit SHA hợp lệ (3.968565ms)
+✔ chuyển giới hạn GitHub thành lỗi có thể thử lại (1.427011ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1939.465289
+cd platform/control-api && npm test
+
+> @mini-paas/control-api@0.2.0 test
+> npm run build && node --test dist/*.test.js
+
+
+> @mini-paas/control-api@0.2.0 build
+> tsc -p tsconfig.json
+
+✔ mã hóa gắn giá trị với đúng ứng dụng và tên biến (10.603412ms)
+✔ giữ secret cũ bằng null nhưng yêu cầu giá trị cho biến mới (4.898958ms)
+✔ từ chối danh sách ứng dụng khi chưa đăng nhập (296.924501ms)
+✔ từ chối mật khẩu sai và ghi audit (158.722141ms)
+✔ đăng nhập, đọc ứng dụng và đăng xuất bằng session cookie (157.36028ms)
+✔ chặn POST từ origin không được phép (7.118763ms)
+✔ xếp hàng thao tác cập nhật và lưu kết quả (137.540313ms)
+✔ từ chối thao tác thiếu xác thực và dữ liệu không đúng (126.195595ms)
+✔ log và số liệu tài nguyên yêu cầu phiên đăng nhập, có giới hạn đầu vào (135.305495ms)
+✔ tạo deployment theo commit cụ thể hoặc commit mới nhất và lưu build metadata (179.190721ms)
+✔ liệt kê release và rollback về đúng image đã ghi nhận (153.09455ms)
+✔ từ chối source lạ và commit không đúng định dạng (138.11294ms)
+✔ lưu biến môi trường có mã hóa, che giá trị nhạy cảm và chặn biến hệ thống (171.370619ms)
+✔ tạo Web Service từ repository tin cậy và xếp hàng deployment đầu tiên (135.383025ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2987.343583
+cd platform/dashboard && npm run build
+
+> @mini-paas/dashboard@0.2.0 build
+> tsc -b && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 36 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                                    0.57 kB │ gzip:  0.36 kB
+dist/assets/be-vietnam-pro-vietnamese-400-normal-BuGn0gnm.woff     6.56 kB
+dist/assets/be-vietnam-pro-vietnamese-600-normal-DkpCIyan.woff     6.88 kB
+dist/assets/be-vietnam-pro-vietnamese-500-normal-CfdwVo8-.woff     6.88 kB
+dist/assets/be-vietnam-pro-vietnamese-700-normal-By_5yT39.woff     6.89 kB
+dist/assets/be-vietnam-pro-vietnamese-400-normal-CRcqvyg1.woff2   11.53 kB
+dist/assets/be-vietnam-pro-vietnamese-500-normal-DREgrEoJ.woff2   12.17 kB
+dist/assets/be-vietnam-pro-vietnamese-600-normal-nyU-ZL2p.woff2   12.17 kB
+dist/assets/be-vietnam-pro-vietnamese-700-normal-Csr0PCuG.woff2   12.46 kB
+dist/assets/index-C7ujZh3V.css                                    47.46 kB │ gzip:  9.94 kB
+dist/assets/index-D_FNfQzS.js                                    280.88 kB │ gzip: 82.93 kB │ map: 1,201.60 kB
+
+✓ built in 648ms
+./tests/smoke/p0_1.sh
+ĐẠT: Gateway khỏe
+ĐẠT: Trang Ứng dụng A
+ĐẠT: Health Ứng dụng A
+ĐẠT: Phiên bản Ứng dụng A
+ĐẠT: Trang Ứng dụng B
+ĐẠT: Health Ứng dụng B
+ĐẠT: Phiên bản Ứng dụng B
+ĐẠT: app-a không công khai cổng 3000
+ĐẠT: app-b không công khai cổng 3000
+
+P0.1 smoke test: 9/9 kiểm tra đạt.
+./tests/integration/p0_2.sh
+ĐẠT: Dashboard được phục vụ qua Gateway
+ĐẠT: Control API khỏe qua Gateway
+ĐẠT: Từ chối danh sách ứng dụng khi chưa đăng nhập
+ĐẠT: Từ chối mật khẩu sai
+ĐẠT: Đăng nhập bằng tài khoản hợp lệ
+ĐẠT: Đọc phiên quản trị
+ĐẠT: Đọc ứng dụng lõi từ Control API
+ĐẠT: Đọc nhật ký kiểm toán
+ĐẠT: dashboard không công khai cổng trực tiếp
+ĐẠT: control-api không công khai cổng trực tiếp
+ĐẠT: runner không công khai cổng trực tiếp
+ĐẠT: app-a không công khai cổng trực tiếp
+ĐẠT: app-b không công khai cổng trực tiếp
+ĐẠT: Đăng xuất phiên quản trị
+ĐẠT: Phiên cũ bị vô hiệu sau đăng xuất
+
+P0.2 integration test: 15/15 kiểm tra đạt.
+./tests/integration/p0_2b.sh
+ĐẠT: Đăng nhập để kiểm thử thao tác P0.2B
+ĐẠT: Từ chối thao tác ứng dụng khi chưa đăng nhập
+ĐẠT: Từ chối action ngoài schema tại Control API
+ĐẠT: Runner từ chối yêu cầu nội bộ thiếu secret
+ĐẠT: Docker socket chỉ được gắn vào Runner
+ĐẠT: Tiếp nhận thao tác {"action":"stop"} cho app-b
+ĐẠT: Dừng App B và ghi operation thành công
+ĐẠT: Gateway phản ánh App B đã dừng bằng HTTP 504
+ĐẠT: Tiếp nhận thao tác {"action":"start"} cho app-b
+ĐẠT: Khởi động lại App B và chờ health thành công
+ĐẠT: App B truy cập lại qua Gateway
+ĐẠT: Tiếp nhận thao tác {"action":"restart"} cho app-b
+ĐẠT: Khởi động lại App B có kiểm soát
+ĐẠT: Tiếp nhận thao tác {"action":"update","version":"v2.0.0"} cho app-a
+ĐẠT: Cập nhật App A từ v1 lên v2
+ĐẠT: Endpoint phiên bản App A trả v2.0.0
+ĐẠT: Tiếp nhận thao tác {"action":"update","version":"latest"} cho app-a
+ĐẠT: Runner từ chối phiên bản không nằm trong danh sách cho phép
+ĐẠT: Tiếp nhận thao tác {"action":"update","version":"v1.0.0"} cho app-a
+ĐẠT: Đưa App A về v1 sau kiểm thử
+ĐẠT: Endpoint phiên bản App A trở lại v1.0.0
+
+P0.2B integration test: 21 kiểm tra đạt.
+./tests/integration/p0_2c.sh
+ĐẠT: Từ chối đọc log khi chưa đăng nhập
+ĐẠT: Từ chối đọc stats khi chưa đăng nhập
+ĐẠT: Đăng nhập để kiểm thử P0.2C
+ĐẠT: Từ chối tail bằng 0
+ĐẠT: Từ chối tail vượt giới hạn 200
+ĐẠT: Từ chối ứng dụng không đăng ký
+ĐẠT: Đọc tối đa 50 dòng log App A
+ĐẠT: Phản hồi log đúng hợp đồng và có dữ liệu thật
+ĐẠT: Đọc ảnh chụp tài nguyên App A
+ĐẠT: CPU/RAM/PID/mạng là số hữu hạn và có thời điểm lấy mẫu
+ĐẠT: Runner từ chối endpoint logs thiếu secret
+ĐẠT: Runner từ chối endpoint stats thiếu secret
+
+P0.2C integration test: 12 kiểm tra đạt.
+./tests/integration/p1_observability.sh
+ĐẠT: Runner xuất metric Prometheus hữu hạn cho App A và App B
+ĐẠT: Runner và Prometheus không công khai cổng ra host
+ĐẠT: Prometheus sẵn sàng nhận truy vấn
+ĐẠT: Prometheus thu được trạng thái đang chạy của App A và App B
+ĐẠT: Prometheus lưu nhiều mẫu theo thời gian cho App A và App B
+ĐẠT: Chuỗi metric RAM có giá trị thực cho hai ứng dụng
+ĐẠT: Prometheus target Runner ở trạng thái up
+ĐẠT: Prometheus nạp đủ ba quy tắc cảnh báo
+ĐẠT: Grafana khỏe qua đường dẫn Gateway
+ĐẠT: Grafana báo cơ sở dữ liệu nội bộ hoạt động
+ĐẠT: Grafana yêu cầu xác thực khi đọc datasource
+ĐẠT: Datasource Prometheus được cấp sẵn trong Grafana
+ĐẠT: Datasource Grafana trỏ đúng Prometheus nội bộ
+ĐẠT: Dashboard Mini PaaS được cấp sẵn trong Grafana
+ĐẠT: Dashboard Grafana có đủ sáu bảng trạng thái/tài nguyên
+
+P1 observability integration test: 15 kiểm tra đạt.
+./tests/integration/p1_dashboard_navigation.sh
+ĐẠT: Trang Tổng quan
+ĐẠT: Danh sách ứng dụng
+ĐẠT: Chi tiết App A
+ĐẠT: Deployment của App A
+ĐẠT: Biến môi trường của App A
+ĐẠT: Quan sát App A
+ĐẠT: Chi tiết App B
+ĐẠT: Triển khai toàn hệ thống
+ĐẠT: Lịch sử thao tác
+ĐẠT: Nhật ký kiểm toán
+ĐẠT: Quan sát toàn hệ thống
+
+P1 Dashboard navigation integration test: 11 kiểm tra đạt.
+./tests/integration/p1_environment.sh
+ĐẠT: Từ chối đọc biến môi trường khi chưa đăng nhập
+ĐẠT: Đăng nhập để kiểm thử biến môi trường
+ĐẠT: Đưa cấu hình App A về trạng thái rỗng ban đầu
+ĐẠT: Từ chối ghi đè APP_VERSION do nền tảng quản lý
+ĐẠT: Áp dụng biến thường và biến nhạy cảm cho App A
+ĐẠT: Phản hồi cập nhật không làm lộ giá trị nhạy cảm
+ĐẠT: Đọc danh sách biến môi trường đã lưu
+ĐẠT: API chỉ trả metadata của biến nhạy cảm
+ĐẠT: Ứng dụng nhận cấu hình mới qua Gateway
+ĐẠT: App A dùng biến thường và nhận biết secret mà không công khai giá trị
+ĐẠT: Runner gắn biến vào đúng container và ghi nhãn tên biến
+ĐẠT: Tiếp nhận cập nhật App A lên v2.0.0
+ĐẠT: App A hoàn tất cập nhật lên v2.0.0
+ĐẠT: Biến môi trường còn hiệu lực sau cập nhật phiên bản
+ĐẠT: Cập nhật image bảo toàn biến môi trường đã quản lý
+ĐẠT: Xóa toàn bộ biến môi trường tùy chỉnh
+ĐẠT: Ứng dụng không còn cấu hình tùy chỉnh sau khi xóa
+ĐẠT: Tiếp nhận cập nhật App A lên v1.0.0
+ĐẠT: App A hoàn tất cập nhật lên v1.0.0
+ĐẠT: Audit ghi nhận thay đổi cấu hình mà không chứa secret
+ĐẠT: Audit chỉ lưu hành động và số lượng biến
+
+P1 Environment Variables integration test: 21 kiểm tra đạt.
+./tests/integration/p2_release_rollback.sh
+ĐẠT: Từ chối đọc release khi chưa đăng nhập
+ĐẠT: Đăng nhập để kiểm thử rollback
+ĐẠT: Tiếp nhận cập nhật App A lên v2.0.0
+ĐẠT: App A hoàn tất cập nhật lên v2.0.0
+ĐẠT: Đọc lịch sử release của App A
+ĐẠT: Release v2 lưu image ID bất biến
+ĐẠT: Tiếp nhận cập nhật App A lên v1.0.0
+ĐẠT: App A hoàn tất cập nhật lên v1.0.0
+ĐẠT: Từ chối rollback khi chưa đăng nhập
+ĐẠT: Rollback App A về release v2
+ĐẠT: Bản ghi rollback tham chiếu đúng release đích và image ID
+ĐẠT: Endpoint App A phản ánh phiên bản v2 sau rollback
+ĐẠT: Container chạy đúng image ID đã ghi trong release
+ĐẠT: Audit ghi nhận rollback thành công
+ĐẠT: Tiếp nhận cập nhật App A lên v1.0.0
+ĐẠT: App A hoàn tất cập nhật lên v1.0.0
+ĐẠT: Đưa App A về v1 sau kiểm thử rollback
+
+P2 Release rollback integration test: 17 kiểm tra đạt.

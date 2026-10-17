@@ -1,0 +1,18 @@
+# Tại VPS, sau khi đã xác thực SSH bằng khóa riêng của người vận hành
+cd /home/user/mini-paas
+git fetch origin --prune
+git pull --ff-only origin main
+docker compose config --quiet
+BACKUP_OUTPUT_DIR=/duong-dan-ngoai-repository/pre-release make backup-control-data
+make up
+make test
+make test-p1-git-latest
+make test-t08
+
+# Từ máy ngoài VPS
+curl --fail --show-error https://paas.ai2p.id.vn/healthz
+curl --fail --show-error https://paas.ai2p.id.vn/api/health
+curl --fail --show-error https://demo.ai2p.id.vn/health
+curl --fail --show-error https://vps-demo.ai2p.id.vn/health
+
+# Không sao chép .env, khóa SSH, Tunnel token, cookie jar hoặc control.db vào evidence.

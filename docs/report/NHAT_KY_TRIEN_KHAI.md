@@ -723,4 +723,29 @@ P0.2 và P1 observability còn giả định danh mục/metric chỉ có đúng 
 
 ### Trạng thái phát hành
 
-Đây là kết quả hồi quy cục bộ cho mã nguồn chưa phát hành. Runtime VPS vẫn là `v1.0.0-rc.1` đã nghiệm thu ngày 16/10/2026; cần commit, đẩy mã và chạy lại hồi quy VPS trước khi gắn phiên bản release mới.
+Mã runtime được commit tại `2ce0e1c`, đẩy lên `main` và triển khai trên VPS để thực hiện vòng nghiệm thu RC2 dưới đây.
+
+## 17/10/2026 — Chốt release candidate `v1.0.0-rc.2`
+
+### Phạm vi
+
+- Giữ nguyên chức năng, endpoint, schema SQLite v6 và kiến trúc một máy của RC1.
+- Phát hành cấu trúc module mới cho Dashboard, Control API và Deployment Runner.
+- Tạo backup SQLite nhất quán trước khi recreate stack; backup giữ ngoài repository.
+- Chạy hồi quy đầy đủ trên Debian 12, deploy commit mới nhất, T08 và kiểm tra HTTPS từ máy ngoài.
+
+### Kết quả
+
+- Commit runtime `2ce0e1c1dedf03f84cb77a426559706d4982f2d6`.
+- Backup trước triển khai: schema v6, integrity `ok`, đủ 4 ứng dụng và có checksum SHA-256.
+- Runner 30/30, Control API 14/14, Dashboard build và 121 kiểm tra tích hợp đạt trên VPS.
+- Deploy latest 15/15 đạt; App A được đưa về v1.0.0 sau thử nghiệm.
+- T08 `PASS`: checksum/integrity đúng, đủ 4 ứng dụng, API/Gateway HTTP 200, stack live không đổi và không publish cổng container tạm.
+- Control Center, API, `demo` và `vps-demo` trả HTTPS 200; 10/10 request health lặp đạt; API quản trị chưa đăng nhập trả 401.
+- 8/8 service trên VPS chạy và khỏe; chỉ Gateway bind `127.0.0.1:8080`.
+- Không chạy responsive, Playwright/CUA hoặc chụp ảnh theo quy tắc chung của dự án.
+
+### Bằng chứng
+
+- `evidence/RELEASE/2026-10-17-v1.0.0-rc.2/`.
+- `docs/release/RELEASE_CANDIDATE_2.md`.

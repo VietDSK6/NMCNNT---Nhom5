@@ -1,0 +1,18 @@
+./tests/integration/p1_git_latest.sh
+ĐẠT: Đăng nhập để kiểm thử commit mới nhất
+ĐẠT: Source công khai nhánh mặc định đã allowlist
+ĐẠT: Nhánh main được cố định trong source catalog
+ĐẠT: Từ chối deploy latest khi chưa đăng nhập
+ĐẠT: Từ chối source ngoài allowlist
+ĐẠT: Phân giải và tiếp nhận commit mới nhất
+ĐẠT: API lưu đúng SHA 40 ký tự của origin/main
+ĐẠT: Runner build và triển khai commit mới nhất
+ĐẠT: App A phản hồi sau deployment latest
+ĐẠT: App A chạy đúng phiên bản từ commit mới nhất
+ĐẠT: Image lưu đúng nhãn commit mới nhất
+ĐẠT: Release ghi nhận commit mới nhất
+ĐẠT: Tiếp nhận yêu cầu đưa App A về v1.0.0
+ĐẠT: Hoàn tất thao tác khôi phục App A
+ĐẠT: App A trở lại v1.0.0 sau kiểm thử
+
+P1 Deploy latest commit integration test: 15 kiểm tra đạt.
