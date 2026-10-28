@@ -1,6 +1,6 @@
 # CHƯƠNG 3. PHÂN TÍCH YÊU CẦU VÀ THIẾT KẾ HỆ THỐNG
 
-> Bản thiết kế cuối đối soát với release candidate `v1.0.0-rc.1` ngày 16/10/2026. Các chức năng mô tả ở thì hiện tại đã được hồi quy trên VPS; registry digest, webhook và kiến trúc nhiều máy vẫn là giới hạn/hướng phát triển.
+> Bản thiết kế cuối đối soát với release candidate `v1.0.0-rc.2`, mã runtime `2ce0e1c` đã được hồi quy trên VPS ngày 17/10/2026. RC2 chuẩn hóa cấu trúc module nhưng giữ nguyên endpoint, schema SQLite v6, mạng và phạm vi chức năng của RC1; registry digest, webhook và kiến trúc nhiều máy vẫn là giới hạn/hướng phát triển.
 
 ## 3.1. Phân tích bài toán
 

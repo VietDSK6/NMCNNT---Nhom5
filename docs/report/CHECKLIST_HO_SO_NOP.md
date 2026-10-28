@@ -7,6 +7,7 @@
 - [ ] Yêu cầu và giả định.
 - [x] Kiến trúc tổng thể, control plane/data plane/observability plane đã chốt trong tài liệu kiến trúc cuối.
 - [x] Sơ đồ hệ thống và luồng Git → build → image → deploy → route đã có bản Mermaid dùng cho báo cáo/slide.
+- [x] Có ma trận đối chiếu kiến thức học phần với thành phần, kiểm thử và giới hạn tại `docs/report/DOI_CHIEU_KIEN_THUC_MON_HOC.md`.
 - [ ] Bảng tài nguyên/IP/quyền.
 - [ ] Mô tả triển khai đúng với phiên bản đã kiểm thử.
 - [ ] Bảng kiểm thử có kỳ vọng và thực tế.
@@ -38,7 +39,7 @@ Phụ lục dự kiến:
 - [x] Web Service độc lập có repository, image, container và hostname riêng; `demo.ai2p.id.vn` đã trả đúng health/version.
 - [x] Quản lý biến môi trường theo ứng dụng, mã hóa SQLite, che secret và hồi quy đạt trên VPS Linux ở release candidate.
 - [x] Lịch sử release và rollback theo image ID cục bộ đã hồi quy đạt trên VPS; chưa có registry digest và không tuyên bố rollback đa máy.
-- [x] Gói `v1.0.0-rc.1` đã quét cây/lịch sử Git và không phát hiện secret xác suất cao; database T08 giữ ngoài repository.
+- [x] Gói `v1.0.0-rc.2` đã quét evidence và không phát hiện secret xác suất cao; database T08 giữ ngoài repository.
 
 Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/switch bằng Packet Tracer. Hồ sơ thay thế bằng sơ đồ mạng Docker, bảng cổng/DNS/quyền và cấu hình chạy thật. Nếu giảng viên yêu cầu `.pkt` riêng cho mọi nhóm, phải bổ sung sau khi xác nhận.
 
@@ -50,11 +51,13 @@ Không mặc định cần file `.pkt`: Mini PaaS không mô phỏng router/swit
 - [x] Mỗi test ghi kết quả mong đợi.
 - [x] Mỗi test ghi kết quả thực tế.
 - [x] Mỗi test đánh dấu đạt/chưa đạt; T01 dùng trạng thái `Đạt có lưu ý`.
-- [x] Mỗi test có thời gian, commit, môi trường và người thực hiện tạm `TV1 – chủ dự án`; phải thay bằng họ tên/MSSV trước khi nộp.
+- [ ] Mỗi test có thời gian, commit, môi trường và người thực hiện đã đối soát; các bài RC2 đã ghi Đỗ Sỹ Việt — B24DCCC287, riêng T06 còn thiếu tên/MSSV trong evidence.
 - [x] Mỗi test liên kết tới log/JSON/CSV hoặc hồ sơ nguồn tương ứng; khoảng trống dữ liệu thô được ghi công khai trong biên bản audit.
 - [x] T06 có ba vòng dữ liệu k6 gốc và metric cùng khoảng thời gian trên VPS Linux.
 - [x] T08 sao lưu/khôi phục SQLite đã nghiệm thu trên volume tạm ở VPS; database nhạy cảm giữ ngoài Git, evidence đã làm sạch.
-- [x] Không phát hiện token, mật khẩu, cookie hoặc khóa trong evidence tại mốc `v1.0.0-rc.1`.
+- [x] Không phát hiện token, mật khẩu, cookie hoặc khóa trong evidence tại mốc `v1.0.0-rc.2`.
+- [ ] Có evidence read-only về loại file system/dung lượng VPS hoặc ghi rõ chưa đo trong báo cáo.
+- [ ] Có bản backup ngoài VPS theo hướng 3–2–1; nếu chưa có phải ghi rõ T08 mới chứng minh backup/restore cục bộ.
 
 ## 4. Video và bảo vệ
 

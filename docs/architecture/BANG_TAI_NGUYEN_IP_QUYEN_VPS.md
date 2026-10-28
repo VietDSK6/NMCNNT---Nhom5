@@ -18,6 +18,8 @@
 | Node.js | 24.21.0, binary chính thức đã đối chiếu checksum |
 | Mã nguồn | `/home/user/mini-paas`, nhánh `main` |
 
+Evidence hiện tại chưa ghi loại file system của phân vùng chứa Docker data và repository. Nếu đưa ext4/journaling vào báo cáo như đặc tính môi trường thực tế, phải thu thêm kết quả `findmnt` hoặc `df -T`; chưa được suy ra chỉ từ việc VPS chạy Debian.
+
 IP `42.113.103.176` là địa chỉ quan sát ở chiều ra, không được coi là IP gắn trực tiếp cho VPS. Thử kết nối từ ngoài tới cổng 80 đã timeout dù Nginx tạm thời lắng nghe. Cấu hình hiện dùng Cloudflare Tunnel outbound-only, không tuyên bố VPS có cổng Internet vào trực tiếp.
 
 ## Cổng và đường truy cập
@@ -63,5 +65,7 @@ Nginx cài trên host hiện dừng và bị vô hiệu hóa khi khởi động.
 - Connector 2026.10.0 dùng image ghim digest, `restart=unless-stopped`, host network, root filesystem read-only, UID/GID `1000:1000`, bỏ capabilities và bật `no-new-privileges`.
 - Chỉ repository/app tin cậy trong allowlist được build; chưa nhận mã tùy ý từ Internet.
 - Các volume SQLite, Prometheus và Grafana còn là điểm trạng thái cục bộ; chưa có bản sao ngoài máy.
+
+T08 đã chứng minh online backup, checksum, integrity và restore trên volume tạm. Kết quả này chưa chứng minh quy tắc sao lưu 3–2–1 vì repository chưa có evidence về hai loại phương tiện và một bản ngoài vị trí VPS.
 
 Tên miền dùng nameserver Cloudflare `carlos.ns.cloudflare.com` và `stella.ns.cloudflare.com`. Published route của Tunnel quản lý `paas` và wildcard `*`; hai bản ghi `@`/`www` phục vụ Vercel vẫn ở chế độ DNS only. Xem [hướng dẫn TenTen/Cloudflare](../deployment/HUONG_DAN_TEN_MIEN_TENTEN.md).

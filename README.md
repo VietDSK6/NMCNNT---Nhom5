@@ -164,6 +164,8 @@ cd ../dashboard && npm ci && npm run build
 cd ../runner && npm ci && npm test
 ```
 
+Thành viên mới bắt đầu từ [hướng dẫn dựng và chạy toàn bộ dự án](docs/development/HUONG_DAN_THANH_VIEN_CHAY_DU_AN.md). Thành viên làm giao diện xem thêm hướng dẫn thiết lập Vite, API proxy, lệnh kiểm tra và quy trình bàn giao tại [`platform/dashboard/README.md`](platform/dashboard/README.md).
+
 Xem 100 dòng log gần nhất:
 
 ```bash
@@ -407,6 +409,6 @@ compose.yaml                Mô tả toàn bộ stack một máy
 - Toàn bộ hệ thống vẫn phụ thuộc một máy chạy Docker.
 - Vòng k6 trên Mac dùng chung host với hệ thống nên có thể tạo nhiễu tài nguyên; chỉ được chạy trên môi trường được phép và phải lặp lại trên VPS trước khi kết luận.
 
-Kiến trúc bản cuối dùng cho báo cáo/slide nằm tại [KIEN_TRUC_TONG_THE_CUOI.md](docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md). Các tài liệu theo mốc gồm [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
+Kiến trúc bản cuối dùng cho báo cáo/slide nằm tại [KIEN_TRUC_TONG_THE_CUOI.md](docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md). Bản [đối chiếu kiến thức học phần](docs/report/DOI_CHIEU_KIEN_THUC_MON_HOC.md) liên kết tám chương RIPT1304 với thành phần, kiểm thử và giới hạn của sản phẩm. Các tài liệu theo mốc gồm [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.

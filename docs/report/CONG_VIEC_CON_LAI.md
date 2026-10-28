@@ -1,54 +1,60 @@
 # Công việc còn lại để chốt bản nộp Mini PaaS
 
-> Đối soát ngày 16/10/2026 sau khi chốt release candidate và chuẩn hóa ma trận T01–T08.
+> Đối soát ngày 26/10/2026 với release candidate `v1.0.0-rc.2` và ma trận T01–T08 đã chuẩn hóa lại theo đúng nguồn gốc evidence.
 
 ## 1. Kết luận phạm vi sản phẩm
 
 Lõi sản phẩm đã đủ để bảo vệ như một Mini PaaS một máy: triển khai từ GitHub, tự build Docker image, chạy Web Service độc lập, cấp URL HTTPS, quản lý vòng đời, log, CPU/RAM, biến môi trường, lịch sử release và rollback cục bộ. Webhook tự deploy khi push không thuộc phạm vi đã chốt; database hosting, nhiều replica, autoscaling và registry riêng là hướng phát triển.
 
-Từ mốc này không nên thêm tính năng lớn trước khi hoàn tất khả năng dựng lại, bộ bằng chứng và báo cáo.
+Từ mốc này không nên thêm tính năng lớn trước khi hoàn tất hồ sơ. Công việc ưu tiên là thống nhất báo cáo, slide, video, bằng chứng và phần đóng góp cá nhân với RC2.
 
-## 2. Việc kỹ thuật bắt buộc còn lại
+## 2. Các mốc kỹ thuật
 
-### R1 — Chốt release candidate — đã đạt ngày 16/10/2026
+### R1 — Chốt release candidate — đã đạt ngày 17/10/2026
 
-- Đã chọn `v1.0.0-rc.1`, khóa kiến trúc và ghi manifest tại `docs/release/RELEASE_CANDIDATE_1.md`.
-- `make test`, deploy latest, T08, public HTTPS và ranh giới 401 đều đạt trên VPS; log tại `evidence/RELEASE/2026-10-16-v1.0.0-rc.1/`.
-- Đã sửa hai assertion hồi quy cũ để cho phép Web Service động nhưng vẫn bắt buộc App A/App B khỏe.
-- Đã quét cây/lịch sử Git; không phát hiện secret xác suất cao và không có database/file khóa được theo dõi.
+- Đã chọn `v1.0.0-rc.2`, khóa kiến trúc và ghi tiêu chí tại `docs/release/RELEASE_CANDIDATE_2.md`.
+- `make test`, deploy latest, T08, public HTTPS và ranh giới 401 đều đạt trên VPS; log tại `evidence/RELEASE/2026-10-17-v1.0.0-rc.2/`.
+- RC2 giữ nguyên chức năng RC1 nhưng chuẩn hóa module Dashboard, Control API và Runner; runtime `2ce0e1c` đã được hồi quy đầy đủ.
+- Đã quét evidence RC2; không phát hiện secret xác suất cao và không đưa database/file khóa vào gói bằng chứng.
 - README đã ghi phiên bản Docker, Compose, Node.js, Nginx, Prometheus, Grafana, k6 và cloudflared.
 
-### R2 — Hoàn thành T08 dựng lại/khôi phục — đã đạt ngày 15/10/2026
+### R2 — Sao lưu/khôi phục — đã đạt; chưa chứng minh 3–2–1
 
-- Viết quy trình sao lưu tối thiểu cho SQLite/cấu hình cần giữ, không đưa secret vào Git.
-- Kiểm thử khôi phục trên bản sao hoặc môi trường tách biệt; không phá stack đang demo.
-- Sau khôi phục phải đăng nhập được, đọc danh sách ứng dụng và truy cập ít nhất một Web Service.
-- Lưu `environment`, `procedure`, `test-record`, `result`, `conclusion` và checksum tại `evidence/T08/`.
+- T08 ngày 15/10 đã kiểm tra online backup, checksum, SQLite integrity, restore vào volume tạm và API phục hồi mà không thay đổi stack live.
+- T08 được chạy lại trên runtime RC2 ngày 17/10 và đạt `PASS`.
+- Database nhạy cảm được giữ ngoài repository.
+- Chưa có evidence về hai loại phương tiện và một bản ngoài vị trí VPS; báo cáo không được tuyên bố đã đạt quy tắc 3–2–1.
 
-Kết quả: đã đạt trên VPS ở commit `c6b1be0`; database phục hồi đủ bốn ứng dụng, API tạm hoạt động và stack live không thay đổi. Bằng chứng nằm tại `evidence/T08/2026-10-15-vps/`.
+### R3 — Chuẩn hóa bộ T01–T08 — đã cập nhật cho RC2 ngày 26/10/2026
 
-### R3 — Chuẩn hóa bộ T01–T08 — đã hoàn thành kỹ thuật ngày 16/10/2026
+- Ma trận tại `docs/test-plan/BANG_KIEM_THU_T01_T08.md` đã dùng RC2 làm phiên bản trình bày và giữ đúng commit/ngày của từng phép đo.
+- T02–T05 và T07 được đối soát với hồi quy RC2 ngày 17/10; T08 được chạy lại trên runtime RC2.
+- T06 giữ nguyên ba vòng dữ liệu gốc trên commit `5cc99b1`; báo cáo phải nêu rõ generator chạy cùng VPS và kết quả không đại diện SLA/production.
+- Biên bản audit RC1 tiếp tục được giữ làm provenance cho evidence lịch sử, không bị gán thành evidence runtime RC2.
+- T01 vẫn là `Đạt có lưu ý` vì thiếu raw log nguyên bản của lần dựng VPS sạch ngày 14/10.
+- Các bài RC2 đã ghi người thực hiện Đỗ Sỹ Việt — B24DCCC287; T06 còn phải đối soát tên/MSSV người trực tiếp chạy.
 
-- Ma trận thống nhất đã có tại `docs/test-plan/BANG_KIEM_THU_T01_T08.md`, gồm điều kiện, thao tác, kỳ vọng, thực tế, kết quả, thời gian, commit, môi trường, người thực hiện và đường dẫn bằng chứng.
-- T01–T05 và T07 được đối soát với hồi quy release candidate trên VPS; T08 được chạy lại trên đúng release candidate.
-- T06 giữ nguyên ba vòng dữ liệu gốc trên commit `5cc99b1` vì release candidate không thay đổi đường xử lý request; báo cáo phải nêu rõ đây không phải phép đo SLA/production.
-- Đã kiểm tra 11/11 manifest checksum sẵn có và tạo manifest cho 29 tệp nguồn lịch sử tại `evidence/AUDIT/2026-10-16-v1.0.0-rc.1/`.
-- T01 được đánh dấu `Đạt có lưu ý`: có nhật ký dựng VPS và hồi quy release candidate nhưng thiếu raw log nguyên bản của lần dựng VPS sạch ngày 14/10; không tạo lại hoặc bịa bằng chứng quá khứ.
-- Luồng deploy commit mới nhất có build log/image/release trong hồ sơ release; Web Service `demo` có health/version qua URL public trong bằng chứng VPS.
+Nếu muốn nâng T01 lên mức đầy đủ, phải dựng lại từ VPS/máy sạch và thu raw log mới, ghi rõ đây là lần chạy mới; không tạo lại hoặc bịa bằng chứng quá khứ.
 
-Việc hành chính còn lại của R3: thay nhãn tạm `TV1 – chủ dự án` bằng họ tên và MSSV thật trước khi nộp. Nếu muốn nâng T01 lên mức đầy đủ tuyệt đối, phải dựng lại từ VPS/máy sạch và thu raw log mới, ghi rõ đó là lần chạy mới.
+### R4 — Đối chiếu kiến thức học phần — đã hoàn thành bản làm việc ngày 26/10/2026
+
+- Đã lập ma trận kiến thức → triển khai → kiểm thử → giới hạn tại `docs/report/DOI_CHIEU_KIEN_THUC_MON_HOC.md`.
+- Đã tách rõ Docker network với VLAN, giới hạn CPU với thuật toán lập lịch và container với VM.
+- Đã chuẩn hóa cách diễn giải T06, PaaS/Cloud, backup 3–2–1 và ranh giới Docker socket.
+- Cần rút gọn nội dung phù hợp để đưa vào báo cáo 12–18 trang và slide; không chép toàn bộ tài liệu làm việc vào phần nội dung chính.
 
 ## 3. Hồ sơ phải hoàn thiện
 
 ### Báo cáo 12–18 trang
 
 - Chương 1: tổng quan, lý do chọn đề tài, phạm vi và giả định.
-- Chương 2: Linux, mạng/DNS/HTTPS, reverse proxy, container, PaaS, CI/CD và giám sát.
-- Chương 3: dùng bản thiết kế hiện có, cập nhật sơ đồ cuối và Web Service động.
+- Chương 2: Linux/process, mạng/DNS/HTTPS, file system, container/VM, PaaS, bảo mật và giám sát; dùng bản đối chiếu kiến thức làm khung.
+- Chương 3: dùng bản thiết kế cuối RC2, sơ đồ mạng và luồng Git → build → image → deploy → route.
 - Chương 4: triển khai trên macOS/VPS, Cloudflare Tunnel và hướng dẫn sử dụng.
 - Chương 5: T01–T08, bảng số liệu T06, lỗi gặp phải và đánh giá.
 - Chương 6: kết luận, giới hạn một host và hướng phát triển.
 - Hoàn thiện tài liệu tham khảo, nguồn cấu hình và mục sử dụng AI; chuyển log/cấu hình dài sang phụ lục.
+- Ghi nguồn bộ slide RIPT1304; nếu chưa đo loại file system hoặc chưa có backup ngoài VPS thì nêu rõ là khoảng trống.
 
 ### Video, slide và đóng góp cá nhân
 
@@ -56,7 +62,7 @@ Việc hành chính còn lại của R3: thay nhãn tạm `TV1 – chủ dự á
 - Slide phải dùng cùng commit và số liệu với báo cáo.
 - Có đủ bốn phiếu đóng góp; mỗi người phải có file/cấu hình/thành phần kỹ thuật, commit hoặc đường dẫn và bằng chứng chạy thử riêng.
 
-## 4. Phần không cần làm để kịp bản nộp
+## 4. Phần không cần làm trước bản nộp
 
 - Webhook tự deploy khi push.
 - Repository riêng tư hoặc GitHub App.
@@ -65,12 +71,13 @@ Việc hành chính còn lại của R3: thay nhãn tạm `TV1 – chủ dự á
 - Registry riêng, image signing, SBOM, log tập trung hoặc Alertmanager.
 - Xóa Web Service từ Dashboard.
 
-Các mục trên chỉ nên làm sau khi R1–R3 và báo cáo đã hoàn tất; nếu không, ghi trung thực là giới hạn/hướng phát triển.
+Các mục trên chỉ nên làm sau khi báo cáo và hồ sơ bắt buộc đã hoàn tất; nếu không, ghi trung thực là giới hạn/hướng phát triển.
 
 ## 5. Thứ tự thực hiện đề xuất
 
-1. ~~Chốt release candidate và chạy regression cuối.~~ Hoàn thành với `v1.0.0-rc.1`.
-2. ~~Hoàn thiện ma trận T01–T08 và đối soát các evidence cũ theo mẫu thống nhất.~~ Hoàn thành; còn thay tên/MSSV người thực hiện.
-3. ~~Chốt sơ đồ kiến trúc bản cuối.~~ Hoàn thành tại `docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md`; tiếp theo viết đủ sáu chương báo cáo rồi rút nội dung thành slide.
-4. Chia sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
-5. Quay video trên đúng release cuối và đóng gói hồ sơ.
+1. ~~Chốt release candidate và chạy regression cuối.~~ Hoàn thành với `v1.0.0-rc.2`.
+2. ~~Hoàn thiện ma trận T01–T08 và đối soát evidence theo mẫu thống nhất.~~ Hoàn thành kỹ thuật; còn xác nhận người thực hiện T06.
+3. ~~Chốt sơ đồ kiến trúc và ma trận đối chiếu kiến thức môn học.~~ Hoàn thành; tiếp theo rút gọn vào báo cáo.
+4. Hoàn thành báo cáo 12–18 trang và tài liệu tham khảo/AI.
+5. Hoàn thành sản phẩm kỹ thuật và phiếu đóng góp cho bốn thành viên.
+6. Làm slide, quay video trên RC2 và đóng gói hồ sơ.
