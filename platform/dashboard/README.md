@@ -36,10 +36,10 @@ Từ thư mục gốc của repository:
 git switch main
 git pull --ff-only
 git switch -c member/thao-dashboard-filter
-cp .env.example .env
+cp team.env.example .env
 ```
 
-Mở `.env` và thay toàn bộ giá trị `CHANGE_ME...` bằng giá trị phát triển riêng. Không gửi nội dung `.env` cho người khác và không commit file này.
+`team.env.example` dùng được ngay cho stack loopback local. Không dùng các mật khẩu/khóa mẫu đó trên VPS hoặc domain public. Không gửi nội dung `.env` sau khi đã thay bằng secret riêng và không commit file này.
 
 Cài đúng phiên bản thư viện đã khóa trong lockfile:
 

@@ -75,13 +75,15 @@ Không commit trực tiếp lên `main`, không dùng tên/email của thành vi
 
 ## 4. Tạo cấu hình phát triển
 
-Từ thư mục gốc:
+Trên máy thành viên, cách nhanh nhất là dùng cấu hình local đã chuẩn bị sẵn:
 
 ```bash
-cp .env.example .env
+cp team.env.example .env
 ```
 
-Mở `.env` và thay các giá trị `CHANGE_ME...`:
+File `team.env.example` chỉ dùng cho loopback local và chứa thông tin phát triển công khai. Không dùng nguyên file này trên VPS, domain public hoặc môi trường dùng chung.
+
+Nếu muốn mỗi máy có secret phát triển riêng, thay vào `.env`:
 
 - `ADMIN_PASSWORD`: ít nhất 12 ký tự.
 - `GRAFANA_ADMIN_PASSWORD`: ít nhất 12 ký tự và khác mật khẩu Dashboard.
@@ -98,7 +100,7 @@ SESSION_COOKIE_SECURE=false
 
 `TRUSTED_GITHUB_OWNERS` phải chỉ chứa các tài khoản GitHub đã được nhóm cho phép. Không dùng wildcard và không đưa repository không tin cậy vào allowlist.
 
-Không commit, chụp ảnh hoặc gửi nội dung `.env`. Mỗi thành viên tự tạo secret phát triển riêng trên máy mình.
+Không commit, chụp ảnh hoặc gửi nội dung `.env`. `team.env.example` có thể commit vì các giá trị trong đó được xác định rõ là thông tin local công khai, không phải secret của VPS.
 
 ## 5. Dựng toàn bộ hệ thống
 

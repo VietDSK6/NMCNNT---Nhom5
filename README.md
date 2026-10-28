@@ -76,6 +76,8 @@ P0.2 bắt buộc đặt mật khẩu quản trị, không có mật khẩu mặ
 cp .env.example .env
 ```
 
+Thành viên cần dựng nhanh toàn bộ hệ thống local có thể dùng `cp team.env.example .env`. Các giá trị trong file này là thông tin phát triển công khai, chỉ an toàn khi Gateway vẫn bind loopback `127.0.0.1`; không được dùng trên VPS hoặc domain public.
+
 Mở `.env`, thay `ADMIN_PASSWORD=CHANGE_ME...` và `GRAFANA_ADMIN_PASSWORD=CHANGE_ME...` bằng hai mật khẩu phát triển khác nhau, mỗi mật khẩu có ít nhất 12 ký tự; thay `RUNNER_SHARED_SECRET=CHANGE_ME...` bằng chuỗi riêng có ít nhất 24 ký tự; đặt `ENVIRONMENT_ENCRYPTION_KEY` bằng chuỗi khác có ít nhất 32 ký tự. Không commit file `.env`. Nếu bỏ `GRAFANA_ADMIN_PASSWORD`, Compose dùng `ADMIN_PASSWORD` để tương thích môi trường cũ. Nếu môi trường cũ chưa có `ENVIRONMENT_ENCRYPTION_KEY`, Control API tạm dùng `RUNNER_SHARED_SECRET`; chỉ nên dùng fallback này khi phát triển.
 
 Nếu thay `ADMIN_PASSWORD` rồi khởi động lại `control-api`, hash trong SQLite được cập nhật và các phiên Dashboard cũ bị hủy. Grafana chỉ dùng mật khẩu môi trường khi khởi tạo volume `grafana-data` lần đầu; thay biến sau đó không tự đổi mật khẩu trong volume đã tồn tại. Hãy đổi mật khẩu trong Grafana trước khi cập nhật `.env`, không xóa volume chỉ để đổi mật khẩu.
