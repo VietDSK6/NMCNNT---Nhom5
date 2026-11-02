@@ -1,0 +1,20 @@
+.glass,
+.glass-strong,
+.glass-subtle {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+.glass { background: var(--surface); }
+.glass-strong { background: var(--surface); }
+.glass-subtle { background: var(--surface-muted); }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong,
+  .glass-subtle { background: var(--surface-elevated); }
+}

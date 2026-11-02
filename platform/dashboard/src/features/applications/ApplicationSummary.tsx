@@ -1,53 +1,8 @@
-import { AppLink } from "../../app/routing";
-import { BoxIcon, ChevronIcon, DeployIcon, ExternalIcon } from "../../icons";
+import { BoxIcon, DeployIcon, ExternalIcon } from "../../icons";
 import { formatDateTime } from "../../shared/format";
 import { deploymentStatusLabels } from "../../shared/labels";
 import type { ApplicationItem, DeploymentItem } from "../../types";
 import { RuntimeBadge, StatusBadge } from "./StatusBadges";
-
-export function ApplicationDirectory({ applications }: { readonly applications: readonly ApplicationItem[] }) {
-  if (applications.length === 0) {
-    return (
-      <div className="page-empty">
-        <BoxIcon />
-        <div><h2>Chưa có ứng dụng</h2><p>Ứng dụng được đăng ký trong danh mục Control API sẽ xuất hiện tại đây.</p></div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="service-directory">
-      {applications.map((application) => {
-        const observedVersion = application.observedVersion || application.runtime.observedVersion || "Chưa đọc được";
-        return (
-          <article className="service-row" key={application.id}>
-            <div className="service-row__identity">
-              <span className="app-icon"><BoxIcon /></span>
-              <div>
-                <span className="app-slug">{application.slug}</span>
-                <AppLink to={`/applications/${application.id}`}><h2>{application.name}</h2></AppLink>
-                <p>{application.description}</p>
-              </div>
-            </div>
-            <div className="service-row__state">
-              <RuntimeBadge status={application.runtime.status} />
-              <StatusBadge status={application.health.status} />
-            </div>
-            <dl className="service-row__facts">
-              <div><dt>Phiên bản</dt><dd>{observedVersion}</dd></div>
-              <div><dt>Đường dẫn</dt><dd>{application.route}</dd></div>
-              <div><dt>Cập nhật</dt><dd>{formatDateTime(application.health.checkedAt)}</dd></div>
-            </dl>
-            <div className="service-row__actions">
-              <a className="icon-button" href={application.route} target="_blank" rel="noreferrer" aria-label={`Mở ${application.name}`}><ExternalIcon /></a>
-              <AppLink className="button button--secondary" to={`/applications/${application.id}`}>Xem chi tiết<ChevronIcon /></AppLink>
-            </div>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
 
 export function ApplicationIdentity({ application }: { readonly application: ApplicationItem }) {
   return (

@@ -25,3 +25,11 @@ export const AlertIcon = (props: IconProps) => <IconBase {...props}><path d="M10
 export const PlayIcon = (props: IconProps) => <IconBase {...props}><path d="m7 4 12 8-12 8V4Z"/></IconBase>;
 export const StopIcon = (props: IconProps) => <IconBase {...props}><rect x="5" y="5" width="14" height="14" rx="2"/></IconBase>;
 export const DeployIcon = (props: IconProps) => <IconBase {...props}><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></IconBase>;
+export const EyeIcon = (props: IconProps) => <IconBase {...props}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+export const EyeOffIcon = (props: IconProps) => <IconBase {...props}><path d="M9.9 5.2A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.1 6.1A17 17 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 4.2-.9"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></IconBase>;
+export const UserIcon = (props: IconProps) => <IconBase {...props}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></IconBase>;
+export const LockIcon = (props: IconProps) => <IconBase {...props}><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></IconBase>;
+export const GitIcon = (props: IconProps) => <IconBase {...props}><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="9" r="2.5"/><path d="M6 8.5v7M18 11.5c0 4-6 2-11 5"/></IconBase>;
+export const MenuIcon = (props: IconProps) => <IconBase {...props}><path d="M4 6h16M4 12h16M4 18h16"/></IconBase>;
+export const ChartIcon = (props: IconProps) => <IconBase {...props}><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></IconBase>;
+export const SearchIcon = (props: IconProps) => <IconBase {...props}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></IconBase>;

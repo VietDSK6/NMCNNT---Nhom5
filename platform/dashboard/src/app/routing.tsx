@@ -60,11 +60,13 @@ export function AppLink({
   children,
   className,
   active = false,
+  title,
 }: {
   readonly to: string;
   readonly children: ReactNode;
   readonly className?: string;
   readonly active?: boolean;
+  readonly title?: string;
 }) {
   function navigate(event: ReactMouseEvent<HTMLAnchorElement>) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -75,5 +77,5 @@ export function AppLink({
     window.scrollTo({ top: 0 });
   }
 
-  return <a href={to} className={className} aria-current={active ? "page" : undefined} onClick={navigate}>{children}</a>;
+  return <a href={to} className={className} title={title} aria-current={active ? "page" : undefined} onClick={navigate}>{children}</a>;
 }
