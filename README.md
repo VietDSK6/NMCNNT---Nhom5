@@ -50,7 +50,7 @@ Môi trường nghiệm thu được chốt ở Debian 12 `x86_64`, Docker Engin
 
 Giới hạn còn lại của luồng triển khai từ Git:
 
-- Repository động chỉ hỗ trợ GitHub công khai thuộc `TRUSTED_GITHUB_OWNERS`, nhánh `main`, Dockerfile trong build context và cổng 3000; chưa có GitHub App, repository riêng tư, chọn nhánh/tag, webhook, hủy build hoặc xóa service.
+- Repository động chỉ hỗ trợ GitHub công khai thuộc `TRUSTED_GITHUB_OWNERS`, Dockerfile trong build context và cổng 3000; chọn được nhánh hoặc tag lúc tạo service, và xóa được Web Service (gỡ container, image, lịch sử). Chưa có GitHub App, repository riêng tư, webhook hoặc hủy build.
 - Chưa đẩy image lên registry nên mới có image ID cục bộ, chưa có registry digest/chữ ký image/SBOM.
 - Chưa có Alertmanager/kênh gửi thông báo và lưu trữ log tập trung; T06 đã nghiệm thu lặp lại trên VPS nhưng nguồn phát tải vẫn chạy cùng máy với hệ thống.
 - Hàng đợi operation chưa bền vững; release/rollback hiện phụ thuộc image cục bộ, chưa có registry digest để khôi phục trên host khác.
@@ -414,3 +414,9 @@ compose.yaml                Mô tả toàn bộ stack một máy
 Kiến trúc bản cuối dùng cho báo cáo/slide nằm tại [KIEN_TRUC_TONG_THE_CUOI.md](docs/architecture/KIEN_TRUC_TONG_THE_CUOI.md). Bản [đối chiếu kiến thức học phần](docs/report/DOI_CHIEU_KIEN_THUC_MON_HOC.md) liên kết tám chương RIPT1304 với thành phần, kiểm thử và giới hạn của sản phẩm. Các tài liệu theo mốc gồm [P0.1_KIEN_TRUC.md](docs/architecture/P0.1_KIEN_TRUC.md), [P0.2_CONTROL_PLANE.md](docs/architecture/P0.2_CONTROL_PLANE.md), [P0.2B_DEPLOYMENT_RUNNER.md](docs/architecture/P0.2B_DEPLOYMENT_RUNNER.md), [P0.2C_OBSERVABILITY.md](docs/architecture/P0.2C_OBSERVABILITY.md), [P1.1A_CI.md](docs/architecture/P1.1A_CI.md), [P1_GIT_DEPLOYMENT.md](docs/architecture/P1_GIT_DEPLOYMENT.md), [P1_OBSERVABILITY.md](docs/architecture/P1_OBSERVABILITY.md), [P1_DASHBOARD_NAVIGATION.md](docs/architecture/P1_DASHBOARD_NAVIGATION.md), [P1_ENVIRONMENT_VARIABLES.md](docs/architecture/P1_ENVIRONMENT_VARIABLES.md), [P1_LOAD_TESTING.md](docs/architecture/P1_LOAD_TESTING.md), [P2_RELEASE_ROLLBACK.md](docs/architecture/P2_RELEASE_ROLLBACK.md) và [P2_BACKUP_RESTORE.md](docs/architecture/P2_BACKUP_RESTORE.md).
 
 Yêu cầu hồ sơ mới được theo dõi tại [CHECKLIST_HO_SO_NOP.md](docs/report/CHECKLIST_HO_SO_NOP.md); mẫu kiểm thử và phiếu đóng góp nằm trong `docs/test-plan/` và `docs/report/`.
+
+## Lịch sử CPU/RAM và xóa Web Service
+
+- Control API lấy mẫu CPU/RAM của mọi container đang chạy mỗi 15 giây, lưu vào bảng `resource_samples` (SQLite) và giữ 24 giờ. `GET /api/v1/metrics/history?range=1h|24h` trả chuỗi thời gian đã gộp theo phút (1 giờ) hoặc 10 phút (24 giờ); Tổng quan vẽ biểu đồ đường từ API này.
+- `DELETE /api/v1/applications/:appId` chỉ áp dụng cho Web Service tạo từ Git: Runner gỡ container và mọi image `mini-paas/service-<slug>`, sau đó Control API xóa bản ghi, release, deployment, biến môi trường và ghi audit `service.delete`. App A/B bị từ chối. Dashboard yêu cầu gõ lại slug để xác nhận.
+- Khi tạo Web Service có thể nhập nhánh hoặc tag (ví dụ `develop`, `v1.2.0`); Runner phân giải thành commit qua GitHub `commits/{ref}`.
