@@ -22,6 +22,8 @@ import type {
   OperationRecord,
   ReleaseOrigin,
   ReleaseRecord,
+  ResourceHistoryPoint,
+  ResourceSampleInput,
   SessionUser,
   UserRecord,
 } from "./database/types.js";
@@ -149,6 +151,56 @@ export class ControlDatabase {
 
   findApplication(id: string): ApplicationRecord | undefined {
     return this.listApplications().find((application) => application.id === id);
+  }
+
+  // Xóa hẳn một Web Service và dữ liệu phụ thuộc; chỉ ứng dụng kind = 'git' được phép.
+  deleteWebService(id: string): boolean {
+    const application = this.findApplication(id);
+    if (!application || application.kind !== "git") return false;
+    this.#db.exec("BEGIN IMMEDIATE;");
+    try {
+      this.#db.prepare("DELETE FROM releases WHERE application_id = ?").run(id);
+      this.#db.prepare("DELETE FROM deployments WHERE application_id = ?").run(id);
+      this.#db.prepare("DELETE FROM operations WHERE application_id = ?").run(id);
+      this.#db.prepare("DELETE FROM applications WHERE id = ?").run(id);
+      this.#db.exec("COMMIT;");
+    } catch (error) {
+      this.#db.exec("ROLLBACK;");
+      throw error;
+    }
+    return true;
+  }
+
+  addResourceSamples(samples: readonly ResourceSampleInput[], sampledAtSeconds: number): void {
+    if (samples.length === 0) return;
+    const statement = this.#db.prepare(`
+      INSERT INTO resource_samples (application_id, sampled_at, cpu_percent, memory_percent)
+      VALUES (?, ?, ?, ?)
+    `);
+    for (const sample of samples) {
+      statement.run(sample.applicationId, sampledAtSeconds, sample.cpuPercent, sample.memoryPercent);
+    }
+  }
+
+  pruneResourceSamples(beforeSeconds: number): void {
+    this.#db.prepare("DELETE FROM resource_samples WHERE sampled_at < ?").run(beforeSeconds);
+  }
+
+  resourceHistory(sinceSeconds: number, bucketSeconds: number, applicationId?: string): readonly ResourceHistoryPoint[] {
+    const rows = this.#db.prepare(`
+      SELECT application_id, (sampled_at / ?) * ? AS bucket_start,
+             AVG(cpu_percent) AS cpu_percent, AVG(memory_percent) AS memory_percent
+      FROM resource_samples
+      WHERE sampled_at >= ? AND (? IS NULL OR application_id = ?)
+      GROUP BY application_id, bucket_start
+      ORDER BY bucket_start ASC
+    `).all(bucketSeconds, bucketSeconds, sinceSeconds, applicationId ?? null, applicationId ?? null) as readonly Record<string, unknown>[];
+    return rows.map((row) => ({
+      applicationId: String(row.application_id),
+      bucketStart: Number(row.bucket_start),
+      cpuPercent: Number(Number(row.cpu_percent).toFixed(2)),
+      memoryPercent: Number(Number(row.memory_percent).toFixed(1)),
+    }));
   }
 
   setDesiredVersion(id: string, version: string): void {

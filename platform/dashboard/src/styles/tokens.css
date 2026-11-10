@@ -1,0 +1,196 @@
+/* Design tokens. Light và dark dùng cùng một tập tên; component chỉ tham chiếu token, không viết màu cứng. */
+:root {
+  /* Nền và bề mặt: page < surface < elevated */
+  --page-bg: #e9eef7;
+  --page-bg-end: #e4eaf5;
+  --surface: #fafbfe;
+  --surface-muted: #eff3fa;
+  --surface-hover: #e3ebf7;
+  --surface-elevated: #fafbfe;
+  --border: #d2dbeb;
+  --border-strong: #b9c6dd;
+  --shadow-card: 0 1px 2px rgba(20, 34, 74, 0.06), 0 6px 16px rgba(20, 34, 74, 0.07);
+  --shadow-pop: 0 12px 32px rgba(23, 37, 84, 0.16);
+
+  /* Chữ */
+  --text-strong: #14224a;
+  --text-muted: #4a5878;
+  --text-on-accent: #ffffff;
+
+  /* Màu chủ đạo */
+  --accent-1: #2754c5;
+  --accent-2: #2563eb;
+  --accent-3: #0284c7;
+  --accent-gradient: linear-gradient(135deg, #3b6fe6, #2a55c8);
+  --accent-shadow: rgba(39, 84, 197, 0.28);
+  --primary-soft: #dbe6fa;
+
+  /* Trạng thái: màu gốc cho icon, chấm, biểu đồ; -fg đạt AA cho chữ nhỏ trên nền -bg */
+  --success: #059669;
+  --success-fg: #047857;
+  --success-bg: #d1fae5;
+  --warning: #d97706;
+  --warning-fg: #b45309;
+  --warning-bg: #fef3c7;
+  --danger: #dc2626;
+  --danger-fg: #b91c1c;
+  --danger-bg: #fee2e2;
+  --info: #0284c7;
+  --info-fg: #0369a1;
+  --info-bg: #e0f2fe;
+
+  /* Thẻ KPI */
+  --kpi-sky-bg: #dbeafe;
+  --kpi-sky-fg: #1d4ed8;
+  --kpi-mint-bg: #d1fae5;
+  --kpi-mint-fg: #047857;
+  --kpi-amber-bg: #fef3c7;
+  --kpi-amber-fg: #b45309;
+  --kpi-teal-bg: #e0f2fe;
+  --kpi-teal-fg: #0369a1;
+
+  /* Biểu đồ: mỗi đường một màu khác hẳn nhau */
+  --chart-1: #1d4ed8;
+  --chart-2: #d97706;
+  --chart-3: #059669;
+  --chart-4: #0891b2;
+
+  /* Thanh bên */
+  --sidebar-bg: #101d33;
+  --sidebar-text: #e6ecfa;
+  --sidebar-muted: rgba(230, 236, 250, 0.64);
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(59, 130, 246, 0.18);
+  --sidebar-divider: rgba(255, 255, 255, 0.1);
+  --sidebar-accent: #4f8df7;
+
+  /* Banner chào */
+  --banner-bg: linear-gradient(120deg, #d3e1fb, #bbd0f6);
+  --banner-wave-1: rgba(29, 78, 216, 0.1);
+  --banner-wave-2: rgba(255, 255, 255, 0.4);
+
+  /* Khung log / mã */
+  --code-bg: #0f1b33;
+  --code-fg: #d5deec;
+  --code-muted: #8a99b4;
+  --code-border: rgba(255, 255, 255, 0.1);
+  --code-error-bg: rgba(248, 113, 113, 0.12);
+
+  /* Hiệu ứng kính (chỉ dùng cho panel đăng nhập, toast, menu nổi) */
+  --glass-blur: 12px;
+  --glass-saturate: 120%;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  --font-sans: "Be Vietnam Pro", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --text-h1: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+  --text-h2: clamp(1.2rem, 1.05rem + 0.6vw, 1.5rem);
+  --text-body: 0.9375rem;
+  --leading-body: 1.5;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --gutter: clamp(16px, 4vw, 32px);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-fast: 0.22s;
+  --duration-base: 0.45s;
+  --duration-slow: 0.8s;
+
+  --z-background: -1;
+  --z-content: 10;
+  --z-chrome: 20;
+  --z-dropdown: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-cursor: 60;
+
+  /* Nền Aurora của trang đăng nhập */
+  --aurora-blue: #cfe3ff;
+  --aurora-sky: #bfe6ff;
+  --aurora-ice: #e3f0ff;
+  --aurora-mint: #c9f5e6;
+  --aurora-teal: #d3f3f6;
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --page-bg: #0b1428;
+  --page-bg-end: #0d1830;
+  --surface: #162642;
+  --surface-muted: #1b2e4f;
+  --surface-hover: #213a63;
+  --surface-elevated: #1e3358;
+  --border: #2a3f66;
+  --border-strong: #3a5385;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.28);
+  --shadow-pop: 0 14px 36px rgba(0, 0, 0, 0.5);
+
+  --text-strong: #dce6f8;
+  --text-muted: #a3b4d3;
+
+  --accent-1: #60a5fa;
+  --accent-2: #3b82f6;
+  --accent-3: #38bdf8;
+  --accent-shadow: rgba(59, 130, 246, 0.4);
+  --primary-soft: rgba(59, 130, 246, 0.2);
+
+  --success: #34d399;
+  --success-fg: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --warning: #fbbf24;
+  --warning-fg: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.15);
+  --danger: #f87171;
+  --danger-fg: #f87171;
+  --danger-bg: rgba(248, 113, 113, 0.16);
+  --info: #38bdf8;
+  --info-fg: #38bdf8;
+  --info-bg: rgba(56, 189, 248, 0.15);
+
+  --kpi-sky-bg: rgba(59, 130, 246, 0.2);
+  --kpi-sky-fg: #93c5fd;
+  --kpi-mint-bg: rgba(52, 211, 153, 0.16);
+  --kpi-mint-fg: #34d399;
+  --kpi-amber-bg: rgba(251, 191, 36, 0.16);
+  --kpi-amber-fg: #fbbf24;
+  --kpi-teal-bg: rgba(56, 189, 248, 0.16);
+  --kpi-teal-fg: #38bdf8;
+
+  --chart-1: #3b82f6;
+  --chart-2: #fbbf24;
+  --chart-3: #34d399;
+  --chart-4: #22d3ee;
+
+  --sidebar-bg: #0a1424;
+  --sidebar-text: #d6e2f7;
+  --sidebar-muted: rgba(214, 226, 247, 0.7);
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(59, 130, 246, 0.2);
+  --sidebar-divider: rgba(255, 255, 255, 0.1);
+
+  --banner-bg: linear-gradient(120deg, #1f3f8f, #1a3472);
+  --banner-wave-1: rgba(255, 255, 255, 0.06);
+  --banner-wave-2: rgba(255, 255, 255, 0.04);
+
+  --code-bg: #0a1224;
+
+  --aurora-blue: #2563eb40;
+  --aurora-sky: #0ea5e933;
+  --aurora-ice: #3b82f626;
+  --aurora-mint: #2fe0b02e;
+  --aurora-teal: #06b6d426;
+
+  color-scheme: dark;
+}

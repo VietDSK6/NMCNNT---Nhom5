@@ -103,3 +103,16 @@ export interface ReleaseRecord {
   readonly requestedBy: string;
   readonly createdAt: string;
 }
+
+export interface ResourceSampleInput {
+  readonly applicationId: string;
+  readonly cpuPercent: number;
+  readonly memoryPercent: number;
+}
+
+export interface ResourceHistoryPoint {
+  readonly applicationId: string;
+  readonly bucketStart: number;
+  readonly cpuPercent: number;
+  readonly memoryPercent: number;
+}

@@ -46,11 +46,15 @@ export class TrustedSourceBuilder {
   }
 
   async resolveLatestCommit(source) {
-    const response = await this.fetch(source.latestRevisionUrl, {
+    // GitHub cache phản hồi API công khai 60 giây; tham số này buộc lấy commit vừa được push.
+    const revisionUrl = new URL(source.latestRevisionUrl);
+    revisionUrl.searchParams.set("cb", Date.now().toString(36));
+    const response = await this.fetch(revisionUrl.toString(), {
       redirect: "follow",
       signal: AbortSignal.timeout(this.downloadTimeoutMs),
       headers: {
-        accept: "application/vnd.github+json",
+        // Endpoint commits/{ref} của Web Service động trả cả danh sách file; kiểu sha chỉ trả đúng mã commit.
+        accept: source.dynamic ? "application/vnd.github.sha" : "application/vnd.github+json",
         "user-agent": "mini-paas-deployment-runner",
         "x-github-api-version": "2022-11-28",
       },
@@ -77,13 +81,15 @@ export class TrustedSourceBuilder {
     if (bytes.length === 0 || bytes.length > DEFAULT_MAX_METADATA_BYTES) {
       throw new RunnerInputError("source_metadata_invalid", "Phản hồi metadata từ GitHub rỗng hoặc quá lớn.", 502);
     }
+    const plain = bytes.toString("utf8").trim();
+    if (/^[0-9a-f]{40}$/.test(plain)) return plain;
     let body;
     try {
-      body = JSON.parse(bytes.toString("utf8"));
+      body = JSON.parse(plain);
     } catch {
       throw new RunnerInputError("source_metadata_invalid", "GitHub trả về metadata không hợp lệ.", 502);
     }
-    const commit = body?.object?.sha;
+    const commit = body?.object?.sha ?? body?.sha;
     if (typeof commit !== "string" || !/^[0-9a-f]{40}$/.test(commit)) {
       throw new RunnerInputError("source_metadata_invalid", "GitHub không trả về commit SHA hợp lệ.", 502);
     }

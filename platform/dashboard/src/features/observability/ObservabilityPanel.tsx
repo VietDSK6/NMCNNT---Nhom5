@@ -23,8 +23,9 @@ export function ObservabilityPanel({ applications }: { readonly applications: re
   const requestSequence = useRef(0);
   const selectedApplication = applications.find((application) => application.id === selectedAppId) ?? applications[0];
 
+  const selectedId = selectedApplication?.id;
   const loadObservability = useCallback(async () => {
-    if (!selectedApplication) return;
+    if (!selectedId) return;
     const requestId = ++requestSequence.current;
     setLoading(true);
     setStats(null);
@@ -32,8 +33,8 @@ export function ObservabilityPanel({ applications }: { readonly applications: re
     setStatsError("");
     setLogsError("");
     const [statsResult, logsResult] = await Promise.allSettled([
-      api.stats(selectedApplication.id),
-      api.logs(selectedApplication.id, tail),
+      api.stats(selectedId),
+      api.logs(selectedId, tail),
     ]);
     if (requestId !== requestSequence.current) return;
     if (statsResult.status === "fulfilled") {
@@ -49,7 +50,7 @@ export function ObservabilityPanel({ applications }: { readonly applications: re
       setLogsError(logsResult.reason instanceof Error ? logsResult.reason.message : "Không thể lấy nhật ký ứng dụng.");
     }
     setLoading(false);
-  }, [selectedApplication?.id, tail]);
+  }, [selectedId, tail]);
 
   useEffect(() => {
     void loadObservability();

@@ -1,15 +1,16 @@
+import { TableCard } from "../../components/ui/TableCard";
 import { formatDateTime } from "../../shared/format";
 import { actionLabels } from "../../shared/labels";
 import type { AuditEvent } from "../../types";
 
 export function AuditTable({ events }: { readonly events: readonly AuditEvent[] }) {
   return (
-    <div className="table-wrap">
+    <TableCard footer={`Tổng số: ${events.length} sự kiện`}>
       <table>
         <thead><tr><th>Thời gian</th><th>Thao tác</th><th>Người thực hiện</th><th>Kết quả</th><th>Địa chỉ nguồn</th></tr></thead>
         <tbody>
           {events.length === 0 ? (
-            <tr><td colSpan={5} className="empty-cell">Chưa có thao tác nào được ghi nhận.</td></tr>
+            <tr><td colSpan={5} className="empty-cell">Chưa có sự kiện phù hợp.</td></tr>
           ) : events.map((event) => (
             <tr key={event.id}>
               <td>{formatDateTime(event.createdAt)}</td>
@@ -21,6 +22,6 @@ export function AuditTable({ events }: { readonly events: readonly AuditEvent[] 
           ))}
         </tbody>
       </table>
-    </div>
+    </TableCard>
   );
 }

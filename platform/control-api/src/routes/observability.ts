@@ -9,6 +9,11 @@ interface ObservabilityRouteContext {
   readonly requireUser: (request: FastifyRequest, reply: FastifyReply) => SessionUser | undefined;
 }
 
+const HISTORY_WINDOWS = {
+  "1h": { seconds: 3_600, bucketSeconds: 60 },
+  "24h": { seconds: 86_400, bucketSeconds: 600 },
+} as const;
+
 export function registerObservabilityRoutes(server: FastifyInstance, context: ObservabilityRouteContext): void {
   const { db, runnerClient, requireUser } = context;
 
@@ -61,5 +66,39 @@ export function registerObservabilityRoutes(server: FastifyInstance, context: Ob
       const failure = observationFailure(error);
       return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
     }
+  });
+
+  // Lịch sử CPU/RAM do bộ lấy mẫu của Control API lưu vào SQLite, gộp theo khoảng thời gian.
+  server.get<{ Querystring: { range?: "1h" | "24h"; appId?: string } }>("/api/v1/metrics/history", {
+    schema: {
+      querystring: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          range: { type: "string", enum: ["1h", "24h"], default: "1h" },
+          appId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const user = requireUser(request, reply);
+    if (!user) return;
+    const window = HISTORY_WINDOWS[request.query.range ?? "1h"];
+    const since = Math.floor(Date.now() / 1_000) - window.seconds;
+    const points = db.resourceHistory(since, window.bucketSeconds, request.query.appId);
+    const names = new Map(db.listApplications().map((application) => [application.id, application.name]));
+    return {
+      data: {
+        range: request.query.range ?? "1h",
+        bucketSeconds: window.bucketSeconds,
+        applications: [...new Set(points.map((point) => point.applicationId))].map((id) => ({ id, name: names.get(id) ?? id })),
+        points: points.map((point) => ({
+          time: new Date(point.bucketStart * 1_000).toISOString(),
+          applicationId: point.applicationId,
+          cpuPercent: point.cpuPercent,
+          memoryPercent: point.memoryPercent,
+        })),
+      },
+    };
   });
 }

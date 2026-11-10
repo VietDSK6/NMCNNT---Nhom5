@@ -55,6 +55,13 @@ export interface RunnerStats {
   readonly sampledAt: string;
 }
 
+export interface RunnerDeleteResult {
+  readonly appId: string;
+  readonly containerRemoved: boolean;
+  readonly removedImages: number;
+  readonly message: string;
+}
+
 export interface TrustedSource {
   readonly id: string;
   readonly name: string;
@@ -106,6 +113,7 @@ export interface RunnerClient {
     variables: readonly { readonly key: string; readonly value: string }[],
   ): Promise<RunnerActionResult>;
   rollback(appId: string, target: RunnerRollbackTarget): Promise<RunnerActionResult>;
+  deleteService(appId: string): Promise<RunnerDeleteResult>;
 }
 
 export class RunnerRequestError extends Error {
@@ -215,6 +223,10 @@ export class HttpRunnerClient implements RunnerClient {
       { method: "PUT", body: JSON.stringify({ variables }) },
       45_000,
     );
+  }
+
+  deleteService(appId: string): Promise<RunnerDeleteResult> {
+    return this.request<RunnerDeleteResult>(`/v1/apps/${encodeURIComponent(appId)}`, { method: "DELETE" }, 60_000);
   }
 
   rollback(appId: string, target: RunnerRollbackTarget): Promise<RunnerActionResult> {

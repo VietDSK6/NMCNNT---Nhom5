@@ -2,7 +2,7 @@ export interface WebServiceInput {
   readonly name: string;
   readonly slug: string;
   readonly repositoryUrl: string;
-  readonly defaultBranch: "main";
+  readonly defaultBranch: string;
   readonly buildContext: string;
 }
 
@@ -18,6 +18,7 @@ export class WebServiceValidationError extends Error {
 
 const reservedSlugs = new Set(["paas", "www", "api", "app-a", "app-b"]);
 const slugPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+const refPattern = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/;
 const contextPattern = /^(?:\.|[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]+)*)$/;
 
 export function normalizeWebService(
@@ -56,9 +57,15 @@ export function normalizeWebService(
       403,
     );
   }
-  const defaultBranch = value.defaultBranch ?? "main";
-  if (defaultBranch !== "main") {
-    throw new WebServiceValidationError("branch_not_allowed", "MVP hiện chỉ triển khai nhánh main.");
+  const defaultBranch = typeof value.defaultBranch === "string" ? value.defaultBranch.trim() : "main";
+  if (
+    !refPattern.test(defaultBranch)
+    || defaultBranch.includes("..")
+    || defaultBranch.includes("//")
+    || defaultBranch.endsWith("/")
+    || defaultBranch.endsWith(".lock")
+  ) {
+    throw new WebServiceValidationError("invalid_source_ref", "Nhánh hoặc tag không hợp lệ.");
   }
   const buildContext = typeof value.buildContext === "string" ? value.buildContext.trim() : ".";
   if (!contextPattern.test(buildContext) || buildContext.split("/").includes("..")) {
@@ -71,7 +78,7 @@ export function normalizeWebService(
     name,
     slug,
     repositoryUrl: `https://github.com/${owner}/${repository}`,
-    defaultBranch: "main",
+    defaultBranch,
     buildContext,
   };
 }

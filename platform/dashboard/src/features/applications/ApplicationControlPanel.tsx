@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DeployIcon, PlayIcon, RefreshIcon, StopIcon } from "../../icons";
 import { operationActionLabels, operationStatusLabels } from "../../shared/labels";
 import type { ApplicationItem, OperationAction } from "../../types";
@@ -12,6 +13,7 @@ export function ApplicationControlPanel({
   readonly submitting: boolean;
   readonly onAction: (application: ApplicationItem, action: OperationAction, version?: string) => void;
 }) {
+  const [confirmingStop, setConfirmingStop] = useState(false);
   const busy = submitting || Boolean(application.activeOperation);
   const running = application.runtime.status === "running" || application.runtime.status === "unhealthy";
   const currentVersion = application.runtime.observedVersion || application.observedVersion;
@@ -31,8 +33,13 @@ export function ApplicationControlPanel({
         <div className="operation-controls__group">
           <span>Vòng đời</span>
           <div>
-            {running ? (
-              <button className="action-button action-button--danger" disabled={busy} onClick={() => onAction(application, "stop")}><StopIcon />Dừng</button>
+            {running && confirmingStop ? (
+              <>
+                <button className="action-button action-button--danger" disabled={busy} onClick={() => { setConfirmingStop(false); onAction(application, "stop"); }}><StopIcon />Xác nhận dừng</button>
+                <button className="action-button" onClick={() => setConfirmingStop(false)}>Giữ nguyên</button>
+              </>
+            ) : running ? (
+              <button className="action-button action-button--danger" disabled={busy} onClick={() => setConfirmingStop(true)}><StopIcon />Dừng</button>
             ) : (
               <button className="action-button action-button--success" disabled={busy || application.runtime.status === "unknown"} onClick={() => onAction(application, "start")}><PlayIcon />Khởi động</button>
             )}

@@ -10,12 +10,16 @@
     "build": "tsc -b && vite build",
     "dev": "vite --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "lint": "node lint/node_modules/eslint/bin/eslint.js src"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "5.3.0",
+    "motion": "14.7.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-is": "19.3.1",
+    "recharts": "3.10.1"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

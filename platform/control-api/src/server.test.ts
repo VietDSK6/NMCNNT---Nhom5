@@ -4,6 +4,7 @@ import type { AppConfig } from "./config.js";
 import { ControlDatabase } from "./database.js";
 import type { ApplicationHealth } from "./health.js";
 import type { RunnerClient } from "./runner.js";
+import { collectResourceSamples } from "./sampler.js";
 import { createServer } from "./server.js";
 
 const config: AppConfig = {
@@ -38,6 +39,8 @@ const healthy: ApplicationHealth = {
   message: "Endpoint HTTP phản hồi bình thường.",
   observedVersion: "v1.0.0",
 };
+
+const deletedServices: string[] = [];
 
 const runnerClient: RunnerClient = {
   sources: async () => [{
@@ -166,6 +169,10 @@ const runnerClient: RunnerClient = {
       environmentVariableCount: variables.length,
     },
   }),
+  deleteService: async (appId) => {
+    deletedServices.push(appId);
+    return { appId, containerRemoved: true, removedImages: 2, message: `Đã gỡ container và 2 image của ${appId}.` };
+  },
   rollback: async (appId, target) => ({
     message: `Đã rollback ${appId} về ${target.version}.`,
     runtime: {
@@ -614,4 +621,89 @@ test("tạo Web Service từ repository tin cậy và xếp hàng deployment đ�
   });
   assert.equal(blocked.statusCode, 403);
   assert.equal(blocked.json().error, "repository_owner_not_allowed");
+});
+
+async function loginCookie(): Promise<string> {
+  const login = await server.inject({
+    method: "POST",
+    url: "/api/v1/auth/login",
+    headers: { origin: config.publicOrigin },
+    payload: { username: config.adminUsername, password: config.adminPassword },
+  });
+  const setCookie = login.headers["set-cookie"];
+  const cookie = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+  assert.ok(cookie);
+  return cookie;
+}
+
+test("Web Service nhận nhánh hoặc tag và từ chối giá trị không hợp lệ", async () => {
+  const cookie = await loginCookie();
+  const accepted = await server.inject({
+    method: "POST",
+    url: "/api/v1/services",
+    headers: { cookie, origin: config.publicOrigin },
+    payload: { name: "Ban Release", slug: "release-web", repositoryUrl: "https://github.com/VietDSK6/release-web", defaultBranch: "v1.2.0" },
+  });
+  assert.equal(accepted.statusCode, 202);
+  assert.equal(database.findApplication("release-web")?.defaultBranch, "v1.2.0");
+
+  for (const bad of ["../etc", "-x", "a b", "x.lock"]) {
+    const rejected = await server.inject({
+      method: "POST",
+      url: "/api/v1/services",
+      headers: { cookie, origin: config.publicOrigin },
+      payload: { name: "Sai Nhanh", slug: "bad-ref", repositoryUrl: "https://github.com/VietDSK6/bad-ref", defaultBranch: bad },
+    });
+    assert.equal(rejected.statusCode, 400, bad);
+  }
+  assert.equal(database.findApplication("bad-ref"), undefined);
+});
+
+test("xóa Web Service dọn dữ liệu, ghi audit và từ chối App A, thiếu xác thực, origin lạ", async () => {
+  const cookie = await loginCookie();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  while (database.findActiveDeployment("release-web")) await new Promise((resolve) => setTimeout(resolve, 20));
+
+  const anonymous = await server.inject({ method: "DELETE", url: "/api/v1/applications/release-web", headers: { origin: config.publicOrigin } });
+  assert.equal(anonymous.statusCode, 401);
+  const foreign = await server.inject({ method: "DELETE", url: "/api/v1/applications/release-web", headers: { cookie, origin: "https://evil.example" } });
+  assert.equal(foreign.statusCode, 403);
+  const catalog = await server.inject({ method: "DELETE", url: "/api/v1/applications/app-a", headers: { cookie, origin: config.publicOrigin } });
+  assert.equal(catalog.statusCode, 403);
+  assert.equal(catalog.json().error, "delete_not_allowed");
+  assert.ok(database.findApplication("app-a"));
+  const missing = await server.inject({ method: "DELETE", url: "/api/v1/applications/khong-ton-tai", headers: { cookie, origin: config.publicOrigin } });
+  assert.equal(missing.statusCode, 404);
+
+  const removed = await server.inject({ method: "DELETE", url: "/api/v1/applications/release-web", headers: { cookie, origin: config.publicOrigin } });
+  assert.equal(removed.statusCode, 200);
+  assert.equal(removed.json().data.removedImages, 2);
+  assert.deepEqual(deletedServices, ["release-web"]);
+  assert.equal(database.findApplication("release-web"), undefined);
+  assert.equal(database.listDeployments(50).some((item) => item.applicationId === "release-web"), false);
+  assert.ok(database.listAudit(50).some((item) => item.action === "service.delete" && item.resourceId === "release-web" && item.outcome === "succeeded"));
+});
+
+test("lưu lịch sử CPU/RAM, gộp theo khoảng thời gian và yêu cầu đăng nhập", async () => {
+  const now = Date.now();
+  const stored = await collectResourceSamples({ db: database, runnerClient, now: () => now });
+  assert.ok(stored >= 2);
+  await collectResourceSamples({ db: database, runnerClient, now: () => now + 15_000 });
+
+  assert.equal((await server.inject({ method: "GET", url: "/api/v1/metrics/history" })).statusCode, 401);
+  const cookie = await loginCookie();
+  const hour = await server.inject({ method: "GET", url: "/api/v1/metrics/history?range=1h&appId=app-a", headers: { cookie } });
+  assert.equal(hour.statusCode, 200);
+  const body = hour.json().data;
+  assert.equal(body.bucketSeconds, 60);
+  assert.deepEqual(body.applications, [{ id: "app-a", name: "Ứng dụng A" }]);
+  assert.ok(body.points.length >= 1);
+  assert.equal(body.points[0].cpuPercent, 1.25);
+  assert.equal(body.points[0].memoryPercent, 12.5);
+  const day = await server.inject({ method: "GET", url: "/api/v1/metrics/history?range=24h", headers: { cookie } });
+  assert.equal(day.json().data.bucketSeconds, 600);
+  assert.equal((await server.inject({ method: "GET", url: "/api/v1/metrics/history?range=7d", headers: { cookie } })).statusCode, 400);
+
+  database.pruneResourceSamples(Math.floor(now / 1_000) + 3_600);
+  assert.equal(database.resourceHistory(0, 60).length, 0);
 });

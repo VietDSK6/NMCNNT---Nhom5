@@ -213,6 +213,16 @@ export class DockerClient {
   create(name, body) { return this.request("POST", `/containers/create?name=${encodeURIComponent(name)}`, body, [201]); }
   remove(id) { return this.request("DELETE", `/containers/${encodeURIComponent(id)}?force=1&v=1`, undefined, [204]); }
 
+  async listImageTags(repository) {
+    const filters = encodeURIComponent(JSON.stringify({ reference: [repository] }));
+    const images = await this.request("GET", `/images/json?filters=${filters}`);
+    return images.flatMap((image) => image.RepoTags ?? []).filter((tag) => tag.startsWith(`${repository}:`));
+  }
+
+  removeImageTag(tag) {
+    return this.request("DELETE", `/images/${encodeURIComponent(tag)}?noprune=0`, undefined, [200]);
+  }
+
   async image(ref) {
     return this.request("GET", `/images/${encodeURIComponent(ref)}/json`);
   }

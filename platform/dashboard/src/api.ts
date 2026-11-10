@@ -14,6 +14,9 @@ import type {
   SourcesResponse,
   UserSession,
   CreateServiceInput,
+  DeleteServiceResult,
+  HistoryRange,
+  MetricsHistory,
 } from "./types";
 
 export class ApiError extends Error {
@@ -48,6 +51,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+interface RequestOptions {
+  readonly signal?: AbortSignal;
+}
+
 export const api = {
   session: () => request<UserSession>("/api/v1/auth/session"),
   login: (username: string, password: string) => request<UserSession>("/api/v1/auth/login", {
@@ -55,17 +62,17 @@ export const api = {
     body: JSON.stringify({ username, password }),
   }),
   logout: () => request<void>("/api/v1/auth/logout", { method: "POST" }),
-  applications: () => request<ApplicationsResponse>("/api/v1/applications"),
+  applications: ({ signal }: RequestOptions = {}) => request<ApplicationsResponse>("/api/v1/applications", { signal }),
   createService: (input: CreateServiceInput) => request<{
     data: { application: { id: string }; deployment: DeploymentItem };
   }>("/api/v1/services", {
     method: "POST",
     body: JSON.stringify(input),
   }),
-  operations: () => request<OperationsResponse>("/api/v1/operations?limit=12"),
-  sources: () => request<SourcesResponse>("/api/v1/sources"),
-  deployments: () => request<DeploymentsResponse>("/api/v1/deployments?limit=12"),
-  releases: () => request<ReleasesResponse>("/api/v1/releases?limit=30"),
+  operations: (limit = 12, { signal }: RequestOptions = {}) => request<OperationsResponse>(`/api/v1/operations?limit=${limit}`, { signal }),
+  sources: ({ signal }: RequestOptions = {}) => request<SourcesResponse>("/api/v1/sources", { signal }),
+  deployments: ({ signal }: RequestOptions = {}) => request<DeploymentsResponse>("/api/v1/deployments?limit=12", { signal }),
+  releases: ({ signal }: RequestOptions = {}) => request<ReleasesResponse>("/api/v1/releases?limit=30", { signal }),
   deploySource: (sourceId: string, commit: string) => request<{ data: DeploymentItem }>(
     "/api/v1/deployments",
     { method: "POST", body: JSON.stringify({ sourceId, commit }) },
@@ -88,8 +95,9 @@ export const api = {
   logs: (appId: string, tail: number) => request<{ data: ApplicationLogs }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/logs?tail=${tail}`,
   ),
-  stats: (appId: string) => request<{ data: ApplicationStats }>(
+  stats: (appId: string, { signal }: RequestOptions = {}) => request<{ data: ApplicationStats }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/stats`,
+    { signal },
   ),
   environment: (appId: string) => request<{ data: ApplicationEnvironment }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/environment`,
@@ -101,5 +109,13 @@ export const api = {
     `/api/v1/applications/${encodeURIComponent(appId)}/environment`,
     { method: "PUT", body: JSON.stringify({ variables }) },
   ),
-  audit: () => request<AuditResponse>("/api/v1/audit-events?limit=12"),
+  deleteService: (appId: string) => request<{ data: DeleteServiceResult }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}`,
+    { method: "DELETE" },
+  ),
+  metricsHistory: (range: HistoryRange, { signal }: RequestOptions = {}) => request<{ data: MetricsHistory }>(
+    `/api/v1/metrics/history?range=${range}`,
+    { signal },
+  ),
+  audit: (limit = 12, { signal }: RequestOptions = {}) => request<AuditResponse>(`/api/v1/audit-events?limit=${limit}`, { signal }),
 };

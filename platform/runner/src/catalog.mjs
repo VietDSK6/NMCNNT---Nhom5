@@ -99,10 +99,7 @@ export function createDynamicSourceSpec(input, trustedOwners = ["VietDSK6"]) {
   if (!trustedOwners.some((item) => item.toLowerCase() === owner.toLowerCase())) {
     throw new RunnerInputError("repository_owner_not_allowed", "Chủ sở hữu repository chưa nằm trong danh sách được phép.", 403);
   }
-  const defaultBranch = input.defaultBranch ?? "main";
-  if (defaultBranch !== "main") {
-    throw new RunnerInputError("branch_not_allowed", "MVP hiện chỉ triển khai nhánh main.");
-  }
+  const defaultBranch = validateSourceRef(input.defaultBranch ?? "main");
   const contextPath = input.contextPath ?? ".";
   if (typeof contextPath !== "string" || !BUILD_CONTEXT_PATTERN.test(contextPath) || contextPath.split("/").includes("..")) {
     throw new RunnerInputError("invalid_source_context", "Build context phải là đường dẫn tương đối an toàn trong repository.");
@@ -114,13 +111,30 @@ export function createDynamicSourceSpec(input, trustedOwners = ["VietDSK6"]) {
     provider: "github",
     repositoryUrl,
     archiveBaseUrl: `${repositoryUrl}/archive`,
-    latestRevisionUrl: `https://api.github.com/repos/${owner}/${repository}/git/ref/heads/${defaultBranch}`,
+    latestRevisionUrl: `https://api.github.com/repos/${owner}/${repository}/commits/${defaultBranch.split("/").map(encodeURIComponent).join("/")}`,
     defaultBranch,
     contextPath,
     appId,
     imageRepository: `mini-paas/service-${appId}`,
     dynamic: true,
   });
+}
+
+const SOURCE_REF_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/;
+
+// Nhánh hoặc tag: GitHub phân giải thành commit qua endpoint commits/{ref}.
+export function validateSourceRef(value) {
+  if (
+    typeof value !== "string"
+    || !SOURCE_REF_PATTERN.test(value)
+    || value.includes("..")
+    || value.includes("//")
+    || value.endsWith("/")
+    || value.endsWith(".lock")
+  ) {
+    throw new RunnerInputError("invalid_source_ref", "Nhánh hoặc tag không hợp lệ.");
+  }
+  return value;
 }
 
 export function listAppIds() {

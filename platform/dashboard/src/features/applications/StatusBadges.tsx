@@ -5,14 +5,15 @@ export function StatusBadge({ status }: { readonly status: ApplicationItem["heal
   return <span className={`status status--${status}`}><i />{label}</span>;
 }
 
+export const runtimeLabels = {
+  running: "Container chạy",
+  stopped: "Container dừng",
+  starting: "Đang khởi động",
+  unhealthy: "Container có lỗi",
+  unknown: "Chưa đọc được",
+} as const;
+
 export function RuntimeBadge({ status }: { readonly status: ApplicationItem["runtime"]["status"] }) {
-  const labels = {
-    running: "Container chạy",
-    stopped: "Container dừng",
-    starting: "Đang khởi động",
-    unhealthy: "Container có lỗi",
-    unknown: "Chưa đọc được",
-  } as const;
   const tone = status === "running" ? "healthy" : status === "stopped" || status === "unhealthy" ? "unhealthy" : "unknown";
-  return <span className={`status status--${tone}`}><i />{labels[status]}</span>;
+  return <span className={`status status--${tone}`}><i />{runtimeLabels[status]}</span>;
 }

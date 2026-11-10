@@ -37,6 +37,7 @@ interface ApplicationRouteContext {
   readonly executeOperation: (operation: OperationRecord, actor: SessionUser, ipAddress: string) => Promise<void>;
   readonly executeSourceDeployment: (deployment: DeploymentRecord, actor: SessionUser, ipAddress: string) => Promise<void>;
   readonly trackOperation: (task: Promise<void>) => void;
+  readonly activeDeletions: Set<string>;
 }
 
 export function registerApplicationRoutes(server: FastifyInstance, context: ApplicationRouteContext): void {
@@ -49,6 +50,7 @@ export function registerApplicationRoutes(server: FastifyInstance, context: Appl
     enforceSameOrigin,
     requireUser,
     isApplicationBusy,
+    activeDeletions,
     executeOperation,
     executeSourceDeployment,
     trackOperation,
@@ -109,7 +111,7 @@ export function registerApplicationRoutes(server: FastifyInstance, context: Appl
           name: { type: "string", minLength: 2, maxLength: 80 },
           slug: { type: "string", minLength: 1, maxLength: 63 },
           repositoryUrl: { type: "string", minLength: 1, maxLength: 240 },
-          defaultBranch: { type: "string", enum: ["main"] },
+          defaultBranch: { type: "string", minLength: 1, maxLength: 100 },
           buildContext: { type: "string", minLength: 1, maxLength: 160 },
         },
       },
@@ -178,6 +180,62 @@ export function registerApplicationRoutes(server: FastifyInstance, context: Appl
     });
     trackOperation(executeSourceDeployment(deployment, user, requestIp(request)));
     return reply.code(202).send({ data: { application, deployment } });
+  });
+
+  server.delete<{ Params: { appId: string } }>("/api/v1/applications/:appId", {
+    schema: {
+      params: {
+        type: "object",
+        additionalProperties: false,
+        required: ["appId"],
+        properties: { appId: { type: "string", pattern: "^[a-z0-9-]+$", maxLength: 64 } },
+      },
+    },
+  }, async (request, reply) => {
+    if (!enforceSameOrigin(request, reply)) return;
+    const user = requireUser(request, reply);
+    if (!user) return;
+    const application = db.findApplication(request.params.appId);
+    if (!application) {
+      return reply.code(404).send({ error: "application_not_found", message: "Không tìm thấy ứng dụng cần xóa." });
+    }
+    if (application.kind !== "git") {
+      return reply.code(403).send({ error: "delete_not_allowed", message: "Chỉ Web Service tạo từ Git mới được xóa." });
+    }
+    if (isApplicationBusy(application.id)) {
+      return reply.code(409).send({ error: "application_busy", message: "Ứng dụng đang có một thao tác khác được xử lý." });
+    }
+    activeDeletions.add(application.id);
+    try {
+      const removal = await runnerClient.deleteService(application.id);
+      db.deleteWebService(application.id);
+      db.addAudit({
+        actorUserId: user.id,
+        actorUsername: user.username,
+        action: "service.delete",
+        resourceType: "application",
+        resourceId: application.id,
+        outcome: "succeeded",
+        detail: removal.message,
+        ipAddress: requestIp(request),
+      });
+      return { data: { id: application.id, ...removal } };
+    } catch (error) {
+      const failure = runnerMutationFailure(error);
+      db.addAudit({
+        actorUserId: user.id,
+        actorUsername: user.username,
+        action: "service.delete",
+        resourceType: "application",
+        resourceId: application.id,
+        outcome: "failed",
+        detail: failure.message,
+        ipAddress: requestIp(request),
+      });
+      return reply.code(failure.statusCode).send({ error: failure.code, message: failure.message });
+    } finally {
+      activeDeletions.delete(application.id);
+    }
   });
 
   server.post<{ Params: { appId: string }; Body: ActionBody }>("/api/v1/applications/:appId/actions", {

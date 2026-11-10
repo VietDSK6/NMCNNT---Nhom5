@@ -49,6 +49,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
   const activeTasks = new Set<Promise<void>>();
   const activeEnvironmentUpdates = new Set<string>();
   const activeRollbacks = new Set<string>();
+  const activeDeletions = new Set<string>();
   const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
   server.addHook("onRequest", async (_request, reply) => {
@@ -284,6 +285,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
       || db.findActiveDeployment(applicationId)
       || activeEnvironmentUpdates.has(applicationId)
       || activeRollbacks.has(applicationId)
+      || activeDeletions.has(applicationId)
     );
   }
 
@@ -301,6 +303,7 @@ export function createServer(config: AppConfig, db: ControlDatabase, options: Se
     executeOperation,
     executeSourceDeployment,
     trackOperation,
+    activeDeletions,
   });
   registerEnvironmentRoutes(server, {
     db,
