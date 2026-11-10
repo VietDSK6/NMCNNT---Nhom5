@@ -3,7 +3,7 @@ import { ApiError } from "../api";
 import { usePageVisibility } from "./usePageVisibility";
 
 // Tải dữ liệu định kỳ cho một trang: tạm dừng khi tab ẩn, hủy request khi rời trang, không chồng lệnh.
-export function usePolling<T>(load: (signal: AbortSignal) => Promise<T>, intervalMs: number) {
+export function usePolling<T>(load: (signal: AbortSignal) => Promise<T>, intervalMs: number, resetKey?: string) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(true);
@@ -36,7 +36,7 @@ export function usePolling<T>(load: (signal: AbortSignal) => Promise<T>, interva
     void run();
     const timer = window.setInterval(() => void run(), intervalMs);
     return () => { controller.abort(); window.clearInterval(timer); };
-  }, [visible, intervalMs, reloadTick]);
+  }, [visible, intervalMs, reloadTick, resetKey]);
 
   const reload = useCallback(() => setReloadTick((tick) => tick + 1), []);
   return { data, error, refreshing, reload };

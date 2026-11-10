@@ -4,6 +4,7 @@ import { AppLink, type ApplicationTab, resolveRoute, useDashboardPath } from "./
 import { AuditPage } from "./features/audit/AuditPage";
 import { ApplicationsPage } from "./features/applications/ApplicationsPage";
 import { GitSummary } from "./features/deployments/GitSummary";
+import { DeleteServicePanel } from "./features/applications/DeleteServicePanel";
 import { ApplicationControlPanel } from "./features/applications/ApplicationControlPanel";
 import { ApplicationFacts, ApplicationIdentity, DeploymentSnapshot } from "./features/applications/ApplicationSummary";
 import { AppShell } from "./components/layout/AppShell";
@@ -51,6 +52,7 @@ export function Dashboard({ session, onLoggedOut }: { readonly session: UserSess
   const [submittingDeployment, setSubmittingDeployment] = useState(false);
   const [submittingReleaseId, setSubmittingReleaseId] = useState<string | null>(null);
   const [submittingService, setSubmittingService] = useState(false);
+  const [deletingApp, setDeletingApp] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const pathname = useDashboardPath();
@@ -184,6 +186,24 @@ export function Dashboard({ session, onLoggedOut }: { readonly session: UserSess
     }
   }
 
+  async function deleteService(application: ApplicationItem) {
+    setDeletingApp(application.id);
+    setError("");
+    setNotice("");
+    try {
+      const response = await api.deleteService(application.id);
+      setNotice(`Đã xóa ${application.name}: ${response.data.message}`);
+      window.history.pushState({}, "", "/applications");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      window.scrollTo({ top: 0 });
+      await loadData(true);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Không thể xóa Web Service.");
+    } finally {
+      setDeletingApp(null);
+    }
+  }
+
   async function logout() {
     try { await api.logout(); } finally { onLoggedOut(); }
   }
@@ -240,6 +260,9 @@ export function Dashboard({ session, onLoggedOut }: { readonly session: UserSess
               </div>
               <OperationsTable operations={applicationOperations} />
             </section>
+            {application.kind === "git" && (
+              <DeleteServicePanel application={application} submitting={deletingApp === application.id} onDelete={(item) => void deleteService(item)} />
+            )}
           </div>
         )}
 

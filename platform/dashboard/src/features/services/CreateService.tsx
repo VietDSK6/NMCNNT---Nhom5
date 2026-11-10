@@ -14,6 +14,7 @@ export function CreateServiceForm({
   const [slug, setSlug] = useState("");
   const [repositoryUrl, setRepositoryUrl] = useState("");
   const [buildContext, setBuildContext] = useState(".");
+  const [sourceRef, setSourceRef] = useState("main");
   const [validationError, setValidationError] = useState("");
 
   function submit(event: FormEvent) {
@@ -27,12 +28,17 @@ export function CreateServiceForm({
       setValidationError("Hãy nhập URL repository GitHub công khai.");
       return;
     }
+    const ref = sourceRef.trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,99}$/.test(ref) || ref.includes("..") || ref.includes("//") || ref.endsWith("/") || ref.endsWith(".lock")) {
+      setValidationError("Nhánh hoặc tag chỉ gồm chữ, số, dấu chấm, gạch ngang, gạch dưới và dấu /.");
+      return;
+    }
     setValidationError("");
     onCreate({
       name: name.trim(),
       slug: normalizedSlug,
       repositoryUrl: repositoryUrl.trim(),
-      defaultBranch: "main",
+      defaultBranch: ref,
       buildContext: buildContext.trim() || ".",
     });
   }
@@ -52,12 +58,12 @@ export function CreateServiceForm({
 
       <section className="new-service-form__section">
         <div className="new-service-form__heading">
-          <div><span className="eyebrow">MÃ NGUỒN</span><h2>Kết nối repository GitHub</h2><p>Mini PaaS lấy nhánh main và build Dockerfile trong thư mục đã chọn.</p></div>
+          <div><span className="eyebrow">MÃ NGUỒN</span><h2>Kết nối repository GitHub</h2><p>Mini PaaS lấy commit mới nhất của nhánh hoặc tag đã chọn và build Dockerfile trong thư mục đã chọn.</p></div>
           <span className="new-service-form__step">02</span>
         </div>
         <div className="new-service-form__grid new-service-form__grid--source">
           <label className="new-service-form__repository"><span>Repository GitHub công khai</span><input required value={repositoryUrl} onChange={(event) => setRepositoryUrl(event.target.value)} placeholder="https://github.com/VietDSK6/ten-repository" aria-invalid={Boolean(validationError) || undefined} /></label>
-          <label><span>Nhánh</span><input value="main" readOnly aria-readonly="true" /></label>
+          <label><span>Nhánh hoặc tag</span><input required maxLength={100} value={sourceRef} onChange={(event) => setSourceRef(event.target.value)} placeholder="main" spellCheck={false} /><small>Ví dụ: main, develop, v1.2.0</small></label>
           <label><span>Build context</span><input required value={buildContext} onChange={(event) => setBuildContext(event.target.value)} placeholder="." /><small>Dùng <strong>.</strong> nếu Dockerfile ở thư mục gốc.</small></label>
         </div>
       </section>
@@ -78,7 +84,7 @@ export function CreateServiceGuide() {
       <h2>Repository cần chuẩn bị</h2>
       <ol>
         <li><span>01</span><div><strong>GitHub công khai</strong><p>Repository thuộc owner đã được Mini PaaS cho phép.</p></div></li>
-        <li><span>02</span><div><strong>Nhánh main</strong><p>Commit mới nhất của nhánh này sẽ được build đầu tiên.</p></div></li>
+        <li><span>02</span><div><strong>Nhánh hoặc tag</strong><p>Commit mà nhánh hoặc tag trỏ tới sẽ được build đầu tiên.</p></div></li>
         <li><span>03</span><div><strong>Dockerfile hợp lệ</strong><p>Đặt tại gốc build context đã nhập trong biểu mẫu.</p></div></li>
         <li><span>04</span><div><strong>Cổng 3000 và /health</strong><p>Ứng dụng phải lắng nghe cổng 3000 và trả health HTTP.</p></div></li>
       </ol>

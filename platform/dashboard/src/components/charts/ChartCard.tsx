@@ -40,11 +40,13 @@ export function ChartCard({ title, description, summary, actions, loading, error
     body = (
       <>
         <div className="chart-card__plot" role="img" aria-label={summary}>{children(inView)}</div>
-        <table className="sr-only">
+        <div className="sr-only">
+        <table>
           <caption>{table.caption}</caption>
           <thead><tr>{table.headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
           <tbody>{table.rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody>
         </table>
+        </div>
       </>
     );
   }

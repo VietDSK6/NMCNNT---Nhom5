@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { lineColors } from "../../config/chartSeries";
 import type { ResourcePoint } from "../../hooks/useResourceHistory";
@@ -5,7 +6,7 @@ import { ChartCard, ChartLegend, chartTooltipStyle } from "./ChartCard";
 
 const minimumPoints = 2;
 
-export function LineChartCard({ title, description, unit, names, points, loading, error }: {
+export function LineChartCard({ title, description, unit, names, points, loading, error, actions, emptyText }: {
   readonly title: string;
   readonly description: string;
   readonly unit: string;
@@ -13,6 +14,8 @@ export function LineChartCard({ title, description, unit, names, points, loading
   readonly points: readonly ResourcePoint[];
   readonly loading: boolean;
   readonly error: string;
+  readonly actions?: ReactNode;
+  readonly emptyText?: string;
 }) {
   const series = names.map((name, index) => ({ key: name, label: name, color: lineColors[index % lineColors.length] ?? "var(--accent-1)" }));
   return (
@@ -23,7 +26,8 @@ export function LineChartCard({ title, description, unit, names, points, loading
       loading={loading}
       error={error}
       empty={points.length < minimumPoints}
-      emptyText="Đang thu thập số liệu, đường biểu diễn xuất hiện sau vài giây."
+      emptyText={emptyText ?? "Đang thu thập số liệu, đường biểu diễn xuất hiện sau vài giây."}
+      actions={actions}
       table={{ caption: title, headers: ["Thời điểm", ...names], rows: points.map((point) => [point.time, ...names.map((name) => point[name] ?? "")]) }}
     >
       {() => (

@@ -63,7 +63,7 @@ export interface CreateServiceInput {
   readonly name: string;
   readonly slug: string;
   readonly repositoryUrl: string;
-  readonly defaultBranch: "main";
+  readonly defaultBranch: string;
   readonly buildContext: string;
 }
 
@@ -203,4 +203,25 @@ export interface ApplicationEnvironment {
     readonly maximumValueBytes: number;
     readonly maximumTotalValueBytes: number;
   };
+}
+
+export type HistoryRange = "1h" | "24h";
+
+export interface MetricsHistory {
+  readonly range: HistoryRange;
+  readonly bucketSeconds: number;
+  readonly applications: readonly { readonly id: string; readonly name: string }[];
+  readonly points: readonly {
+    readonly time: string;
+    readonly applicationId: string;
+    readonly cpuPercent: number;
+    readonly memoryPercent: number;
+  }[];
+}
+
+export interface DeleteServiceResult {
+  readonly id: string;
+  readonly containerRemoved: boolean;
+  readonly removedImages: number;
+  readonly message: string;
 }

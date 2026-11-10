@@ -11,6 +11,7 @@ export const actionLabels: Record<string, string> = {
   "deployment.create": "Triển khai từ Git",
   "release.rollback": "Khôi phục phiên bản",
   "service.create": "Tạo Web Service",
+  "service.delete": "Xóa Web Service",
 };
 
 export const operationActionLabels: Record<OperationAction, string> = {

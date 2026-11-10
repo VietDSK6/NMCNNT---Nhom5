@@ -14,6 +14,9 @@ import type {
   SourcesResponse,
   UserSession,
   CreateServiceInput,
+  DeleteServiceResult,
+  HistoryRange,
+  MetricsHistory,
 } from "./types";
 
 export class ApiError extends Error {
@@ -105,6 +108,14 @@ export const api = {
   ) => request<{ data: ApplicationEnvironment }>(
     `/api/v1/applications/${encodeURIComponent(appId)}/environment`,
     { method: "PUT", body: JSON.stringify({ variables }) },
+  ),
+  deleteService: (appId: string) => request<{ data: DeleteServiceResult }>(
+    `/api/v1/applications/${encodeURIComponent(appId)}`,
+    { method: "DELETE" },
+  ),
+  metricsHistory: (range: HistoryRange, { signal }: RequestOptions = {}) => request<{ data: MetricsHistory }>(
+    `/api/v1/metrics/history?range=${range}`,
+    { signal },
   ),
   audit: (limit = 12, { signal }: RequestOptions = {}) => request<AuditResponse>(`/api/v1/audit-events?limit=${limit}`, { signal }),
 };
