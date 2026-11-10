@@ -22,7 +22,7 @@ test("phân giải nhánh mặc định thành commit SHA bất biến", async (
   });
 
   assert.equal(await builder.resolveLatestCommit(source), commit);
-  assert.equal(requestedUrl, source.latestRevisionUrl);
+  assert.ok(requestedUrl.startsWith(`${source.latestRevisionUrl}?cb=`), "URL phải kèm tham số chống cache");
 });
 
 test("từ chối metadata không có commit SHA hợp lệ", async () => {
@@ -45,4 +45,21 @@ test("chuyển giới hạn GitHub thành lỗi có thể thử lại", async ()
     code: "source_provider_rate_limited",
     statusCode: 503,
   });
+});
+
+test("Web Service động xin phản hồi chỉ gồm SHA để không vượt giới hạn metadata", async () => {
+  const commit = "b".repeat(40);
+  let accept = null;
+  const builder = new TrustedSourceBuilder({}, {
+    fetch: async (_url, options) => {
+      accept = options.headers.accept;
+      return new Response(`${commit}\n`, { status: 200 });
+    },
+  });
+  const dynamicSource = { ...source, dynamic: true, latestRevisionUrl: "https://api.github.test/repos/group/repo/commits/main" };
+  assert.equal(await builder.resolveLatestCommit(dynamicSource), commit);
+  assert.equal(accept, "application/vnd.github.sha");
+  // Nguồn tĩnh vẫn dùng JSON như cũ.
+  await builder.resolveLatestCommit(source).catch(() => undefined);
+  assert.equal(accept, "application/vnd.github+json");
 });

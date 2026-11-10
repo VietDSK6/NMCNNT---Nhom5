@@ -79,3 +79,13 @@ test("chuẩn hóa Web Service động và chặn repository ngoài owner tin c�
     repositoryUrl: "https://github.com/attacker/demo-web",
   }, ["VietDSK6"]), { code: "repository_owner_not_allowed", statusCode: 403 });
 });
+
+test("Web Service động nhận nhánh hoặc tag hợp lệ và từ chối giá trị nguy hiểm", () => {
+  const base = { appId: "demo-web", name: "Demo Web", repositoryUrl: "https://github.com/VietDSK6/demo-web", contextPath: "." };
+  const tag = createDynamicSourceSpec({ ...base, defaultBranch: "release/v1.2.0" }, ["VietDSK6"]);
+  assert.equal(tag.defaultBranch, "release/v1.2.0");
+  assert.equal(tag.latestRevisionUrl, "https://api.github.com/repos/VietDSK6/demo-web/commits/release/v1.2.0");
+  for (const bad of ["../x", "-rf", "a b", "a..b", "x/", "x.lock", "a//b", ""]) {
+    assert.throws(() => createDynamicSourceSpec({ ...base, defaultBranch: bad }, ["VietDSK6"]), { code: "invalid_source_ref" }, bad);
+  }
+});

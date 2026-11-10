@@ -172,3 +172,22 @@ test("deployment đầu tiên tạo container Web Service độc lập với gi�
   assert.equal(createBody.HostConfig.Memory, 134_217_728);
   assert.deepEqual(createBody.NetworkingConfig.EndpointsConfig["mini-paas-edge"].Aliases, ["service-demo-web", "mini-paas-service-demo-web"]);
 });
+
+test("xóa Web Service gỡ container và image, từ chối App A/B", async () => {
+  const removed = [];
+  const removedTags = [];
+  const docker = {
+    listManaged: async () => [{ Id: "dyn" }],
+    inspect: async () => ({ Id: "dyn", Name: "/mini-paas-service-demo-web", State: { Running: true } }),
+    remove: async (id) => { removed.push(id); },
+    listImageTags: async (repository) => [`${repository}:git-aaa`, `${repository}:git-bbb`],
+    removeImageTag: async (tag) => { removedTags.push(tag); },
+  };
+  const runtime = new DeploymentRuntime(docker, {});
+  const result = await runtime.deleteService("demo-web");
+  assert.deepEqual(removed, ["dyn"]);
+  assert.deepEqual(removedTags, ["mini-paas/service-demo-web:git-aaa", "mini-paas/service-demo-web:git-bbb"]);
+  assert.equal(result.removedImages, 2);
+  await assert.rejects(() => runtime.deleteService("app-a"), { code: "delete_not_allowed", statusCode: 403 });
+  assert.deepEqual(removed, ["dyn"]);
+});

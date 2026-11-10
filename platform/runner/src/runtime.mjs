@@ -151,6 +151,46 @@ export class DeploymentRuntime {
     }
   }
 
+  // Chỉ Web Service động mới được xóa; App A/B thuộc Compose nên không bao giờ đi qua đường này.
+  async deleteService(appId) {
+    const spec = getRuntimeAppSpec(appId);
+    if (!spec.dynamic) {
+      throw new RunnerInputError("delete_not_allowed", "Chỉ Web Service tạo từ Git mới được xóa.", 403);
+    }
+    if (this.locks.has(spec.id)) {
+      throw new RunnerRuntimeError("application_busy", "Ứng dụng đang có một thao tác khác được xử lý.", 409);
+    }
+    this.locks.add(spec.id);
+    try {
+      let containerRemoved = false;
+      try {
+        const current = await this.findContainer(spec);
+        await this.docker.remove(current.Id);
+        containerRemoved = true;
+      } catch (error) {
+        if (error?.code !== "container_not_found") throw error;
+      }
+      const tags = await this.docker.listImageTags(`mini-paas/${spec.service}`);
+      let removedImages = 0;
+      for (const tag of tags) {
+        try {
+          await this.docker.removeImageTag(tag);
+          removedImages += 1;
+        } catch {
+          // Image còn được tham chiếu bởi nơi khác thì giữ lại; container đã được gỡ nên không ảnh hưởng dịch vụ.
+        }
+      }
+      return {
+        appId: spec.id,
+        containerRemoved,
+        removedImages,
+        message: `Đã gỡ container và ${removedImages} image của ${spec.id}.`,
+      };
+    } finally {
+      this.locks.delete(spec.id);
+    }
+  }
+
   async logs(appId, tail = OBSERVABILITY_LIMITS.defaultTail) {
     const spec = getRuntimeAppSpec(appId);
     if (!Number.isInteger(tail) || tail < 1 || tail > OBSERVABILITY_LIMITS.maximumTail) {

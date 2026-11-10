@@ -168,6 +168,21 @@ const migrations: readonly Migration[] = [
         ON applications(public_host) WHERE public_host IS NOT NULL;
     `,
   },
+  {
+    version: 7,
+    sql: `
+      CREATE TABLE resource_samples (
+        application_id TEXT NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        sampled_at INTEGER NOT NULL,
+        cpu_percent REAL NOT NULL,
+        memory_percent REAL NOT NULL
+      );
+      CREATE INDEX resource_samples_app_time_idx
+        ON resource_samples(application_id, sampled_at);
+      CREATE INDEX resource_samples_time_idx
+        ON resource_samples(sampled_at);
+    `,
+  },
 ];
 
 export function runMigrations(database: DatabaseSync): void {

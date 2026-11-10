@@ -173,6 +173,12 @@ export function createRunnerServer({ runtime, token, logger = console }) {
         json(response, 200, { data: await runtime.status(appId) });
         return;
       }
+      if (request.method === "DELETE" && resource === "status") {
+        const result = await runtime.deleteService(appId);
+        logger.info?.({ appId, removedImages: result.removedImages, result: "succeeded" }, "runner_service_deleted");
+        json(response, 200, { data: result });
+        return;
+      }
       if (request.method === "GET" && resource === "logs") {
         const rawTail = url.searchParams.get("tail");
         const tail = rawTail === null ? 100 : Number(rawTail);
