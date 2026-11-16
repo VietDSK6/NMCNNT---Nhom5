@@ -1,0 +1,16 @@
+# Lệnh đã chạy (không chứa bí mật)
+
+# 1. Kiểm tra stack 8 service đang healthy
+docker compose ps
+
+# 2. Chạy bài kiểm thử tích hợp T05 nền (15 bước)
+./tests/integration/p1_observability.sh
+
+# 3. Chạy kiểm tra mở rộng Alert Rules & 9 nhóm Metric (OBS-02)
+node work/minh-monitoring/scripts/verify-observability-rules.mjs
+
+# 4. Chạy kịch bản dừng thử app-a -> kích hoạt alert FIRING -> khôi phục
+./work/minh-monitoring/scripts/test-alert-app-a-stop.sh
+
+# Hoặc chạy gộp tất cả bằng 1 lệnh:
+./work/minh-monitoring/scripts/run-all-checks.sh --with-alert-drill
