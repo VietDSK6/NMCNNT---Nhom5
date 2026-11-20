@@ -51,9 +51,11 @@ function verifyTargetUp() {
   );
 }
 
-function verifyAlertRules() {
+function verifyAlertRules(appsWithoutHealthcheck) {
   const rulesData = fetchPrometheusJson("/api/v1/rules");
   const allRules = (rulesData.groups ?? []).flatMap((group) => group.rules ?? []);
+  const alertsData = fetchPrometheusJson("/api/v1/alerts");
+  const activeAlerts = alertsData.alerts ?? [];
 
   for (const [ruleName, expected] of EXPECTED_RULES.entries()) {
     const rule = allRules.find((item) => item.name === ruleName);
@@ -62,27 +64,105 @@ function verifyAlertRules() {
       rule.health === "ok" && rule.duration === expected.duration,
       `Rule ${ruleName}: health=${rule.health}, for=${rule.duration}s, state=${rule.state}`,
     );
+
+    const blockingAlerts = (rule.alerts ?? []).filter((alert) => {
+      const appId = alert.labels?.app_id;
+      return !(ruleName === "MiniPaasApplicationNotHealthy" && appsWithoutHealthcheck.has(appId));
+    });
     assertCondition(
-      rule.state === "inactive",
-      `Rule ${ruleName} đang ở trạng thái bình thường (inactive)`,
+      blockingAlerts.length === 0,
+      `Rule ${ruleName} không có cảnh báo đang pending/firing trên các app có HEALTHCHECK (state=${rule.state})`,
     );
   }
 
-  const alertsData = fetchPrometheusJson("/api/v1/alerts");
-  const activeAlerts = alertsData.alerts ?? [];
+  const unexpectedActive = activeAlerts.filter((alert) => {
+    const ruleName = alert.labels?.alertname;
+    const appId = alert.labels?.app_id;
+    return !(ruleName === "MiniPaasApplicationNotHealthy" && appsWithoutHealthcheck.has(appId));
+  });
   assertCondition(
-    activeAlerts.length === 0,
-    `Không có cảnh báo đang pending/firing ở trạng thái nền (activeAlerts=${activeAlerts.length})`,
+    unexpectedActive.length === 0,
+    `Không có cảnh báo bất thường ở trạng thái nền (unexpectedAlerts=${unexpectedActive.length}, totalActive=${activeAlerts.length})`,
   );
 }
 
+const BASELINE_APPS = ["app-a", "app-b"];
+
+function getAppsWithoutHealthcheck() {
+  const infoData = fetchPrometheusJson(`/api/v1/query?query=${encodeURIComponent("mini_paas_app_info")}`);
+  const missing = new Set();
+  for (const item of infoData.result ?? []) {
+    const appId = item.metric?.app_id;
+    const health = item.metric?.health;
+    if (typeof appId === "string" && !BASELINE_APPS.includes(appId) && health === "unknown") {
+      missing.add(appId);
+    }
+  }
+  return missing;
+}
+
+function resolveExpectedApps() {
+  const runningData = fetchPrometheusJson(`/api/v1/query?query=${encodeURIComponent("mini_paas_app_running")}`);
+  const discovered = (runningData.result ?? [])
+    .map((item) => ({
+      appId: item.metric?.app_id,
+      running: Number(item.value?.[1]),
+    }))
+    .filter((item) => typeof item.appId === "string" && item.appId.length > 0);
+
+  const runningByApp = new Map(discovered.map((item) => [item.appId, item.running]));
+  const explicit = (process.env.TARGET_APPS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (explicit.length > 0) {
+    for (const appId of explicit) {
+      assertCondition(
+        runningByApp.get(appId) === 1,
+        `Ứng dụng chỉ định ${appId} đang ở trạng thái chạy (running=1)`,
+      );
+    }
+    return { activeApps: explicit, stoppedApps: [] };
+  }
+
+  for (const coreApp of BASELINE_APPS) {
+    assertCondition(
+      runningByApp.get(coreApp) === 1,
+      `Ứng dụng nền ${coreApp} đang có dữ liệu và ở trạng thái chạy (running=1)`,
+    );
+  }
+
+  const extraActive = discovered
+    .filter((item) => !BASELINE_APPS.includes(item.appId) && item.running === 1)
+    .map((item) => item.appId)
+    .sort();
+  const stoppedApps = discovered
+    .filter((item) => !BASELINE_APPS.includes(item.appId) && item.running !== 1)
+    .map((item) => item.appId)
+    .sort();
+
+  const activeApps = [...BASELINE_APPS, ...extraActive];
+  console.log(`THÔNG TIN: Phát hiện ${activeApps.length} ứng dụng đang chạy: ${activeApps.join(", ")}`);
+  if (stoppedApps.length > 0) {
+    console.log(`THÔNG TIN: Bỏ qua metric tài nguyên cho ${stoppedApps.length} ứng dụng đang dừng: ${stoppedApps.join(", ")}`);
+  }
+
+  return { activeApps, stoppedApps };
+}
+
 function verifyCoreMetrics() {
-  const snapshot = { "app-a": {}, "app-b": {} };
+  const { activeApps } = resolveExpectedApps();
+  const activeSet = new Set(activeApps);
+  const snapshot = Object.fromEntries(activeApps.map((appId) => [appId, {}]));
 
   for (const metric of METRIC_QUERIES) {
     const data = fetchPrometheusJson(`/api/v1/query?query=${encodeURIComponent(metric.query)}`);
-    const results = (data.result ?? []).filter((item) => ["app-a", "app-b"].includes(item.metric?.app_id));
-    assertCondition(results.length === 2, `Metric ${metric.query} có đủ dữ liệu cho app-a và app-b`);
+    const results = (data.result ?? []).filter((item) => activeSet.has(item.metric?.app_id));
+    assertCondition(
+      results.length === activeApps.length,
+      `Metric ${metric.query} có đủ dữ liệu cho ${activeApps.length} ứng dụng (${activeApps.join(", ")})`,
+    );
 
     for (const item of results) {
       const appId = item.metric.app_id;
@@ -96,7 +176,7 @@ function verifyCoreMetrics() {
   }
 
   console.log("\n=== BẢNG METRIC THỰC TẾ TỪ PROMETHEUS ===");
-  for (const appId of ["app-a", "app-b"]) {
+  for (const appId of activeApps) {
     const row = snapshot[appId];
     console.log(
       `${appId}: running=${row.running}, healthy=${row.healthy}, cpu=${row.cpu.toFixed(2)}%, `
@@ -104,13 +184,20 @@ function verifyCoreMetrics() {
       + `pids=${row.pids}, rx=${(row.netRx / 1024).toFixed(2)} KiB, tx=${(row.netTx / 1024).toFixed(2)} KiB`,
     );
   }
+  return activeApps;
 }
 
 function main() {
   verifyTargetUp();
-  verifyAlertRules();
-  verifyCoreMetrics();
-  console.log("\nHOÀN TẤT OBS-02: Toàn bộ target, 3 alert rule và 9 nhóm metric Prometheus đều hợp lệ.");
+  const appsWithoutHealthcheck = getAppsWithoutHealthcheck();
+  if (appsWithoutHealthcheck.size > 0) {
+    console.log(
+      `CẢNH BÁO: Các Web Service sau chưa có Docker HEALTHCHECK nên mini_paas_app_healthy=0: ${[...appsWithoutHealthcheck].join(", ")}`,
+    );
+  }
+  verifyAlertRules(appsWithoutHealthcheck);
+  const verifiedApps = verifyCoreMetrics();
+  console.log(`\nHOÀN TẤT OBS-02: Target, 3 alert rule và 9 nhóm metric cho ${verifiedApps.length} ứng dụng (${verifiedApps.join(", ")}) đều hợp lệ.`);
 }
 
 main();

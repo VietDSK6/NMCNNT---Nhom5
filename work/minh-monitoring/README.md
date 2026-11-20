@@ -10,9 +10,12 @@ Thư mục này chứa toàn bộ sản phẩm kỹ thuật riêng, kịch bản
 work/minh-monitoring/
 ├── README.md                                 # Tài liệu hướng dẫn chạy lại & phân tích số liệu thật T05/T06
 ├── scripts/
-│   ├── verify-observability-rules.mjs        # Kiểm tra sâu target, 3 alert rules và 9 nhóm metric Prometheus (OBS-02)
+│   ├── verify-observability-rules.mjs        # Kiểm tra sâu target, 3 alert rules & 9 nhóm metric cho mọi app đang chạy (OBS-02)
 │   ├── test-alert-app-a-stop.sh              # Kịch bản giả lập dừng app-a -> kích hoạt alert FIRING -> khôi phục
-│   ├── run-all-checks.sh                     # Chạy gộp T05 nền + OBS-02 + (tùy chọn) kịch bản sự cố + phân tích/vẽ T06
+│   ├── dynamic-load.js                       # Kịch bản k6 nhận danh sách ứng dụng động (app-a, app-b, app-c...)
+│   ├── run-dynamic-load.mjs                  # Tự động phát hiện mọi app đang chạy, chạy k6 + gom metric Prometheus
+│   ├── summarize-dynamic.mjs                 # Tổng hợp JSON/CSV/Markdown cho kiểm thử tải đa ứng dụng
+│   ├── run-all-checks.sh                     # Chạy gộp T05 nền + OBS-02 + (tùy chọn) diễn tập alert & tải động
 │   ├── t06_loader.py                         # Module đọc & kiểm chứng dữ liệu gốc T06 VPS (dùng chung)
 │   ├── analyze-t06.py                        # Đối chiếu 9/9 tổ hợp VPS và xuất bảng Markdown/JSON
 │   └── generate-t06-charts.py                # Vẽ 3 biểu đồ PNG (p95, thông lượng, CPU/RAM) từ CSV gốc
@@ -50,13 +53,17 @@ Chạy riêng từng phần:
 # 1. Bài test nền của nhóm (15 bước)
 ./tests/integration/p1_observability.sh
 
-# 2. Kiểm tra sâu 3 Alert Rules & 9 nhóm metric
+# 2. Kiểm tra sâu 3 Alert Rules & 9 nhóm metric (tự động quét mọi app đang chạy: app-a, app-b, app-c...)
 node work/minh-monitoring/scripts/verify-observability-rules.mjs
 
-# 3. Kịch bản dừng thử app-a -> cảnh báo FIRING -> tự bật lại app-a
+# 3. Kiểm thử tải động đa ứng dụng (tự phát hiện mọi app đang chạy gồm cả Web Service mới như app-c)
+# Hỗ trợ 3 mức thời gian: quick (10s/mức), pilot (20s/mức), standard (60s/mức)
+node work/minh-monitoring/scripts/run-dynamic-load.mjs quick
+
+# 4. Kịch bản dừng thử app-a -> cảnh báo FIRING -> tự bật lại app-a
 ./work/minh-monitoring/scripts/test-alert-app-a-stop.sh
 
-# 4. Đối chiếu số liệu gốc T06 VPS & vẽ lại 3 biểu đồ PNG (yêu cầu Python 3 + matplotlib)
+# 5. Đối chiếu số liệu gốc T06 VPS & vẽ lại 3 biểu đồ PNG (yêu cầu Python 3 + matplotlib)
 python work/minh-monitoring/scripts/analyze-t06.py
 python work/minh-monitoring/scripts/generate-t06-charts.py
 ```
