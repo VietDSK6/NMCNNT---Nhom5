@@ -1,0 +1,62 @@
+{
+  "verifiedCombinations": 9,
+  "levels": [
+    {
+      "level": "low",
+      "targetRps": 10,
+      "duration": "60s",
+      "medianAchievedRps": 10.02,
+      "medianP95Ms": 58.0,
+      "minP95Ms": 45.87,
+      "maxP95Ms": 58.92,
+      "maxErrorPercent": 0.0,
+      "maxDropped": 0,
+      "medianAppACpuPercent": 0.08,
+      "maxAppACpuPercent": 0.12,
+      "medianAppBCpuPercent": 0.19,
+      "maxAppBCpuPercent": 0.23,
+      "medianAppARamMiB": 39.5,
+      "maxAppARamMiB": 43.72,
+      "medianAppBRamMiB": 37.0,
+      "maxAppBRamMiB": 43.32
+    },
+    {
+      "level": "medium",
+      "targetRps": 25,
+      "duration": "60s",
+      "medianAchievedRps": 25.01,
+      "medianP95Ms": 22.78,
+      "minP95Ms": 19.83,
+      "maxP95Ms": 40.19,
+      "maxErrorPercent": 0.0,
+      "maxDropped": 0,
+      "medianAppACpuPercent": 0.09,
+      "maxAppACpuPercent": 0.13,
+      "medianAppBCpuPercent": 0.2,
+      "maxAppBCpuPercent": 0.24,
+      "medianAppARamMiB": 41.69,
+      "maxAppARamMiB": 42.06,
+      "medianAppBRamMiB": 38.75,
+      "maxAppBRamMiB": 46.06
+    },
+    {
+      "level": "high",
+      "targetRps": 50,
+      "duration": "60s",
+      "medianAchievedRps": 50.01,
+      "medianP95Ms": 35.0,
+      "minP95Ms": 18.12,
+      "maxP95Ms": 48.81,
+      "maxErrorPercent": 0.0,
+      "maxDropped": 0,
+      "medianAppACpuPercent": 0.1,
+      "maxAppACpuPercent": 0.14,
+      "medianAppBCpuPercent": 0.21,
+      "maxAppBCpuPercent": 0.25,
+      "medianAppARamMiB": 39.74,
+      "maxAppARamMiB": 41.42,
+      "medianAppBRamMiB": 39.44,
+      "maxAppBRamMiB": 40.64
+    }
+  ]
+}
