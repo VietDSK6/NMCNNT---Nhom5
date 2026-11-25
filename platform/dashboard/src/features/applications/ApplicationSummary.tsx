@@ -1,3 +1,4 @@
+import { CopyUrlButton } from "./CopyUrlButton";
 import { BoxIcon, DeployIcon, ExternalIcon } from "../../icons";
 import { formatDateTime } from "../../shared/format";
 import { deploymentStatusLabels } from "../../shared/labels";
@@ -29,7 +30,7 @@ export function ApplicationFacts({ application, latestDeployment }: { readonly a
     <section className="service-facts" aria-labelledby="service-facts-title">
       <div className="panel-heading"><div><span className="eyebrow">TRẠNG THÁI HIỆN TẠI</span><h2 id="service-facts-title">Thông tin dịch vụ</h2></div></div>
       <dl>
-        <div><dt>URL truy cập</dt><dd><a href={application.route} target="_blank" rel="noreferrer">{application.route}<ExternalIcon /></a></dd></div>
+        <div><dt>URL truy cập</dt><dd className="fact-url"><a href={application.route} target="_blank" rel="noreferrer">{application.route}<ExternalIcon /></a> <CopyUrlButton route={application.route} /></dd></div>
         <div><dt>Phiên bản thực tế</dt><dd className="mono">{observedVersion}</dd></div>
         <div><dt>Phiên bản mong muốn</dt><dd className="mono">{application.desiredVersion}</dd></div>
         <div><dt>Container</dt><dd className="mono">{application.runtime.containerName || "Chưa đọc được"}</dd></div>

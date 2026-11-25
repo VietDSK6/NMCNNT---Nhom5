@@ -245,6 +245,8 @@ h1, h2, h3, p { overflow-wrap: anywhere; }
 .service-facts dd { overflow: hidden; margin: 6px 0 0; font-size: 0.8125rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .service-facts dd a { display: inline-flex; align-items: center; gap: 5px; color: var(--accent-1); }
 .service-facts dd svg { width: 13px; height: 13px; }
+.service-facts dd.fact-url { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; overflow: visible; white-space: normal; }
+.service-facts dd.fact-url .button { padding: 4px 12px; font-size: 0.75rem; }
 .release-snapshot__status { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .release-snapshot__status time { color: var(--text-muted); font-size: 0.75rem; }
 .release-snapshot__body > code { display: block; overflow: hidden; margin-top: 16px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-muted); font-size: 0.75rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -632,3 +634,4 @@ tbody tr:hover { background: var(--surface-hover); }
 .overview__trio .chart-card__plot, .overview__split .chart-card__plot { flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .overview__trio .card__body.quick-access { flex: 1; grid-auto-rows: 1fr; align-content: stretch; }
 .overview__trio .donut { flex: 1; align-content: center; }
+.deployment-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 20px; }

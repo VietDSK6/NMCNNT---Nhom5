@@ -4,12 +4,11 @@ import { ListToolbar } from "../../components/ui/ListToolbar";
 import { TableCard } from "../../components/ui/TableCard";
 import { BoxIcon, ExternalIcon } from "../../icons";
 import { formatTime } from "../../shared/format";
-import type { ApplicationItem, ApplicationsResponse } from "../../types";
+import type { ApplicationsResponse } from "../../types";
 import { KpiGrid } from "../dashboard/KpiGrid";
+import { filterApplications, matchesFilter, type FilterId } from "./filterApplications";
 import { RuntimeBadge, StatusBadge } from "./StatusBadges";
 import { useUsageKpis } from "./usageKpis";
-
-type FilterId = "all" | "running" | "stopped" | "attention";
 
 const filters: readonly { readonly id: FilterId; readonly label: string }[] = [
   { id: "all", label: "Tất cả" },
@@ -17,14 +16,6 @@ const filters: readonly { readonly id: FilterId; readonly label: string }[] = [
   { id: "stopped", label: "Tạm dừng" },
   { id: "attention", label: "Lỗi" },
 ];
-
-function matchesFilter(application: ApplicationItem, filter: FilterId): boolean {
-  const status = application.runtime.status;
-  if (filter === "all") return true;
-  if (filter === "running") return status === "running";
-  if (filter === "stopped") return status === "stopped";
-  return status !== "running" && status !== "stopped";
-}
 
 export function ApplicationsPage({ applications, refreshing, onRefresh }: {
   readonly applications: ApplicationsResponse | null;
@@ -34,9 +25,7 @@ export function ApplicationsPage({ applications, refreshing, onRefresh }: {
   const [filter, setFilter] = useState<FilterId>("all");
   const [query, setQuery] = useState("");
   const { items, kpis, cpuNow, memoryNow } = useUsageKpis(applications);
-  const needle = query.trim().toLowerCase();
-  const visible = items.filter((item) => matchesFilter(item, filter)
-    && `${item.name} ${item.slug} ${item.route} ${item.description}`.toLowerCase().includes(needle));
+  const visible = filterApplications(items, filter, query);
 
   if (!applications) return <div className="skeleton-list"><i /><i /></div>;
 

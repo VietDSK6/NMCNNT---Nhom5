@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { AlertIcon, DeployIcon, ExternalIcon, HistoryIcon } from "../../icons";
 import { formatDateTime } from "../../shared/format";
+import { type DeploymentFilter, filterDeployments } from "./filterDeployments";
 import { deploymentStatusLabels } from "../../shared/labels";
 import type { DeploymentItem, TrustedSource } from "../../types";
 
@@ -20,6 +21,10 @@ export function GitDeploymentPanel({
   const [sourceId, setSourceId] = useState("");
   const [commit, setCommit] = useState("");
   const [validationError, setValidationError] = useState("");
+  const [statusFilter, setStatusFilter] = useState<DeploymentFilter>("all");
+  const [appFilter, setAppFilter] = useState("");
+  const shown = filterDeployments(deployments, statusFilter, appFilter);
+  const appOptions = [...new Map(deployments.map((item) => [item.applicationId, item.applicationName]))];
   const selectedSource = sources.find((source) => source.id === sourceId) ?? sources[0];
 
   useEffect(() => {
@@ -99,12 +104,21 @@ export function GitDeploymentPanel({
       </form>
 
       <div className="deployment-history">
-        <div className="deployment-history__heading"><strong>Lịch sử deployment</strong><span>{deployments.length} bản ghi gần nhất</span></div>
+        <div className="deployment-history__heading"><strong>Lịch sử deployment</strong><span>{shown.length}/{deployments.length} bản ghi gần nhất</span></div>
+        <div className="deployment-filters">
+          <select aria-label="Lọc theo kết quả" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as DeploymentFilter)}>
+            <option value="all">Mọi kết quả</option><option value="succeeded">Thành công</option><option value="failed">Thất bại</option><option value="active">Đang xử lý</option>
+          </select>
+          <select aria-label="Lọc theo ứng dụng" value={appFilter} onChange={(event) => setAppFilter(event.target.value)}>
+            <option value="">Mọi ứng dụng</option>{appOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+          </select>
+        </div>
         {deployments.length === 0 ? (
           <div className="deployment-empty"><HistoryIcon /><span><strong>Chưa có deployment từ Git</strong>Nhập commit của source được phép để bắt đầu.</span></div>
         ) : (
+          shown.length === 0 ? <div className="deployment-empty"><HistoryIcon /><span><strong>Không có deployment phù hợp bộ lọc</strong>Hãy đổi kết quả hoặc ứng dụng.</span></div> :
           <div className="deployment-list">
-            {deployments.map((deployment) => (
+            {shown.map((deployment) => (
               <article key={deployment.id} className="deployment-item">
                 <div className="deployment-item__top">
                   <div><strong>{deployment.applicationName}</strong><code>{deployment.commitSha.slice(0, 12)}</code></div>
