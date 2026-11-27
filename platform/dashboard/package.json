@@ -11,6 +11,7 @@
     "dev": "vite --host 0.0.0.0",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc -b --pretty false",
+    "test": "node --test tests/*.test.ts",
     "lint": "node lint/node_modules/eslint/bin/eslint.js src"
   },
   "dependencies": {
